@@ -9,6 +9,9 @@ import { DatabaseHealthIndicator } from './health/db.health.js';
 import { HealthController } from './health/health.controller.js';
 import { KeycloakHealthIndicator } from './health/keycloak.health.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
+import { ProjectsModule } from './modules/projects/projects.module.js';
+import { TenantsModule } from './modules/tenants/tenants.module.js';
 
 @Module({})
 export class AppModule {
@@ -20,6 +23,9 @@ export class AppModule {
         LoggerModule.forRoot({ pinoHttp: { level: config.logLevel } }),
         TerminusModule,
         AuthModule,
+        TenantsModule,
+        AuditModule,
+        ProjectsModule,
       ],
       controllers: [HealthController],
       providers: [

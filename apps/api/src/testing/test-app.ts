@@ -156,6 +156,11 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
         ...(org ? { organization: { [org.alias]: { groups: org.groups } } } : {}),
         ...extra,
       }),
+    async member(tenant, group) {
+      const user = this.newUser();
+      await this.join(tenant, user, group);
+      return { user, token: await this.token(user, { alias: tenant.slug, groups: [`/${group}`] }) };
+    },
     async close() {
       await app.close();
       await issuer.close();
