@@ -93,7 +93,7 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
   const port = (server.address() as AddressInfo).port;
   const db = createDb(app.get<Pool>(DB_POOL));
 
-  return {
+  const testApp: TestApp = {
     app,
     config,
     db,
@@ -162,13 +162,14 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
         ...extra,
       }),
     async member(tenant, group) {
-      const user = this.newUser();
-      await this.join(tenant, user, group);
-      return { user, token: await this.token(user, { alias: tenant.slug, groups: [`/${group}`] }) };
+      const user = testApp.newUser();
+      await testApp.join(tenant, user, group);
+      return { user, token: await testApp.token(user, { alias: tenant.slug, groups: [`/${group}`] }) };
     },
     async close() {
       await app.close();
       await issuer.close();
     },
   };
+  return testApp;
 }
