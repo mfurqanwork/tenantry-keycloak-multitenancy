@@ -13,7 +13,7 @@ import {
   Theme,
 } from '@carbon/react';
 import { Asleep, Light, Screen, type CarbonIconType } from '@carbon/icons-react';
-import type { ReactNode } from 'react';
+import type { ElementType, ReactNode } from 'react';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
 
@@ -27,6 +27,8 @@ interface AppShellProps {
   productName: string;
   navItems: NavItem[];
   currentPath: string;
+  // The app's router link (it receives href); plain anchors, and full page loads, without it.
+  linkAs?: ElementType;
   children: ReactNode;
 }
 
@@ -37,7 +39,7 @@ const THEME_ACTIONS: { preference: ThemePreference; label: string; Icon: CarbonI
 ];
 
 // The frame every screen sits in: a header that is dark in both themes, a side nav, and the main landmark.
-export function AppShell({ productName, navItems, currentPath, children }: AppShellProps) {
+export function AppShell({ productName, navItems, currentPath, linkAs, children }: AppShellProps) {
   const { preference, setPreference } = useThemePreference();
   return (
     <HeaderContainer
@@ -83,6 +85,7 @@ export function AppShell({ productName, navItems, currentPath, children }: AppSh
                 return (
                   <SideNavLink
                     key={item.href}
+                    {...(linkAs ? { as: linkAs } : {})}
                     href={item.href}
                     {...(item.icon ? { renderIcon: item.icon } : {})}
                     isActive={current}

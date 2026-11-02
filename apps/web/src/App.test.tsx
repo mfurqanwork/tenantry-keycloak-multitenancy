@@ -1,13 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import { TenantryThemeProvider } from '@tenantry/ui';
 import { App } from './App.js';
 
 function renderAt(path: string) {
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <App hostname="demo.tenantry.localhost" />
-    </MemoryRouter>,
+    <TenantryThemeProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <App hostname="demo.tenantry.localhost" />
+      </MemoryRouter>
+    </TenantryThemeProvider>,
   );
 }
 

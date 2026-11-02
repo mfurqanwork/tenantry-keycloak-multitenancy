@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { forwardRef, type AnchorHTMLAttributes } from 'react';
 import { describe, expect, it } from 'vitest';
 import { stubColorScheme } from '../test/setup.js';
 import { TenantryThemeProvider } from '../theme/ThemeProvider.js';
@@ -43,5 +44,20 @@ describe('AppShell', () => {
   it('shows the product name', () => {
     renderShell();
     expect(screen.getByRole('banner')).toHaveTextContent('Tenantry');
+  });
+
+  it('renders navigation through the link component it is given', () => {
+    const TestLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement>>((props, ref) => (
+      <a ref={ref} data-router-link="" {...props} />
+    ));
+    render(
+      <TenantryThemeProvider>
+        <AppShell productName="Tenantry" navItems={nav} currentPath="/" linkAs={TestLink}>
+          <p>content</p>
+        </AppShell>
+      </TenantryThemeProvider>,
+    );
+    const links = screen.getAllByRole('link', { name: 'Patterns' });
+    expect(links.some((link) => link.hasAttribute('data-router-link'))).toBe(true);
   });
 });
