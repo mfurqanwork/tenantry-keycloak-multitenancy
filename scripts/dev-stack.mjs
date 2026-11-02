@@ -59,4 +59,6 @@ const run = (args) =>
 
 run(['up', '-d', '--build', '--wait', ...(infraOnly ? ['caddy', 'keycloak', 'postgres', 'mailpit'] : [])]);
 if (infraOnly) run(['run', '--rm', '--build', 'migrate']);
+// Caddy reads its bind-mounted Caddyfile only at start; a restart picks up edits since the last run.
+run(['restart', 'caddy']);
 console.log(`\nTenantry is up: http://demo.tenantry.localhost${port === 80 ? '' : `:${port}`}`);

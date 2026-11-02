@@ -19,3 +19,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run lint typecheck test build
       - run: pnpm test:scripts
+
+  # The security suite (README guarantees) against the real stack: Caddy, API, Keycloak, Postgres.
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - run: pnpm build
+      - run: pnpm dev:stack
+      - run: pnpm smoke
+      - run: pnpm test:isolation
+      - if: failure()
+        run: docker compose -f infra/docker-compose.yml --env-file .env logs --no-color

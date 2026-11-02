@@ -27,7 +27,7 @@ const checks = [
       return res.status === 200 || `status ${res.status}`;
     },
   ],
-  ...['demo.tenantry.localhost', 'demo.portal.tenantry.localhost'].map((host) => [
+  ...['tenantry.localhost', 'demo.tenantry.localhost', 'demo.portal.tenantry.localhost'].map((host) => [
     `${host} serves the app shell`,
     async () => {
       const res = await getVia(host, '/');
