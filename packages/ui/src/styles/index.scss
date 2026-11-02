@@ -84,6 +84,8 @@ body {
   overflow-x: auto;
 }
 
+// Back and Next sit at the end, written like the settings save bar.
 .tenantry-wizard__actions {
+  display: flex;
   justify-content: flex-end;
 }

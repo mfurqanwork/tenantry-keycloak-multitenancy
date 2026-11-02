@@ -112,4 +112,35 @@ describe('page patterns', () => {
     expect(screen.getByText('Summary')).toBeInTheDocument();
     expect(screen.getAllByRole('tab')).toHaveLength(2);
   });
+
+  it.each([
+    [
+      'DashboardPage',
+      <DashboardPage
+        key="b"
+        breadcrumbs={crumbs}
+        title="Dashboard"
+        actions={<button>Act</button>}
+        tiles={['a']}
+      />,
+    ],
+    [
+      'WizardPage',
+      <WizardPage
+        key="w"
+        breadcrumbs={crumbs}
+        title="Sign up"
+        actions={<button>Act</button>}
+        steps={['One']}
+        currentStep={0}
+        onNext={vi.fn()}
+      >
+        c
+      </WizardPage>,
+    ],
+  ])('%s shows breadcrumbs and header actions like the other patterns', (_name, element) => {
+    render(element);
+    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toHaveTextContent('Home');
+    expect(screen.getByRole('button', { name: 'Act' })).toBeInTheDocument();
+  });
 });

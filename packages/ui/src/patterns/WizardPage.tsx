@@ -1,9 +1,11 @@
-import { Button, ButtonSet, ProgressIndicator, ProgressStep } from '@carbon/react';
+import { Button, ProgressIndicator, ProgressStep } from '@carbon/react';
 import type { ReactNode } from 'react';
-import { PageHeader } from './PageHeader.js';
+import { PageHeader, type Crumb } from './PageHeader.js';
 
 interface WizardPageProps {
+  breadcrumbs?: Crumb[];
   title: string;
+  actions?: ReactNode;
   steps: string[];
   currentStep: number;
   children: ReactNode;
@@ -15,7 +17,9 @@ interface WizardPageProps {
 
 // A multi-step flow (signup, app registration): progress, the step's content, then Back and Next.
 export function WizardPage({
+  breadcrumbs,
   title,
+  actions,
   steps,
   currentStep,
   children,
@@ -26,7 +30,7 @@ export function WizardPage({
 }: WizardPageProps) {
   return (
     <div className="tenantry-page">
-      <PageHeader title={title} />
+      <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
       <div className="tenantry-wizard__progress">
         <ProgressIndicator currentIndex={currentStep} spaceEqually>
           {steps.map((step) => (
@@ -35,7 +39,7 @@ export function WizardPage({
         </ProgressIndicator>
       </div>
       <div className="tenantry-page__body">{children}</div>
-      <ButtonSet className="tenantry-wizard__actions">
+      <div className="tenantry-wizard__actions">
         {onBack && (
           <Button kind="secondary" onClick={onBack}>
             Back
@@ -44,7 +48,7 @@ export function WizardPage({
         <Button kind="primary" disabled={nextDisabled} onClick={onNext}>
           {nextLabel}
         </Button>
-      </ButtonSet>
+      </div>
     </div>
   );
 }

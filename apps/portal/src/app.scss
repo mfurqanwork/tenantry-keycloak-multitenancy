@@ -13,19 +13,3 @@
 
   margin-block-start: $spacing-03;
 }
-
-.tenantry-pattern-sample {
-  margin-block-end: $spacing-10;
-}
-
-.tenantry-pattern-sample__name {
-  @include type.type-style('label-01');
-
-  color: theme.$text-secondary;
-  text-transform: uppercase;
-}
-
-.tenantry-pattern-sample__frame {
-  padding-inline: $spacing-05;
-  border: 1px dashed theme.$border-subtle;
-}
