@@ -10,6 +10,7 @@ import { HealthController } from './health/health.controller.js';
 import { KeycloakHealthIndicator } from './health/keycloak.health.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
+import { MembersModule } from './modules/members/members.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
 import { SignupModule } from './modules/signup/signup.module.js';
 import { TenantsModule } from './modules/tenants/tenants.module.js';
@@ -28,6 +29,7 @@ export class AppModule {
         AuditModule,
         ProjectsModule,
         SignupModule,
+        MembersModule,
       ],
       controllers: [HealthController],
       providers: [
