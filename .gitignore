@@ -4,3 +4,5 @@ dist/
 .turbo/
 coverage/
 *.log
+.superpowers/
+nul

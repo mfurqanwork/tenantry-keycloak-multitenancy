@@ -1,0 +1,54 @@
+import { Button, ProgressIndicator, ProgressStep } from '@carbon/react';
+import type { ReactNode } from 'react';
+import { PageHeader, type Crumb } from './PageHeader.js';
+
+interface WizardPageProps {
+  breadcrumbs?: Crumb[];
+  title: string;
+  actions?: ReactNode;
+  steps: string[];
+  currentStep: number;
+  children: ReactNode;
+  onBack?: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+}
+
+// A multi-step flow (signup, app registration): progress, the step's content, then Back and Next.
+export function WizardPage({
+  breadcrumbs,
+  title,
+  actions,
+  steps,
+  currentStep,
+  children,
+  onBack,
+  onNext,
+  nextLabel = 'Next',
+  nextDisabled = false,
+}: WizardPageProps) {
+  return (
+    <div className="tenantry-page">
+      <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
+      <div className="tenantry-wizard__progress">
+        <ProgressIndicator currentIndex={currentStep} spaceEqually>
+          {steps.map((step) => (
+            <ProgressStep key={step} label={step} />
+          ))}
+        </ProgressIndicator>
+      </div>
+      <div className="tenantry-page__body">{children}</div>
+      <div className="tenantry-wizard__actions">
+        {onBack && (
+          <Button kind="secondary" onClick={onBack}>
+            Back
+          </Button>
+        )}
+        <Button kind="primary" disabled={nextDisabled} onClick={onNext}>
+          {nextLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}

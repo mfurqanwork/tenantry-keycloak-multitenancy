@@ -1,0 +1,133 @@
+name: tenantry
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    ports:
+      - '127.0.0.1:${TENANTRY_HTTP_PORT}:${TENANTRY_HTTP_PORT}'
+    environment:
+      TENANTRY_HTTP_PORT: ${TENANTRY_HTTP_PORT}
+      WEB_UPSTREAM: ${WEB_UPSTREAM}
+      PORTAL_UPSTREAM: ${PORTAL_UPSTREAM}
+      API_UPSTREAM: ${API_UPSTREAM}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      default:
+        # Containers reach Keycloak at the same URL the browser uses, so token issuers match.
+        aliases: [auth.tenantry.localhost]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TENANTRY_OWNER_PASSWORD: ${TENANTRY_OWNER_PASSWORD}
+      TENANTRY_APP_PASSWORD: ${TENANTRY_APP_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    ports:
+      - '127.0.0.1:${TENANTRY_PG_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d tenantry']
+      interval: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: ['start-dev', '--import-realm']
+    ports:
+      # For processes on the host (pnpm dev): Node cannot resolve *.localhost names.
+      - '127.0.0.1:${TENANTRY_KC_PORT:-8180}:8080'
+    environment:
+      KC_HOSTNAME: ${TENANTRY_AUTH_URL}
+      KC_HTTP_ENABLED: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: 'true'
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak/platform-realm.json:/opt/keycloak/data/import/platform-realm.json:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      # The image has no curl; ask the management port directly.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q UP <&3
+      interval: 10s
+      retries: 30
+      start_period: 120s
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: packages/db/Dockerfile
+    environment:
+      DATABASE_OWNER_URL: postgres://tenantry_owner:${TENANTRY_OWNER_PASSWORD}@postgres:5432/tenantry
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://tenantry_app:${TENANTRY_APP_PASSWORD}@postgres:5432/tenantry
+      TENANTRY_AUTH_URL: ${TENANTRY_AUTH_URL}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      keycloak: { condition: service_healthy }
+      caddy: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 5s
+      retries: 10
+
+  portal:
+    build:
+      context: ..
+      dockerfile: apps/portal/Dockerfile
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

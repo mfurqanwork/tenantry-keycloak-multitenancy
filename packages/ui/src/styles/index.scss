@@ -1,0 +1,91 @@
+// Tenantry's one stylesheet: Carbon, IBM Plex from the installed packages (no CDN), g10/g100 themes.
+@use '@carbon/react/scss/config' with (
+  $font-path: '@ibm/plex',
+  $use-akamai-cdn: false
+);
+@use '@carbon/react/scss/fonts' with (
+  $fonts: (
+    IBM-Plex-Serif: false,
+  )
+);
+@use '@carbon/react';
+@use '@carbon/react/scss/themes';
+@use '@carbon/react/scss/theme';
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/type';
+
+:root {
+  @include theme.theme(themes.$g10);
+}
+
+:root[data-carbon-theme='g100'] {
+  @include theme.theme(themes.$g100);
+}
+
+body {
+  background: theme.$background;
+  color: theme.$text-primary;
+}
+
+.tenantry-page {
+  padding-block: $spacing-07;
+}
+
+.tenantry-page-header {
+  margin-block-end: $spacing-07;
+}
+
+.tenantry-page-header__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-05;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-start: $spacing-03;
+}
+
+.tenantry-page-header__title {
+  @include type.type-style('productive-heading-05');
+}
+
+.tenantry-page-header__actions {
+  display: flex;
+  gap: $spacing-03;
+}
+
+.tenantry-page__summary {
+  margin-block-end: $spacing-07;
+}
+
+.tenantry-page__body {
+  margin-block: $spacing-07;
+}
+
+.tenantry-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-start: $spacing-05;
+  border-block-start: 1px solid theme.$border-subtle;
+}
+
+.tenantry-save-bar__loading {
+  inline-size: auto;
+  padding-inline: $spacing-05;
+}
+
+// Carbon's grid has column gutters only; wrapped tiles need a row gap to read as separate tiles.
+.tenantry-dashboard__tiles {
+  row-gap: $spacing-05;
+  margin-block-end: $spacing-07;
+}
+
+// Steps keep their minimum width; on a phone the indicator scrolls instead of widening the page.
+.tenantry-wizard__progress {
+  overflow-x: auto;
+}
+
+// Back and Next sit at the end, written like the settings save bar.
+.tenantry-wizard__actions {
+  display: flex;
+  justify-content: flex-end;
+}

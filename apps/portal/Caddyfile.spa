@@ -1,0 +1,6 @@
+# Serves the built SPA; every unknown path falls back to index.html for client-side routing.
+:80 {
+	root * /srv
+	try_files {path} /index.html
+	file_server
+}

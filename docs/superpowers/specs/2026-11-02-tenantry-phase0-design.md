@@ -22,30 +22,30 @@ Out of Phase 0: login, tenants, database tables beyond a migrations baseline, an
 
 The pnpm workspace uses Turborepo and TypeScript 5 in strict mode. `tsconfig.base.json` holds the shared settings, and each package extends it.
 
-| Path | Phase 0 content |
-|---|---|
-| `apps/api` | NestJS 11 app with a `/api/health` endpoint (Terminus checks for Postgres and the Keycloak discovery doc), config loaded from env with zod validation, and pino logging |
-| `apps/web` | Vite + React 19 SPA that renders `AppShell` from `packages/ui` with a placeholder dashboard page |
-| `apps/portal` | Same as web, with a different product name in the header |
-| `packages/ui` | Carbon setup: g10/g100 themes that follow the OS, an always-dark header, IBM Plex, the `AppShell`, and five page-pattern templates (`ListPage`, `DetailPage`, `SettingsPage`, `DashboardPage`, `WizardPage`) with Storybook-free example usage in `apps/web` |
-| `packages/db` | Drizzle and drizzle-kit config, plus a baseline migration that creates the `tenantry_app` role's grants. No tables yet |
-| `packages/auth` | Empty package, with types for `TenantContext` and the permission union (for Phase 1) |
-| `packages/keycloak-admin`, `packages/oidc-client` | Stubs with a README stating their single responsibility |
-| `infra/` | `docker-compose.yml`, `Caddyfile`, `keycloak/platform-realm.json`, `postgres/init.sql` |
-| `docs/decisions` | ADR-0001 to ADR-0016 |
+| Path                                              | Phase 0 content                                                                                                                                                                                                                                              |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/api`                                        | NestJS 11 app with a `/api/health` endpoint (Terminus checks for Postgres and the Keycloak discovery doc), config loaded from env with zod validation, and pino logging                                                                                      |
+| `apps/web`                                        | Vite + React 19 SPA that renders `AppShell` from `packages/ui` with a placeholder dashboard page                                                                                                                                                             |
+| `apps/portal`                                     | Same as web, with a different product name in the header                                                                                                                                                                                                     |
+| `packages/ui`                                     | Carbon setup: g10/g100 themes that follow the OS, an always-dark header, IBM Plex, the `AppShell`, and five page-pattern templates (`ListPage`, `DetailPage`, `SettingsPage`, `DashboardPage`, `WizardPage`) with Storybook-free example usage in `apps/web` |
+| `packages/db`                                     | Drizzle and drizzle-kit config, plus a baseline migration that creates the `tenantry_app` role's grants. No tables yet                                                                                                                                       |
+| `packages/auth`                                   | Empty package, with types for `TenantContext` and the permission union (for Phase 1)                                                                                                                                                                         |
+| `packages/keycloak-admin`, `packages/oidc-client` | Stubs with a README stating their single responsibility                                                                                                                                                                                                      |
+| `infra/`                                          | `docker-compose.yml`, `Caddyfile`, `keycloak/platform-realm.json`, `postgres/init.sql`                                                                                                                                                                       |
+| `docs/decisions`                                  | ADR-0001 to ADR-0016                                                                                                                                                                                                                                         |
 
 `apps/login-theme`, `scripts/`, `examples/` and `tests/isolation` are created in the phases that first need them.
 
 ## Local stack
 
-| Service | Image | Reached at |
-|---|---|---|
-| caddy | `caddy:2` | host :80; Docker network alias `auth.tenantry.localhost` |
-| keycloak | `quay.io/keycloak/keycloak:26.8.x` (exact patch pinned) | `auth.tenantry.localhost` |
-| postgres | `postgres:17` | one server with two databases: `tenantry` and `keycloak` |
-| mailpit | `axllent/mailpit` | `mail.tenantry.localhost` |
-| api | built from `apps/api` (dev: `pnpm --filter api dev` with watch) | `/api/*` on any tenant host |
-| web, portal | Vite dev servers in containers, with HMR through Caddy | `*.tenantry.localhost`, `*.portal.tenantry.localhost` |
+| Service     | Image                                                                                                                                                                                                   | Reached at                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| caddy       | `caddy:2`                                                                                                                                                                                               | host :80; Docker network alias `auth.tenantry.localhost` |
+| keycloak    | `quay.io/keycloak/keycloak:26.8.x` (exact patch pinned)                                                                                                                                                 | `auth.tenantry.localhost`                                |
+| postgres    | `postgres:17`                                                                                                                                                                                           | one server with two databases: `tenantry` and `keycloak` |
+| mailpit     | `axllent/mailpit`                                                                                                                                                                                       | `mail.tenantry.localhost`                                |
+| api         | built from `apps/api` (dev: `pnpm --filter api dev` with watch)                                                                                                                                         | `/api/*` on any tenant host                              |
+| web, portal | `pnpm dev:stack`: built images serving static files. `pnpm dev`: Vite servers on the host with HMR, reached by Caddy through `host.docker.internal` (Windows file watching in containers is unreliable) | `*.tenantry.localhost`, `*.portal.tenantry.localhost`    |
 
 - **Caddy routing.** `auth.` goes to Keycloak and `mail.` to Mailpit. On `*.portal.tenantry.localhost`, `/api/*` goes to the API and everything else to portal. On `*.tenantry.localhost`, `/api/*` goes to the API and everything else to web. The original `Host` header is passed through, so the API can read the tenant slug in Phase 1.
 - **Keycloak settings.** `KC_HOSTNAME=http://auth.tenantry.localhost` and `KC_HTTP_ENABLED=true`, both dev only. The master admin comes from `.env`. `--import-realm` loads `platform-realm.json`, which has Organizations enabled, an empty client list and token lifetimes from the plan (5-minute access tokens).
@@ -58,6 +58,7 @@ The pnpm workspace uses Turborepo and TypeScript 5 in strict mode. `tsconfig.bas
 ## Design system foundation (packages/ui)
 
 These rules follow the plan's Design system section:
+
 - `@carbon/react` v11 and `@carbon/icons-react` only, with no other component library.
 - The `ThemeProvider` picks `g10` or `g100` from `prefers-color-scheme`, with a user override stored in localStorage. The header always renders inside a `g100` Theme zone.
 - Spacing, colour and type come only from Carbon tokens and the productive type scale; custom pixel values fail lint (a stylelint rule on `.scss`).
@@ -69,7 +70,7 @@ These rules follow the plan's Design system section:
 
 ## Docs and repo hygiene
 
-- **README:** a pitch, the "Guarantees" table (rows marked *planned* until their tests exist), quick start, an architecture diagram (Mermaid), a tier comparison and links to the ADRs.
+- **README:** a pitch, the "Guarantees" table (rows marked _planned_ until their tests exist), quick start, an architecture diagram (Mermaid), a tier comparison and links to the ADRs.
 - **AGENTS.md:** layout, commands, conventions, and the plan's hard rules verbatim, plus these:
   - Screens start from a page pattern.
   - Use Carbon components and tokens only.
@@ -89,21 +90,21 @@ These rules follow the plan's Design system section:
 
 ## ADR list
 
-| # | Title |
-|---|---|
-| 0001 | Hybrid tenant model: shared realm with Organizations, realm per enterprise tenant |
-| 0002 | Keycloak 26.8.x, version pinned |
+| #    | Title                                                                                            |
+| ---- | ------------------------------------------------------------------------------------------------ |
+| 0001 | Hybrid tenant model: shared realm with Organizations, realm per enterprise tenant                |
+| 0002 | Keycloak 26.8.x, version pinned                                                                  |
 | 0003 | Standard-tier roles from organization groups, read only from `organization.<alias>.realm_access` |
-| 0004 | Enterprise-tier roles as client roles on `tenantry-api` |
-| 0005 | Subdomain picks the tenant; the token must prove it |
-| 0006 | Shared tables, `tenant_id` on every row, forced RLS, non-owner app role |
-| 0007 | Own users table plus identities keyed by issuer and subject |
-| 0008 | Permissions from a role-to-permission map; code checks permissions |
-| 0009 | Our API is the only writer of identity data |
-| 0010 | Versioned realm templates applied by our own Admin API code |
-| 0011 | Customer apps: Enterprise tier only, with enforced client policies |
-| 0012 | Keycloak native SCIM per enterprise realm |
-| 0013 | pnpm + Turborepo TypeScript monorepo |
-| 0014 | NestJS for the API |
-| 0015 | React + Vite SPAs with IBM Carbon |
-| 0016 | Drizzle ORM with SQL RLS policies and a `tenantTx` helper |
+| 0004 | Enterprise-tier roles as client roles on `tenantry-api`                                          |
+| 0005 | Subdomain picks the tenant; the token must prove it                                              |
+| 0006 | Shared tables, `tenant_id` on every row, forced RLS, non-owner app role                          |
+| 0007 | Own users table plus identities keyed by issuer and subject                                      |
+| 0008 | Permissions from a role-to-permission map; code checks permissions                               |
+| 0009 | Our API is the only writer of identity data                                                      |
+| 0010 | Versioned realm templates applied by our own Admin API code                                      |
+| 0011 | Customer apps: Enterprise tier only, with enforced client policies                               |
+| 0012 | Keycloak native SCIM per enterprise realm                                                        |
+| 0013 | pnpm + Turborepo TypeScript monorepo                                                             |
+| 0014 | NestJS for the API                                                                               |
+| 0015 | React + Vite SPAs with IBM Carbon                                                                |
+| 0016 | Drizzle ORM with SQL RLS policies and a `tenantTx` helper                                        |
