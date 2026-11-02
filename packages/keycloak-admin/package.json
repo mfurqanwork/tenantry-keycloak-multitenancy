@@ -9,11 +9,23 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src test-integration",
+    "test": "vitest run",
+    "test:isolation": "vitest run -c vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@tenantry/auth": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
   }
 }
