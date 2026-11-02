@@ -104,3 +104,9 @@ body {
 
   overflow-wrap: anywhere;
 }
+
+// Carbon's vertical Stack is a grid whose items never shrink below their content, so a wide table
+// widened the whole page on phones. Let the column shrink; the table then scrolls in its own box.
+.tenantry-page__body > .cds--stack-vertical {
+  grid-template-columns: minmax(0, 1fr);
+}
