@@ -4,6 +4,7 @@ export interface AppConfig {
   port: number;
   databaseUrl: string;
   authUrl: string;
+  authInternalUrl: string;
   platformRealm: string;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
@@ -16,6 +17,8 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1),
   TENANTRY_AUTH_URL: z.url(),
+  // Where this process reaches Keycloak, when that differs from the public URL (host-mode `pnpm dev`).
+  TENANTRY_AUTH_INTERNAL_URL: z.url().optional(),
   TENANTRY_PLATFORM_REALM: z.string().min(1).default('platform'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
@@ -32,6 +35,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     port: e.PORT,
     databaseUrl: e.DATABASE_URL,
     authUrl: e.TENANTRY_AUTH_URL.replace(/\/$/, ''),
+    authInternalUrl: (e.TENANTRY_AUTH_INTERNAL_URL ?? e.TENANTRY_AUTH_URL).replace(/\/$/, ''),
     platformRealm: e.TENANTRY_PLATFORM_REALM,
     logLevel: e.LOG_LEVEL,
   };

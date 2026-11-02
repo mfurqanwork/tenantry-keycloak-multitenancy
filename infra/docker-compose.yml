@@ -4,7 +4,7 @@ services:
   caddy:
     image: caddy:2.10-alpine
     ports:
-      - '${TENANTRY_HTTP_PORT}:${TENANTRY_HTTP_PORT}'
+      - '127.0.0.1:${TENANTRY_HTTP_PORT}:${TENANTRY_HTTP_PORT}'
     environment:
       TENANTRY_HTTP_PORT: ${TENANTRY_HTTP_PORT}
       WEB_UPSTREAM: ${WEB_UPSTREAM}
@@ -43,6 +43,9 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
     command: ['start-dev', '--import-realm']
+    ports:
+      # For processes on the host (pnpm dev): Node cannot resolve *.localhost names.
+      - '127.0.0.1:${TENANTRY_KC_PORT:-8180}:8080'
     environment:
       KC_HOSTNAME: ${TENANTRY_AUTH_URL}
       KC_HTTP_ENABLED: 'true'

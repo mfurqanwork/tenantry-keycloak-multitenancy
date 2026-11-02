@@ -3,11 +3,16 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ensureEnv, ROOT } from './lib/env.mjs';
-import { isPortFree } from './lib/port.mjs';
+import { busyPorts } from './lib/port.mjs';
 
 const infraOnly = process.argv.includes('--infra');
 const env = ensureEnv();
 const port = Number(env.TENANTRY_HTTP_PORT ?? 80);
+const ports = {
+  TENANTRY_HTTP_PORT: port,
+  TENANTRY_PG_PORT: Number(env.TENANTRY_PG_PORT ?? 5432),
+  TENANTRY_KC_PORT: Number(env.TENANTRY_KC_PORT ?? 8180),
+};
 const cwd = fileURLToPath(ROOT);
 const compose = ['compose', '-f', 'infra/docker-compose.yml', '--env-file', '.env'];
 
@@ -25,12 +30,18 @@ try {
   );
   process.exit(1);
 }
-if (!ourCaddy && !(await isPortFree(port))) {
-  console.error(
-    `Port ${port} is in use. Set TENANTRY_HTTP_PORT and TENANTRY_AUTH_URL (with the port) in .env, then rerun.`,
-  );
-  process.exit(1);
+// When our own stack is already up, its containers hold these ports; that is not a conflict.
+const busy = ourCaddy ? [] : await busyPorts(ports);
+for (const { name, port: taken } of busy) {
+  const hint =
+    name === 'TENANTRY_HTTP_PORT'
+      ? 'Set TENANTRY_HTTP_PORT and TENANTRY_AUTH_URL (with the port) in .env'
+      : name === 'TENANTRY_PG_PORT'
+        ? 'Set TENANTRY_PG_PORT and the port in DATABASE_URL and DATABASE_OWNER_URL in .env'
+        : 'Set TENANTRY_KC_PORT and TENANTRY_AUTH_INTERNAL_URL in .env';
+  console.error(`Port ${taken} is in use. ${hint}, then rerun.`);
 }
+if (busy.length) process.exit(1);
 
 const upstreams = infraOnly
   ? {

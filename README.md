@@ -49,7 +49,7 @@ Then open <http://demo.tenantry.localhost>. Any subdomain works as a tenant slug
 - **Keycloak admin:** <http://auth.tenantry.localhost>, with the credentials in `.env`. The first run creates `.env` from `.env.example`.
 - **Mailpit** (catches outgoing email): <http://mail.tenantry.localhost>.
 - **Check the stack:** `pnpm smoke`.
-- **Port 80 or 5432 already in use?** Set `TENANTRY_HTTP_PORT` (and add the port to `TENANTRY_AUTH_URL`) or `TENANTRY_PG_PORT` in `.env`, then rerun. URLs then include the port, for example `http://demo.tenantry.localhost:8080`.
+- **Port 80, 5432 or 8180 already in use?** `pnpm dev:stack` names the variable to change. Set `TENANTRY_HTTP_PORT` and add the port to `TENANTRY_AUTH_URL`. Or set `TENANTRY_PG_PORT` and the port in `DATABASE_URL` and `DATABASE_OWNER_URL`. Or set `TENANTRY_KC_PORT` and `TENANTRY_AUTH_INTERNAL_URL`. Then rerun. URLs then include the port, for example `http://demo.tenantry.localhost:8080`. Every port listens on `127.0.0.1` only.
 - **Day-to-day development:** `pnpm dev` runs Keycloak, Postgres, Caddy and Mailpit in Docker, and the API and both apps on your machine with hot reload.
 
 `*.localhost` names resolve to your own machine in Chrome, Edge and Firefox, with no hosts-file edits.

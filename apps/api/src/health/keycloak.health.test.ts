@@ -7,6 +7,7 @@ const config: AppConfig = {
   port: 3000,
   databaseUrl: 'postgres://x',
   authUrl: 'http://auth.tenantry.localhost',
+  authInternalUrl: 'http://auth.tenantry.localhost',
   platformRealm: 'platform',
   logLevel: 'info',
 };
@@ -37,5 +38,22 @@ describe('KeycloakHealthIndicator', () => {
     await expect(indicator().check()).resolves.toEqual({
       keycloak: { status: 'down', message: 'fetch failed' },
     });
+  });
+
+  it('fetches through the internal URL but still expects the public issuer', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ issuer: 'http://auth.tenantry.localhost/realms/platform' }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const internal = new KeycloakHealthIndicator(
+      { ...config, authInternalUrl: 'http://127.0.0.1:8180' },
+      new HealthIndicatorService(),
+    );
+    await expect(internal.check()).resolves.toEqual({ keycloak: { status: 'up' } });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'http://127.0.0.1:8180/realms/platform/.well-known/openid-configuration',
+    );
   });
 });

@@ -14,7 +14,8 @@ export class KeycloakHealthIndicator {
     const indicator = this.health.check('keycloak');
     const expected = `${this.config.authUrl}/realms/${this.config.platformRealm}`;
     try {
-      const res = await fetch(`${expected}/.well-known/openid-configuration`, {
+      const discovery = `${this.config.authInternalUrl}/realms/${this.config.platformRealm}/.well-known/openid-configuration`;
+      const res = await fetch(discovery, {
         signal: AbortSignal.timeout(3000),
       });
       if (!res.ok) return indicator.down({ message: `discovery returned ${res.status}` });
