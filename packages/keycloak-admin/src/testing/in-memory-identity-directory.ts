@@ -23,6 +23,10 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     this.failing.add(operation);
   }
 
+  clearFailures(): void {
+    this.failing.clear();
+  }
+
   // Like the real client, every failure is a rejected promise, never a synchronous throw.
   private run<T>(operation: keyof IdentityDirectory, fn: () => T): Promise<T> {
     return new Promise((resolve) => {

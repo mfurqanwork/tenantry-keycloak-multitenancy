@@ -11,6 +11,7 @@ import { KeycloakHealthIndicator } from './health/keycloak.health.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
+import { SignupModule } from './modules/signup/signup.module.js';
 import { TenantsModule } from './modules/tenants/tenants.module.js';
 
 @Module({})
@@ -26,6 +27,7 @@ export class AppModule {
         TenantsModule,
         AuditModule,
         ProjectsModule,
+        SignupModule,
       ],
       controllers: [HealthController],
       providers: [

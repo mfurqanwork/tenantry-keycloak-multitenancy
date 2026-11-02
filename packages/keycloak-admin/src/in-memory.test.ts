@@ -18,6 +18,8 @@ describe('InMemoryIdentityDirectory', () => {
     dir.failOn('createGroups');
     const { id } = await dir.createOrganization({ alias: 'acme', name: 'Acme' });
     await expect(dir.createGroups(id)).rejects.toBeInstanceOf(DirectoryError);
+    dir.clearFailures();
+    await expect(dir.createGroups(id)).resolves.toBeUndefined();
   });
 
   it('records invites and origins for assertions', async () => {
