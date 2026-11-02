@@ -39,8 +39,9 @@ describe('loadConfig', () => {
   });
 
   it('names a missing backend secret', () => {
-    const { KEYCLOAK_BACKEND_CLIENT_SECRET: _omit, ...env } = base;
-    expect(() => loadConfig(env)).toThrow(/KEYCLOAK_BACKEND_CLIENT_SECRET/);
+    expect(() => loadConfig({ ...base, KEYCLOAK_BACKEND_CLIENT_SECRET: undefined })).toThrow(
+      /KEYCLOAK_BACKEND_CLIENT_SECRET/,
+    );
   });
 
   it('reads the base domain', () => {
