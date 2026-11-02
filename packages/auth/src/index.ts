@@ -1,3 +1,11 @@
-export { permissionsFor, ROLE_PERMISSIONS } from './roles.js';
-export type { Permission, Role } from './roles.js';
+export {
+  canAssignRole,
+  groupForRole,
+  highestRole,
+  permissionsFor,
+  ROLE_PERMISSIONS,
+  ROLES,
+  roleForGroupPath,
+} from './roles.js';
+export type { GroupName, Permission, Role } from './roles.js';
 export type { TenantContext } from './context.js';

@@ -9,14 +9,18 @@
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:isolation": "vitest run -c vitest.integration.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/terminus": "^11.1.1",
+    "@tenantry/auth": "workspace:*",
     "@tenantry/db": "workspace:*",
+    "@tenantry/keycloak-admin": "workspace:*",
+    "jose": "^6.2.15",
     "nestjs-pino": "^5.3.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",

@@ -21,13 +21,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src test-integration",
     "test": "vitest run",
-    "migrate": "node dist/migrate-cli.js"
+    "migrate": "node dist/migrate-cli.js",
+    "test:isolation": "vitest run -c vitest.integration.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "@tenantry/auth": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",

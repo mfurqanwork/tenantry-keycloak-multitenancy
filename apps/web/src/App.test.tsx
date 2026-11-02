@@ -1,15 +1,29 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import { TenantryThemeProvider } from '@tenantry/ui';
 import { App } from './App.js';
+import { ApiProvider } from './lib/api.js';
+import { MeProvider, type Me } from './lib/me.js';
+import { ALL, fakeApi, makeMe, MEMBER } from './test-utils.js';
 
-function renderAt(path: string) {
+function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <App hostname="demo.tenantry.localhost" />
-    </MemoryRouter>,
+    <TenantryThemeProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <ApiProvider api={fakeApi()}>
+          <MeProvider value={me}>
+            <App hostname="demo.tenantry.localhost" />
+          </MeProvider>
+        </ApiProvider>
+      </MemoryRouter>
+    </TenantryThemeProvider>,
   );
 }
+
+const renderAs = (me: Me) => {
+  renderAt('/', me);
+};
 
 describe('web app', () => {
   it('shows the dashboard with the tenant slug from the subdomain', () => {
@@ -30,5 +44,17 @@ describe('web app', () => {
     renderAt('/patterns');
     const links = screen.getAllByRole('link', { name: 'Patterns' });
     expect(links.some((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
+  });
+
+  it('shows only the pages the role allows in the side nav', () => {
+    renderAs(makeMe('member', MEMBER));
+    expect(screen.getAllByRole('link', { name: 'Projects' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Members' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Audit log' })).not.toBeInTheDocument();
+  });
+
+  it('shows the audit log to an owner', () => {
+    renderAs(makeMe('owner', ALL));
+    expect(screen.getAllByRole('link', { name: 'Audit log' }).length).toBeGreaterThan(0);
   });
 });

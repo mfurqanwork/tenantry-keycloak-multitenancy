@@ -11,6 +11,16 @@ http://mail.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
 	reverse_proxy mailpit:8025
 }
 
+# The apex host serves signup from the web app.
+http://tenantry.localhost:{$TENANTRY_HTTP_PORT} {
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
+	handle {
+		reverse_proxy {$WEB_UPSTREAM}
+	}
+}
+
 http://*.portal.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
 	handle /api/* {
 		reverse_proxy {$API_UPSTREAM}

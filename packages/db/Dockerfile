@@ -12,7 +12,7 @@ COPY --from=pruner /repo/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 COPY tsconfig.base.json .
-RUN pnpm --filter @tenantry/db build
+RUN pnpm --filter "@tenantry/db..." build
 
 FROM builder
 CMD ["node", "packages/db/dist/migrate-cli.js"]

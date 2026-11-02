@@ -20,3 +20,6 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0014](0014-nestjs-api.md)            | NestJS for the API                                          |
 | [0015](0015-react-vite-carbon.md)     | React + Vite SPAs with IBM Carbon                           |
 | [0016](0016-drizzle-rls.md)           | Drizzle ORM with SQL RLS policies and a tenantTx helper     |
+| [0017](0017-feature-modules.md)       | Feature modules behind two interfaces                       |
+| [0018](0018-signup-saga.md)           | Signup through Keycloak first, with a compensating saga     |
+| [0019](0019-keycloak-org-invites.md)  | Invites through Keycloak organization invites               |

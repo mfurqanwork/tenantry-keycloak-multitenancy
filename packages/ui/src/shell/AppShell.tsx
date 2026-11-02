@@ -1,4 +1,5 @@
 import {
+  Button,
   Content,
   Header,
   HeaderContainer,
@@ -6,14 +7,15 @@ import {
   HeaderGlobalBar,
   HeaderMenuButton,
   HeaderName,
+  HeaderPanel,
   SideNav,
   SideNavItems,
   SideNavLink,
   SkipToContent,
   Theme,
 } from '@carbon/react';
-import { Asleep, Light, Screen, type CarbonIconType } from '@carbon/icons-react';
-import type { ReactNode } from 'react';
+import { Asleep, Light, Screen, UserAvatar, type CarbonIconType } from '@carbon/icons-react';
+import { useState, type ElementType, type ReactNode } from 'react';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
 
@@ -27,6 +29,10 @@ interface AppShellProps {
   productName: string;
   navItems: NavItem[];
   currentPath: string;
+  // The app's router link (it receives href); plain anchors, and full page loads, without it.
+  linkAs?: ElementType;
+  // The signed-in person, for the account menu; no menu without one.
+  user?: { email: string; onSignOut: () => void };
   children: ReactNode;
 }
 
@@ -37,8 +43,9 @@ const THEME_ACTIONS: { preference: ThemePreference; label: string; Icon: CarbonI
 ];
 
 // The frame every screen sits in: a header that is dark in both themes, a side nav, and the main landmark.
-export function AppShell({ productName, navItems, currentPath, children }: AppShellProps) {
+export function AppShell({ productName, navItems, currentPath, linkAs, user, children }: AppShellProps) {
   const { preference, setPreference } = useThemePreference();
+  const [accountOpen, setAccountOpen] = useState(false);
   return (
     <HeaderContainer
       render={({ isSideNavExpanded, onClickSideNavExpand }) => (
@@ -68,7 +75,30 @@ export function AppShell({ productName, navItems, currentPath, children }: AppSh
                     <Icon size={20} />
                   </HeaderGlobalAction>
                 ))}
+                {user && (
+                  <HeaderGlobalAction
+                    aria-label="Account"
+                    aria-expanded={accountOpen}
+                    isActive={accountOpen}
+                    tooltipAlignment="end"
+                    onClick={() => {
+                      setAccountOpen(!accountOpen);
+                    }}
+                  >
+                    <UserAvatar size={20} />
+                  </HeaderGlobalAction>
+                )}
               </HeaderGlobalBar>
+              {user && (
+                <HeaderPanel aria-label="Account" expanded={accountOpen}>
+                  <div className="tenantry-account">
+                    <p className="tenantry-account__email">{user.email}</p>
+                    <Button kind="secondary" size="sm" onClick={user.onSignOut}>
+                      Sign out
+                    </Button>
+                  </div>
+                </HeaderPanel>
+              )}
             </Header>
           </Theme>
           <SideNav
@@ -83,6 +113,7 @@ export function AppShell({ productName, navItems, currentPath, children }: AppSh
                 return (
                   <SideNavLink
                     key={item.href}
+                    {...(linkAs ? { as: linkAs } : {})}
                     href={item.href}
                     {...(item.icon ? { renderIcon: item.icon } : {})}
                     isActive={current}

@@ -7,21 +7,21 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** Phase 0 (foundations). The stack runs and the decisions are recorded. Identity features arrive in Phase 1. See the [roadmap](#roadmap).
+> **Status:** Phase 1 (Standard tenant core). Signup, the auth guard, row-level security, members with invites and roles, and the audit log work, and the Phase 1 guarantees are tested in CI. See the [roadmap](#roadmap).
 
 ## Guarantees
 
-These are the project's promises. Each one becomes an automated test that runs in CI against real Keycloak and Postgres containers. Until its phase lands, a row stays _planned_.
+These are the project's promises. Each one is an automated test that runs in CI against real Keycloak and Postgres containers (`pnpm test:isolation`). Until its phase lands, a row stays _planned_.
 
 | Guarantee                                                   | Expected result                                             | Phase | Status  |
 | ----------------------------------------------------------- | ----------------------------------------------------------- | ----- | ------- |
-| Tenant A user requests tenant B data with A's token         | 403                                                         | 1     | planned |
-| Tenant A user calls B's subdomain with A's token            | 403                                                         | 1     | planned |
-| A query that forgets the tenant filter                      | Returns only the current tenant's rows (row-level security) | 1     | planned |
-| App database role tries to bypass row-level security        | Not allowed; the role does not own the tables               | 1     | planned |
-| User is admin in org A and member in org B, acts in B       | Treated as member                                           | 1     | planned |
-| Client sends a tenant id header that differs from the token | Ignored; the token decides                                  | 1     | planned |
-| Member tries to invite, remove or change roles              | 403                                                         | 1     | planned |
+| Tenant A user requests tenant B data with A's token         | 404 (the row is invisible to A)                             | 1     | tested  |
+| Tenant A user calls B's subdomain with A's token            | 403                                                         | 1     | tested  |
+| A query that forgets the tenant filter                      | Returns only the current tenant's rows (row-level security) | 1     | tested  |
+| App database role tries to bypass row-level security        | Not allowed; the role does not own the tables               | 1     | tested  |
+| User is admin in org A and member in org B, acts in B       | Treated as member                                           | 1     | tested  |
+| Client sends a tenant id header that differs from the token | Ignored; the token decides                                  | 1     | tested  |
+| Member tries to invite, remove or change roles              | 403                                                         | 1     | tested  |
 | Logout in one app                                           | Session ends in the other app                               | 2     | planned |
 | Domain link without a verified DNS record                   | Refused                                                     | 2     | planned |
 | Valid token from another enterprise realm                   | 401 (issuer rule)                                           | 3     | planned |
@@ -53,6 +53,17 @@ Then open <http://demo.tenantry.localhost>. Any subdomain works as a tenant slug
 - **Day-to-day development:** `pnpm dev` runs Keycloak, Postgres, Caddy and Mailpit in Docker, and the API and both apps on your machine with hot reload.
 
 `*.localhost` names resolve to your own machine in Chrome, Edge and Firefox, with no hosts-file edits.
+
+## Try it
+
+With the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
+
+1. Open <http://tenantry.localhost>, choose **Register**, create an account, and confirm it with the link Keycloak emails to Mailpit (<http://mail.tenantry.localhost>).
+2. The **Create your workspace** wizard asks for a name and an address. Create `acme`.
+3. You land on <http://acme.tenantry.localhost>, signed in as the owner.
+4. Under **Members**, invite someone as Admin. The invite email arrives in Mailpit at <http://mail.tenantry.localhost>.
+5. Sign out, follow the email's link, register as that person, and confirm the address the same way. At `acme.tenantry.localhost` they are an Admin.
+6. **Audit log** lists `tenant.created`, `member.invited` and `member.joined`. **Projects** is the row-level security example.
 
 ## Architecture
 

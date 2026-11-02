@@ -7,6 +7,11 @@ export interface AppConfig {
   authInternalUrl: string;
   platformRealm: string;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+  baseDomain: string;
+  // The port browsers use, read from the public auth URL; null when it is the default 80.
+  publicPort: number | null;
+  backendClientId: string;
+  backendClientSecret: string;
 }
 
 export class ConfigError extends Error {
@@ -21,6 +26,9 @@ const schema = z.object({
   TENANTRY_AUTH_INTERNAL_URL: z.url().optional(),
   TENANTRY_PLATFORM_REALM: z.string().min(1).default('platform'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  TENANTRY_BASE_DOMAIN: z.string().min(1).default('tenantry.localhost'),
+  KEYCLOAK_BACKEND_CLIENT_ID: z.string().min(1),
+  KEYCLOAK_BACKEND_CLIENT_SECRET: z.string().min(1),
 });
 
 // Fails fast at startup, naming every bad variable at once.
@@ -38,6 +46,10 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     authInternalUrl: (e.TENANTRY_AUTH_INTERNAL_URL ?? e.TENANTRY_AUTH_URL).replace(/\/$/, ''),
     platformRealm: e.TENANTRY_PLATFORM_REALM,
     logLevel: e.LOG_LEVEL,
+    baseDomain: e.TENANTRY_BASE_DOMAIN,
+    publicPort: new URL(e.TENANTRY_AUTH_URL).port ? Number(new URL(e.TENANTRY_AUTH_URL).port) : null,
+    backendClientId: e.KEYCLOAK_BACKEND_CLIENT_ID,
+    backendClientSecret: e.KEYCLOAK_BACKEND_CLIENT_SECRET,
   };
 }
 

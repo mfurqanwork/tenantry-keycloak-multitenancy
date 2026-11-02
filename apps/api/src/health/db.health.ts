@@ -2,8 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { HealthIndicatorService, type HealthIndicatorResult } from '@nestjs/terminus';
 import { pingDatabase } from '@tenantry/db';
 import type { Pool } from '@tenantry/db';
-
-export const DB_POOL = Symbol('DB_POOL');
+import { DB_POOL } from '../infrastructure/tokens.js';
 
 @Injectable()
 export class DatabaseHealthIndicator {

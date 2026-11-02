@@ -29,3 +29,10 @@
   padding-inline: $spacing-05;
   border: 1px dashed theme.$border-subtle;
 }
+
+// A heading for a second table on a list page (below the page's h1).
+.tenantry-section__title {
+  @include type.type-style('heading-compact-02');
+
+  margin-block-end: $spacing-05;
+}
