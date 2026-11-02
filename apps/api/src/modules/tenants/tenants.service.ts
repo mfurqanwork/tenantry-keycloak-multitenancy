@@ -17,8 +17,9 @@ export class TenantsService {
 
   async authConfig(slug: string): Promise<AuthConfig> {
     const tenant = await platformRepository(this.db).findTenantBySlug(slug.toLowerCase());
-    if (tenant?.status !== 'active' || !tenant.issuer)
+    if (tenant?.status !== 'active' || !tenant.issuer) {
       throw new NotFoundProblem('No workspace at this address.');
+    }
     return { issuer: tenant.issuer, clientId: WEB_CLIENT_ID, organization: tenant.slug };
   }
 }

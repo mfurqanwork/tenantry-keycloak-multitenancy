@@ -55,6 +55,11 @@ export interface TestApp {
     org?: { alias: string; groups: string[] },
     extra?: Record<string, unknown>,
   ): Promise<string>;
+  // A new user who is in the tenant with this group, and a token that says so.
+  member(
+    tenant: TestTenant,
+    group: 'owners' | 'admins' | 'members',
+  ): Promise<{ user: TestUser; token: string }>;
   close(): Promise<void>;
 }
 
