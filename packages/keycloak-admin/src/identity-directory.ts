@@ -12,6 +12,7 @@ export interface DirectoryMember {
 // Everything the API asks of Keycloak for Standard tenants. Services depend on this, never on HTTP.
 export interface IdentityDirectory {
   createOrganization(input: { alias: string; name: string }): Promise<{ id: string }>;
+  findOrganizationByAlias(alias: string): Promise<{ id: string } | null>;
   // A missing organization counts as deleted.
   deleteOrganization(orgId: string): Promise<void>;
   // Creates the owners, admins and members groups inside the organization.

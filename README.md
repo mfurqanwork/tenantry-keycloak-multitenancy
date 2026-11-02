@@ -58,11 +58,11 @@ Then open <http://demo.tenantry.localhost>. Any subdomain works as a tenant slug
 
 With the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
 
-1. Open <http://tenantry.localhost>, choose **Register**, and create an account.
+1. Open <http://tenantry.localhost>, choose **Register**, create an account, and confirm it with the link Keycloak emails to Mailpit (<http://mail.tenantry.localhost>).
 2. The **Create your workspace** wizard asks for a name and an address. Create `acme`.
 3. You land on <http://acme.tenantry.localhost>, signed in as the owner.
 4. Under **Members**, invite someone as Admin. The invite email arrives in Mailpit at <http://mail.tenantry.localhost>.
-5. Sign out, follow the email's link, and register as that person. At `acme.tenantry.localhost` they are an Admin.
+5. Sign out, follow the email's link, register as that person, and confirm the address the same way. At `acme.tenantry.localhost` they are an Admin.
 6. **Audit log** lists `tenant.created`, `member.invited` and `member.joined`. **Projects** is the row-level security example.
 
 ## Architecture

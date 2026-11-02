@@ -142,8 +142,8 @@ describe('changing roles', () => {
     const third = await t.member(acme, 'owners');
     expect((await as(third).del(`/api/members/${ownerId}`)).status).toBe(204);
     const thirdId = await userIdOf(third.user);
-    // The removed owner's token still says owner until it expires (5 min); the owner count still stops them.
-    expect((await as(owner).patch(`/api/members/${thirdId}`, { role: 'admin' })).status).toBe(409);
+    // The removed owner's token still says owner for up to five minutes; their current role decides.
+    expect((await as(owner).patch(`/api/members/${thirdId}`, { role: 'admin' })).status).toBe(403);
     expect(
       (
         await t.request({
@@ -167,6 +167,41 @@ describe('changing roles', () => {
     });
     expect((await as(admin).patch(`/api/members/${res.body.user.id}`, { role: 'admin' })).status).toBe(404);
     expect((await as(admin).del(`/api/members/${res.body.user.id}`)).status).toBe(404);
+  });
+});
+
+describe('changes that race or come from stale tokens', () => {
+  it('lets only one of two owners demoting each other at once succeed', async () => {
+    const second = await t.member(acme, 'owners');
+    const [ownerId, secondId] = [await userIdOf(owner.user), await userIdOf(second.user)];
+    // Like a real network: both requests read the owner count before either writes.
+    t.directory.latencyMs = 25;
+    const results = await Promise.all([
+      as(owner).patch(`/api/members/${secondId}`, { role: 'admin' }),
+      as(second).patch(`/api/members/${ownerId}`, { role: 'admin' }),
+    ]);
+    t.directory.latencyMs = 0;
+    // Exactly one wins; the other is refused (by then its actor is no longer an owner).
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(results.filter((r) => r.status >= 400)).toHaveLength(1);
+    const owners = (await t.directory.listMembers(acme.kcOrgId)).filter((m) => m.group === 'owners');
+    expect(owners).toHaveLength(1);
+  });
+
+  it('refuses an admin who was removed but still holds an unexpired token', async () => {
+    await t.directory.removeMember(acme.kcOrgId, admin.user.sub);
+    const res = await as(admin).post('/api/members/invites', {
+      email: 'comeback@example.com',
+      role: 'admin',
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('uses the current role, not the one in an old token', async () => {
+    // Demoted to member in Keycloak; the token still says admin.
+    await t.directory.setMemberGroup(acme.kcOrgId, admin.user.sub, 'members');
+    const res = await as(admin).patch(`/api/members/${await userIdOf(member.user)}`, { role: 'admin' });
+    expect(res.status).toBe(403);
   });
 });
 

@@ -63,6 +63,7 @@ export class TenantAuthGuard implements CanActivate {
       userId: user.userId,
       kcUserId: user.kcUserId,
       email: user.email,
+      emailVerified: payload['email_verified'] === true,
     });
     if (!role) throw new ForbiddenProblem('You have no role in this workspace yet.');
 

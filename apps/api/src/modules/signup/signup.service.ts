@@ -55,6 +55,10 @@ export class SignupService {
           {
             name: 'create organization',
             run: async () => {
+              // We hold this slug now, so an organization already using it is debris from an earlier
+              // attempt whose Keycloak reply was lost; remove it rather than fail on the alias.
+              const orphan = await this.directory.findOrganizationByAlias(input.slug);
+              if (orphan) await this.directory.deleteOrganization(orphan.id);
               // Keycloak keeps organization names unique; display names are not, so the slug is the name.
               orgId = (await this.directory.createOrganization({ alias: input.slug, name: input.slug })).id;
             },

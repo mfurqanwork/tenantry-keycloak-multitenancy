@@ -28,10 +28,17 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
   }
 
   // Like the real client, every failure is a rejected promise, never a synchronous throw.
+  // Milliseconds each call waits before it runs, like a network round trip; lets tests interleave calls.
+  latencyMs = 0;
+
   private run<T>(operation: keyof IdentityDirectory, fn: () => T): Promise<T> {
-    return new Promise((resolve) => {
+    const wait = new Promise<void>((resolve) => {
+      if (this.latencyMs > 0) setTimeout(resolve, this.latencyMs);
+      else resolve();
+    });
+    return wait.then(() => {
       if (this.failing.has(operation)) throw new DirectoryError(operation, 500, 'injected failure');
-      resolve(fn());
+      return fn();
     });
   }
 
@@ -50,6 +57,13 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
       const id = randomUUID();
       this.orgs.set(id, { ...input, groups: false, members: new Map() });
       return { id };
+    });
+  }
+
+  findOrganizationByAlias(alias: string): Promise<{ id: string } | null> {
+    return this.run('findOrganizationByAlias', () => {
+      const found = [...this.orgs].find(([, org]) => org.alias === alias);
+      return found ? { id: found[0] } : null;
     });
   }
 

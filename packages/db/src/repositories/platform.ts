@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { isUniqueViolation, SlugTakenError } from '../errors.js';
 import { identities, tenantIdentity, tenants, users, type TenantStatus } from '../schema/index.js';
 import type { Executor } from './executor.js';
@@ -43,11 +43,25 @@ export function platformRepository(ex: Executor) {
     findTenantBySlug: (slug: string) => findTenant(eq(tenants.slug, slug)),
     findTenantById: (id: string) => findTenant(eq(tenants.id, id)),
 
-    // A failed signup leaves its row behind; the next signup for that slug replaces it.
+    // A failed signup leaves its row behind, and so does one whose process died mid-way (still
+    // provisioning after ten minutes); the next signup for that slug replaces either.
     async insertProvisioningTenant(input: { slug: string; name: string }): Promise<{ id: string }> {
       try {
         return await ex.transaction(async (tx) => {
-          await tx.delete(tenants).where(and(eq(tenants.slug, input.slug), eq(tenants.status, 'failed')));
+          await tx
+            .delete(tenants)
+            .where(
+              and(
+                eq(tenants.slug, input.slug),
+                or(
+                  eq(tenants.status, 'failed'),
+                  and(
+                    eq(tenants.status, 'provisioning'),
+                    lt(tenants.createdAt, sql`now() - interval '10 minutes'`),
+                  ),
+                ),
+              ),
+            );
           const [row] = await tx.insert(tenants).values(input).returning({ id: tenants.id });
           if (!row) throw new Error('insert returned no row');
           return row;

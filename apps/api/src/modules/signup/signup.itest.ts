@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { IdentityDirectory } from '@tenantry/keycloak-admin';
-import { listAudit, platformRepository, tenantTx } from '@tenantry/db';
+import { createAppPool, listAudit, platformRepository, tenantTx } from '@tenantry/db';
+import { stackEnv } from '../../testing/env.js';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from '../../testing/test-app.js';
 
@@ -83,6 +84,23 @@ describe('POST /api/signup', () => {
   it('lets two workspaces share a display name', async () => {
     expect((await signup(newSlug(), 'Same Name')).status).toBe(201);
     expect((await signup(newSlug(), 'Same Name')).status).toBe(201);
+  });
+
+  it('replaces a signup whose process died mid-way', async () => {
+    const slug = newSlug();
+    const { id } = await platformRepository(t.db).insertProvisioningTenant({ slug, name: 'Crashed' });
+    const owner = createAppPool(stackEnv('DATABASE_OWNER_URL'));
+    await owner.query(`update tenants set created_at = now() - interval '11 minutes' where id = $1`, [id]);
+    await owner.end();
+    expect((await signup(slug)).status).toBe(201);
+  });
+
+  it('cleans up an organization left behind by a lost Keycloak response', async () => {
+    const slug = newSlug();
+    // Keycloak created it, but the API never learned the id.
+    await t.directory.createOrganization({ alias: slug, name: slug });
+    expect((await signup(slug)).status).toBe(201);
+    expect(orgsWithAlias(slug)).toHaveLength(1);
   });
 
   it('answers 409 for a slug that is taken', async () => {

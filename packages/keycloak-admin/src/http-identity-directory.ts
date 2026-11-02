@@ -95,6 +95,20 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       return { id };
     },
 
+    // Keycloak's search matches names; organizations are named by their alias (ADR-0018), so search
+    // by it and keep only an exact alias match.
+    async findOrganizationByAlias(alias) {
+      const found = await json<{ id: string; alias: string }[]>(
+        await call(
+          'findOrganizationByAlias',
+          'GET',
+          `/organizations?search=${encodeURIComponent(alias)}&exact=true`,
+        ),
+      );
+      const match = found.find((o) => o.alias === alias);
+      return match ? { id: match.id } : null;
+    },
+
     async deleteOrganization(orgId) {
       await call('deleteOrganization', 'DELETE', org(orgId), undefined, [404]);
     },

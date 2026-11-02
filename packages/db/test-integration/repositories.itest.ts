@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OpenInviteExistsError, SlugTakenError } from '../src/errors.js';
 import { insertAudit, listAudit } from '../src/repositories/audit.js';
-import { createInvite, findOpenInviteByEmail, revokeInvite } from '../src/repositories/invites.js';
+import {
+  createInvite,
+  findOpenInviteByEmail,
+  hasRevokedInvite,
+  revokeInvite,
+} from '../src/repositories/invites.js';
+import { lockTenantMembership } from '../src/repositories/membership-lock.js';
 import { platformRepository } from '../src/repositories/platform.js';
 import { createProject, getProject } from '../src/repositories/projects.js';
 import { tenantTx } from '../src/tenant-tx.js';
@@ -21,6 +27,32 @@ beforeAll(async () => {
 afterAll(() => conn.close());
 
 describe('platformRepository: tenants', () => {
+  it('reuses a slug whose signup has been stuck in provisioning for over ten minutes', async () => {
+    const slug = newSlug();
+    const stuck = await platform.insertProvisioningTenant({ slug, name: 'Crashed' });
+    await conn.owner.query(`update tenants set created_at = now() - interval '11 minutes' where id = $1`, [
+      stuck.id,
+    ]);
+    const again = await platform.insertProvisioningTenant({ slug, name: 'Again' });
+    expect(again.id).not.toBe(stuck.id);
+  });
+
+  it('serialises membership changes per tenant', async () => {
+    const order: string[] = [];
+    const hold = (label: string, ms: number) =>
+      tenantTx(conn.db, a.tenantId, async (tx) => {
+        await lockTenantMembership(tx);
+        order.push(`${label}:start`);
+        await new Promise((r) => setTimeout(r, ms));
+        order.push(`${label}:end`);
+      });
+    await Promise.all([
+      hold('first', 150),
+      new Promise((r) => setTimeout(r, 20)).then(() => hold('second', 0)),
+    ]);
+    expect(order).toEqual(['first:start', 'first:end', 'second:start', 'second:end']);
+  });
+
   it('refuses a slug held by a provisioning or active tenant, and reuses a failed one', async () => {
     const slug = newSlug();
     const first = await platform.insertProvisioningTenant({ slug, name: 'One' });
@@ -106,7 +138,9 @@ describe('invites', () => {
         role: 'member',
         invitedBy: b.userId,
       });
+      expect(await hasRevokedInvite(tx, 'CAROL@example.com')).toBe(false);
       expect(await revokeInvite(tx, invite.id)).toBe(true);
+      expect(await hasRevokedInvite(tx, 'CAROL@example.com')).toBe(true);
       expect(await revokeInvite(tx, invite.id)).toBe(false);
       await expect(
         createInvite(tx, { email: 'carol@example.com', role: 'member', invitedBy: b.userId }),

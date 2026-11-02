@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { groupForRole, type Role } from '@tenantry/auth';
+import { groupForRole, roleForGroupPath, type Role } from '@tenantry/auth';
 import {
   findOpenInviteByEmail,
+  hasRevokedInvite,
   insertAudit,
   markInviteAccepted,
   tenantTx,
@@ -11,8 +12,10 @@ import {
 import type { IdentityDirectory } from '@tenantry/keycloak-admin';
 import { DB, IDENTITY_DIRECTORY } from '../infrastructure/tokens.js';
 
-// An invitee who accepted Keycloak's invite is in the organization but in no group yet.
-// Their first request applies the role the inviter chose (ADR-0019).
+// A token whose organization block lists no group reaches here (ADR-0019). Three cases:
+// - an invitee's first request: apply the role the inviter chose, once (the invite row is locked);
+// - a role already applied, but the token predates it (tokens live five minutes): read the group;
+// - someone who joined through a revoked invite: take them back out of the organization.
 @Injectable()
 export class InviteClaimer {
   constructor(
@@ -25,22 +28,41 @@ export class InviteClaimer {
     userId: string;
     kcUserId: string;
     email: string | null;
+    emailVerified: boolean;
   }): Promise<Role | null> {
-    const { tenant, userId, kcUserId, email } = input;
-    if (!email || !tenant.kcOrgId) return null;
+    const { tenant, userId, kcUserId, email, emailVerified } = input;
+    if (!tenant.kcOrgId) return null;
     const orgId = tenant.kcOrgId;
+    // Only a verified address may claim what was sent to that address.
+    const claimable = emailVerified ? email : null;
+
     return tenantTx(this.db, tenant.id, async (tx) => {
-      const invite = await findOpenInviteByEmail(tx, email);
-      if (!invite) return null;
-      await this.directory.setMemberGroup(orgId, kcUserId, groupForRole(invite.role));
-      await markInviteAccepted(tx, invite.id);
-      await insertAudit(tx, {
-        actorUserId: userId,
-        action: 'member.joined',
-        target: userId,
-        metadata: { role: invite.role, inviteId: invite.id },
-      });
-      return invite.role;
+      const invite = claimable ? await findOpenInviteByEmail(tx, claimable, { lock: true }) : null;
+      if (invite) {
+        await this.directory.setMemberGroup(orgId, kcUserId, groupForRole(invite.role));
+        await markInviteAccepted(tx, invite.id);
+        await insertAudit(tx, {
+          actorUserId: userId,
+          action: 'member.joined',
+          target: userId,
+          metadata: { role: invite.role, inviteId: invite.id },
+        });
+        return invite.role;
+      }
+
+      const member = (await this.directory.listMembers(orgId)).find((m) => m.kcUserId === kcUserId);
+      if (member?.group) return roleForGroupPath(member.group);
+
+      if (member && claimable && (await hasRevokedInvite(tx, claimable))) {
+        await this.directory.removeMember(orgId, kcUserId);
+        await insertAudit(tx, {
+          actorUserId: null,
+          action: 'member.removed',
+          target: userId,
+          metadata: { reason: 'joined through a revoked invite', email: claimable },
+        });
+      }
+      return null;
     });
   }
 }

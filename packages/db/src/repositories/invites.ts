@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Role } from '@tenantry/auth';
 import { isUniqueViolation, OpenInviteExistsError } from '../errors.js';
 import { tenantInvites } from '../schema/index.js';
@@ -42,12 +42,29 @@ export function listOpenInvites(tx: TenantTx): Promise<InviteRecord[]> {
   return tx.select(columns).from(tenantInvites).where(open).orderBy(desc(tenantInvites.createdAt));
 }
 
-export async function findOpenInviteByEmail(tx: TenantTx, email: string): Promise<InviteRecord | null> {
-  const [row] = await tx
+const sameEmail = (email: string) => sql`lower(${tenantInvites.email}) = lower(${email})`;
+
+// lock: hold the row until the transaction ends, so two first requests cannot both claim it.
+export async function findOpenInviteByEmail(
+  tx: TenantTx,
+  email: string,
+  options: { lock?: boolean } = {},
+): Promise<InviteRecord | null> {
+  const query = tx
     .select(columns)
     .from(tenantInvites)
-    .where(and(open, sql`lower(${tenantInvites.email}) = lower(${email})`));
+    .where(and(open, sameEmail(email)));
+  const [row] = options.lock ? await query.for('update') : await query;
   return row ?? null;
+}
+
+export async function hasRevokedInvite(tx: TenantTx, email: string): Promise<boolean> {
+  const rows = await tx
+    .select({ id: tenantInvites.id })
+    .from(tenantInvites)
+    .where(and(isNotNull(tenantInvites.revokedAt), sameEmail(email)))
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function markInviteAccepted(tx: TenantTx, id: string): Promise<void> {

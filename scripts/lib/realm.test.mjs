@@ -30,6 +30,11 @@ test('self-registration is on, so signup can start in Keycloak', () => {
   assert.equal(realm.registrationAllowed, true);
 });
 
+// Invites are claimed by email (ADR-0019); only a verified address may claim one.
+test('email addresses must be verified', () => {
+  assert.equal(realm.verifyEmail, true);
+});
+
 test('tenantry-web is a public PKCE client for the apex host', () => {
   const web = client('tenantry-web');
   assert.equal(web.publicClient, true);

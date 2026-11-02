@@ -158,6 +158,7 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
         sub: user.sub,
         email: user.email,
         aud: 'tenantry-api',
+        email_verified: true,
         ...(org ? { organization: { [org.alias]: { groups: org.groups } } } : {}),
         ...extra,
       }),

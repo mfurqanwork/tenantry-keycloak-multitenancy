@@ -10,6 +10,7 @@ export type { Executor } from './repositories/executor.js';
 export {
   createInvite,
   findOpenInviteByEmail,
+  hasRevokedInvite,
   listOpenInvites,
   markInviteAccepted,
   revokeInvite,
@@ -22,3 +23,4 @@ export {
   type TenantRecord,
 } from './repositories/platform.js';
 export { createProject, getProject, listProjects, type ProjectRecord } from './repositories/projects.js';
+export { lockTenantMembership } from './repositories/membership-lock.js';

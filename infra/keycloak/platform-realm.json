@@ -7,6 +7,7 @@
   "ssoSessionIdleTimeout": 1800,
   "sslRequired": "external",
   "registrationAllowed": true,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "smtpServer": {
     "host": "mailpit",

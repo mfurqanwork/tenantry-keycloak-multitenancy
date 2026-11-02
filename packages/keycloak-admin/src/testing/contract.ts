@@ -72,6 +72,14 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
       await s.dir.deleteOrganization(first.id);
     });
 
+    it('finds an organization by alias, and nothing for an unknown one', async () => {
+      const alias = `f${randomUUID().slice(0, 8)}`;
+      const { id } = await s.dir.createOrganization({ alias, name: alias });
+      expect(await s.dir.findOrganizationByAlias(alias)).toEqual({ id });
+      expect(await s.dir.findOrganizationByAlias(`${alias}x`)).toBeNull();
+      await s.dir.deleteOrganization(id);
+    });
+
     it('treats deleting a missing organization as done', async () => {
       const alias = `d${randomUUID().slice(0, 8)}`;
       const { id } = await s.dir.createOrganization({ alias, name: alias });
