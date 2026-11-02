@@ -5,6 +5,7 @@
 **Goal:** A fresh clone of Tenantry starts every service with one command. Each service answers on its local hostname, the decisions are documented, and CI is green.
 
 **Architecture:**
+
 - **Workspace:** a pnpm + Turborepo TypeScript workspace.
 - **Local stack:** Docker Compose runs Caddy (wildcard `*.localhost` routing), Keycloak 26.8 (`platform` realm imported), Postgres 17 (separate app and Keycloak databases), Mailpit, the NestJS API and the two React SPAs.
 - **API:** exposes only `/api/health` in this phase.
@@ -69,6 +70,7 @@ README.md AGENTS.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md LICENSE
 ```
 
 **One deviation from the spec, flagged for review.** The spec runs web and portal as Vite dev servers in containers. On Windows, bind-mounted `node_modules` and file watching in Docker are slow and unreliable, so this plan does two things instead:
+
 - **Full stack** (`pnpm dev:stack`): web and portal are built images that serve static files. This meets exit criterion 1.
 - **Development** (`pnpm dev`): Caddy, Keycloak, Postgres and Mailpit run in Compose; the API, web and portal run on the host with hot reload. Caddy reaches them through `host.docker.internal`, selected by `*_UPSTREAM` env vars.
 
@@ -79,21 +81,31 @@ Task 3 updates the spec's stack table to match.
 ### Task 1: Workspace tooling and `@tenantry/auth`
 
 **Files:**
+
 - Create the root files listed above (except `.env.example`, `vitest.workspace.ts` entries for later packages are globbed).
 - Create `packages/auth/*`.
 
 **Interfaces:**
+
 - Produces, from `@tenantry/auth`:
   ```ts
   export type Role = 'owner' | 'admin' | 'member';
   export type Permission =
-    | 'members:read' | 'members:invite' | 'members:remove' | 'members:change-role'
-    | 'apps:read' | 'apps:register' | 'tenant:settings' | 'audit:read';
+    | 'members:read'
+    | 'members:invite'
+    | 'members:remove'
+    | 'members:change-role'
+    | 'apps:read'
+    | 'apps:register'
+    | 'tenant:settings'
+    | 'audit:read';
   export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>>;
   export function permissionsFor(roles: readonly Role[]): ReadonlySet<Permission>;
   export interface TenantContext {
-    readonly tenantId: string; readonly userId: string;
-    readonly roles: readonly Role[]; readonly permissions: ReadonlySet<Permission>;
+    readonly tenantId: string;
+    readonly userId: string;
+    readonly roles: readonly Role[];
+    readonly permissions: ReadonlySet<Permission>;
   }
   ```
 - Produces, as root scripts: `lint`, `typecheck`, `test`, `build` (all `turbo run <x>`), `format`.
@@ -108,7 +120,7 @@ Task 3 updates the spec's stack table to match.
 - [ ] **Step 2: Write the failing test** at `packages/auth/src/roles.test.ts`:
   ```ts
   expect(permissionsFor(['owner'])).toEqual(new Set(ROLE_PERMISSIONS.owner));
-  expect(ROLE_PERMISSIONS.owner).toHaveLength(8);                 // owner has every permission
+  expect(ROLE_PERMISSIONS.owner).toHaveLength(8); // owner has every permission
   expect(permissionsFor(['admin']).has('tenant:settings')).toBe(false);
   expect([...permissionsFor(['member'])].sort()).toEqual(['apps:read', 'members:read']);
   expect(permissionsFor(['member', 'admin']).has('members:invite')).toBe(true); // union of roles
@@ -125,9 +137,11 @@ Task 3 updates the spec's stack table to match.
 ### Task 2: `@tenantry/db` baseline
 
 **Files:**
+
 - Create `packages/db/{package.json,drizzle.config.ts,src/client.ts,src/migrate.ts,src/index.ts,migrations/0000_baseline.sql,src/client.test.ts}`.
 
 **Interfaces:**
+
 - Produces:
   - `createAppPool(databaseUrl: string): pg.Pool`, for use by the API.
   - `pingDatabase(pool: pg.Pool): Promise<void>`, which runs `select 1` and throws on failure.
@@ -147,6 +161,7 @@ Task 3 updates the spec's stack table to match.
 ### Task 3: Infrastructure stack and smoke script
 
 **Files:**
+
 - Create:
   - `infra/docker-compose.yml`, `infra/Caddyfile`, `infra/postgres/init.sh`
   - `infra/keycloak/platform-realm.json`
@@ -156,6 +171,7 @@ Task 3 updates the spec's stack table to match.
 - Modify: root `package.json` scripts, and the spec's "Local stack" table (to match the deviation above).
 
 **Interfaces:**
+
 - Produces:
   - `getVia(hostHeader: string, path: string, port?: number): Promise<{ status: number; body: string }>`. It sends a `node:http` request to `127.0.0.1` with a `Host` header, because Windows does not resolve `*.localhost` for Node.
   - `isPortFree(port: number): Promise<boolean>`.
@@ -173,6 +189,7 @@ Task 3 updates the spec's stack table to match.
   - `DATABASE_URL` (as `tenantry_app`), `DATABASE_OWNER_URL` (as `tenantry_owner`)
 
 **Compose details the implementer cannot guess:**
+
 - **Project name:** set top-level `name: tenantry` in the compose file, so volumes and labels don't depend on the folder name.
 - **caddy:**
   - Publishes `${TENANTRY_HTTP_PORT}:${TENANTRY_HTTP_PORT}` and listens on that same port inside, so the internal and external issuers match.
@@ -185,6 +202,7 @@ Task 3 updates the spec's stack table to match.
   - `http://*.tenantry.localhost:{$TENANTRY_HTTP_PORT}`: the same, with `{$WEB_UPSTREAM}`
 
   Caddy's `*` matches one label, so the portal and web blocks do not overlap. Keep `Host` (Caddy's default) and add `X-Forwarded-Host`.
+
 - **keycloak:**
   - `start-dev --import-realm`, with `KC_HOSTNAME=${TENANTRY_AUTH_URL}`, `KC_HTTP_ENABLED=true`, `KC_HEALTH_ENABLED=true`, and `KC_DB=postgres` on database `keycloak`.
   - Mount `infra/keycloak/platform-realm.json` at `/opt/keycloak/data/import/`.
@@ -195,6 +213,7 @@ Task 3 updates the spec's stack table to match.
   - role and database `keycloak`.
 
   Passwords come from env. The healthcheck is `pg_isready`.
+
 - **mailpit:** `axllent/mailpit`.
 - **migrate:** a one-shot service built from the api image. It runs `tenantry-migrate` and depends on postgres being healthy.
 - **Realm JSON:**
@@ -211,6 +230,7 @@ Task 3 updates the spec's stack table to match.
   - Mailpit answers 200.
 
   Task 6 adds the app checks.
+
 - [ ] **Step 5: Write the compose file, Caddyfile, init script, realm JSON and `.env.example`.** For now, run with `dev:infra` (caddy, keycloak, postgres, mailpit, migrate).
 - [ ] **Step 6: Run `pnpm dev:infra && pnpm smoke`.** Expected: both checks PASS, and `docker compose logs migrate` shows the baseline applied. Also confirm the RLS precondition: `docker compose exec postgres psql -U postgres -tc "select rolbypassrls, rolsuper from pg_roles where rolname='tenantry_app'"` must print `f | f`.
 - [ ] **Step 7: Run the port tests and update the spec's stack table** for the deviation.
@@ -219,13 +239,21 @@ Task 3 updates the spec's stack table to match.
 ### Task 4: `@tenantry/api` with health
 
 **Files:**
+
 - Create `apps/api/{package.json,nest-cli.json,tsconfig.json,vitest.config.ts,Dockerfile}` and the `src/*` files listed in the file structure.
 
 **Interfaces:**
+
 - Consumes: `createAppPool` and `pingDatabase` from `@tenantry/db`.
 - Produces:
   ```ts
-  export interface AppConfig { port: number; databaseUrl: string; authUrl: string; platformRealm: string; logLevel: 'debug'|'info'|'warn'|'error'; }
+  export interface AppConfig {
+    port: number;
+    databaseUrl: string;
+    authUrl: string;
+    platformRealm: string;
+    logLevel: 'debug' | 'info' | 'warn' | 'error';
+  }
   export class ConfigError extends Error {}
   export function loadConfig(env: Record<string, string | undefined>): AppConfig;
   ```
@@ -239,8 +267,15 @@ Task 3 updates the spec's stack table to match.
   // config.test.ts
   expect(() => loadConfig({})).toThrow(ConfigError);
   expect(() => loadConfig({})).toThrow(/DATABASE_URL.*TENANTRY_AUTH_URL|TENANTRY_AUTH_URL.*DATABASE_URL/); // names every missing var
-  expect(loadConfig({ DATABASE_URL: 'postgres://x', TENANTRY_AUTH_URL: 'http://auth.tenantry.localhost' }))
-    .toEqual({ port: 3000, databaseUrl: 'postgres://x', authUrl: 'http://auth.tenantry.localhost', platformRealm: 'platform', logLevel: 'info' });
+  expect(
+    loadConfig({ DATABASE_URL: 'postgres://x', TENANTRY_AUTH_URL: 'http://auth.tenantry.localhost' }),
+  ).toEqual({
+    port: 3000,
+    databaseUrl: 'postgres://x',
+    authUrl: 'http://auth.tenantry.localhost',
+    platformRealm: 'platform',
+    logLevel: 'info',
+  });
   // keycloak.health.test.ts (fetch stubbed with vi.stubGlobal)
   // 200 + matching issuer → { keycloak: { status: 'up' } }
   // 200 + issuer 'http://localhost:8080/realms/platform' → throws HealthCheckError, message contains 'issuer mismatch'
@@ -263,33 +298,88 @@ Task 3 updates the spec's stack table to match.
 ### Task 5: `@tenantry/ui` — theme, AppShell, page patterns
 
 **Files:**
+
 - Create `packages/ui/*` per the file structure, plus `stylelint.config.mjs` at the root.
 
 **Interfaces:**
+
 - Produces:
   ```ts
   export type ThemePreference = 'system' | 'light' | 'dark';
   export const THEME_STORAGE_KEY = 'tenantry.theme';
-  export function readPreference(storage?: Storage): ThemePreference;   // never throws → 'system'
+  export function readPreference(storage?: Storage): ThemePreference; // never throws → 'system'
   export function writePreference(p: ThemePreference, storage?: Storage): void; // never throws
   export function TenantryThemeProvider(props: { children: ReactNode }): JSX.Element; // g10 / g100
-  export function useThemePreference(): { preference: ThemePreference; resolved: 'g10' | 'g100'; setPreference(p: ThemePreference): void };
-  export interface NavItem { label: string; href: string; icon?: CarbonIconType }
-  export function AppShell(props: { productName: string; navItems: NavItem[]; children: ReactNode }): JSX.Element;
-  export interface Crumb { label: string; href?: string }
-  export function PageHeader(props: { breadcrumbs?: Crumb[]; title: string; actions?: ReactNode }): JSX.Element;
-  export function ListPage(props: { breadcrumbs?: Crumb[]; title: string; primaryAction?: ReactNode; isEmpty: boolean; emptyState: ReactNode; children: ReactNode }): JSX.Element;
-  export function DetailPage(props: { breadcrumbs?: Crumb[]; title: string; actions?: ReactNode; summary: ReactNode; tabs: { label: string; content: ReactNode }[] }): JSX.Element;
-  export function SettingsPage(props: { breadcrumbs?: Crumb[]; title: string; children: ReactNode; dirty: boolean; saving: boolean; onSave(): void; onDiscard(): void }): JSX.Element;
-  export function DashboardPage(props: { title: string; tiles: ReactNode[]; activity?: ReactNode }): JSX.Element;
-  export function WizardPage(props: { title: string; steps: string[]; currentStep: number; children: ReactNode; onBack?(): void; onNext(): void; nextLabel?: string; nextDisabled?: boolean }): JSX.Element;
+  export function useThemePreference(): {
+    preference: ThemePreference;
+    resolved: 'g10' | 'g100';
+    setPreference(p: ThemePreference): void;
+  };
+  export interface NavItem {
+    label: string;
+    href: string;
+    icon?: CarbonIconType;
+  }
+  export function AppShell(props: {
+    productName: string;
+    navItems: NavItem[];
+    children: ReactNode;
+  }): JSX.Element;
+  export interface Crumb {
+    label: string;
+    href?: string;
+  }
+  export function PageHeader(props: {
+    breadcrumbs?: Crumb[];
+    title: string;
+    actions?: ReactNode;
+  }): JSX.Element;
+  export function ListPage(props: {
+    breadcrumbs?: Crumb[];
+    title: string;
+    primaryAction?: ReactNode;
+    isEmpty: boolean;
+    emptyState: ReactNode;
+    children: ReactNode;
+  }): JSX.Element;
+  export function DetailPage(props: {
+    breadcrumbs?: Crumb[];
+    title: string;
+    actions?: ReactNode;
+    summary: ReactNode;
+    tabs: { label: string; content: ReactNode }[];
+  }): JSX.Element;
+  export function SettingsPage(props: {
+    breadcrumbs?: Crumb[];
+    title: string;
+    children: ReactNode;
+    dirty: boolean;
+    saving: boolean;
+    onSave(): void;
+    onDiscard(): void;
+  }): JSX.Element;
+  export function DashboardPage(props: {
+    title: string;
+    tiles: ReactNode[];
+    activity?: ReactNode;
+  }): JSX.Element;
+  export function WizardPage(props: {
+    title: string;
+    steps: string[];
+    currentStep: number;
+    children: ReactNode;
+    onBack?(): void;
+    onNext(): void;
+    nextLabel?: string;
+    nextDisabled?: boolean;
+  }): JSX.Element;
   export function applyBrand(color: string): void; // Phase 0: exported no-op so call sites compile; Phase 2 sets --cds-interactive* tokens
   ```
 - `@tenantry/ui/styles.scss` is imported once by each app.
 
 **UI checklist.** It was read 2026-11-02, with no pages in the project yet.
 
-There is no reference and no family, so each line below is *as asked* by the approved spec (level 1). Carbon is the source for every piece, because the project has no shared layer yet.
+There is no reference and no family, so each line below is _as asked_ by the approved spec (level 1). Carbon is the source for every piece, because the project has no shared layer yet.
 
 - [ ] **Page holder.** `AppShell` renders Carbon `Header` inside `<Theme theme="g100">`, plus `SideNav` and `Content` as the `main` landmark. The header stays g100 in both themes.
 - [ ] **Header.** It shows `HeaderName` with the product name, `HeaderGlobalBar` with a theme switcher (`HeaderGlobalAction` with the icons `Light`, `Asleep` and `Screen`), and a skip-to-content link.
@@ -306,8 +396,20 @@ There is no reference and no family, so each line below is *as asked* by the app
 - [ ] **Step 1: Write the failing tests.** They use Vitest with jsdom and Testing Library.
   ```ts
   // preference.test.ts
-  expect(readPreference({ getItem: () => { throw new Error('denied'); } } as unknown as Storage)).toBe('system'); // Review Focus 5
-  expect(() => writePreference('dark', { setItem: () => { throw new Error('denied'); } } as unknown as Storage)).not.toThrow();
+  expect(
+    readPreference({
+      getItem: () => {
+        throw new Error('denied');
+      },
+    } as unknown as Storage),
+  ).toBe('system'); // Review Focus 5
+  expect(() =>
+    writePreference('dark', {
+      setItem: () => {
+        throw new Error('denied');
+      },
+    } as unknown as Storage),
+  ).not.toThrow();
   expect(readPreference(storageWith('tenantry.theme', 'bogus'))).toBe('system');
   // ThemeProvider.test.tsx — matchMedia stubbed dark → resolved 'g100'; preference 'light' overrides → 'g10'
   // AppShell.test.tsx — in both themes the header's closest '.cds--g100' exists; getByRole('main'); nav link for current path has aria-current="page"
@@ -323,10 +425,12 @@ There is no reference and no family, so each line below is *as asked* by the app
 ### Task 6: `@tenantry/web` and `@tenantry/portal`
 
 **Files:**
+
 - Create `apps/web/*` and `apps/portal/*`. They share the same layout; only the product name and nav differ.
 - Modify `infra/docker-compose.yml` (adding the `web` and `portal` services) and `scripts/smoke.mjs` (adding the app checks).
 
 **Interfaces:**
+
 - Consumes `TenantryThemeProvider`, `AppShell` and all five patterns from `@tenantry/ui`.
 - Web: productName `Tenantry`; nav Dashboard (`/`), Patterns (`/patterns`). Routing uses `react-router` v7 in library mode.
 - Portal: productName `Tenantry Portal`; nav Dashboard (`/`).
@@ -355,6 +459,7 @@ There is no reference and no family, so each line below is *as asked* by the app
 ### Task 7: Repo docs, stub packages and CI
 
 **Files:**
+
 - Create:
   - `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `LICENSE`
   - `.github/workflows/ci.yml`, `.github/ISSUE_TEMPLATE/{bug.yml,feature.yml}`, `.github/pull_request_template.md`
@@ -362,9 +467,10 @@ There is no reference and no family, so each line below is *as asked* by the app
   - `docs/guides/.gitkeep`
 
 **Content the implementer cannot infer:**
+
 - **README sections:**
   1. Pitch: one paragraph, based on the plan doc's opening.
-  2. "Guarantees": the 16 rows of the plan doc's security test table, each marked *planned* with its phase.
+  2. "Guarantees": the 16 rows of the plan doc's security test table, each marked _planned_ with its phase.
   3. Quick start: `pnpm install`, then `pnpm dev:stack`, then open `http://demo.tenantry.localhost`. Also cover the port-80 note and Keycloak admin at `http://auth.tenantry.localhost` with credentials from `.env`.
   4. Architecture: a Mermaid diagram of browser → Caddy → {web, portal, api, keycloak}, with api → postgres and keycloak → postgres.
   5. Standard vs Enterprise table: copied from the plan doc.
