@@ -12,6 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tile,
 } from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 import type { Role } from '@tenantry/auth';
@@ -56,6 +57,7 @@ export function MembersRoute() {
   const list = useResource<{ members: MemberRow[]; invites: InviteRow[] }>('/api/members');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [actionError, setActionError] = useState<unknown>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
   const roles = assignableRoles(me.role);
   const manages = me.can('members:change-role') || me.can('members:remove');
   const close = () => {
@@ -83,10 +85,10 @@ export function MembersRoute() {
             </Button>
           ) : undefined
         }
-        isEmpty={false}
-        emptyState={null}
+        isEmpty={list.data !== undefined && members.length === 0}
+        emptyState={<Tile>No members yet. Invite someone to get started.</Tile>}
       >
-        <Stack gap={7}>
+        <Stack gap={6}>
           <ApiErrorNotification error={list.error ?? actionError} />
           {!list.data && !list.error && <DataTableSkeleton headers={MEMBER_HEADERS} rowCount={3} />}
           {list.data && (
@@ -198,11 +200,16 @@ export function MembersRoute() {
                                 <Button
                                   kind="ghost"
                                   size="sm"
+                                  disabled={revoking === row.id}
                                   onClick={() => {
                                     setActionError(null);
+                                    setRevoking(row.id);
                                     api
                                       .del(`/api/members/invites/${row.id}`)
-                                      .then(list.reload, setActionError);
+                                      .then(list.reload, setActionError)
+                                      .finally(() => {
+                                        setRevoking(null);
+                                      });
                                   }}
                                 >
                                   Revoke

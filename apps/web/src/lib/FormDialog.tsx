@@ -44,6 +44,8 @@ export function FormDialog({
       primaryButtonText={submitLabel}
       secondaryButtonText="Cancel"
       primaryButtonDisabled={!canSubmit || sending}
+      loadingStatus={sending ? 'active' : 'inactive'}
+      loadingDescription="Sending"
       onRequestSubmit={() => void submit()}
       onRequestClose={onClose}
       size="sm"
