@@ -30,6 +30,8 @@ export function AuthProvider({
       if (window.location.pathname === CALLBACK_PATH) {
         const returnTo = await client.handleCallback();
         window.history.replaceState(null, '', returnTo);
+        // replaceState is silent; routers (React Router included) re-read the address on popstate.
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
       const current = await client.user();
       if (run.cancelled) return;

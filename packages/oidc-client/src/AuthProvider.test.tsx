@@ -59,4 +59,23 @@ describe('AuthProvider', () => {
     expect(client.handleCallback).toHaveBeenCalled();
     expect(window.location.pathname).toBe('/members');
   });
+
+  it('tells the router the address changed after the callback', async () => {
+    window.history.replaceState(null, '', '/auth/callback?code=abc&state=xyz');
+    const client = fakeClient({ email: 'ada@example.com', name: null });
+    vi.mocked(client.handleCallback).mockResolvedValue('/members');
+    const seen: string[] = [];
+    const listener = () => {
+      seen.push(window.location.pathname);
+    };
+    window.addEventListener('popstate', listener);
+    render(
+      <AuthProvider client={client} fallback={<p>Signing in</p>}>
+        <Who />
+      </AuthProvider>,
+    );
+    await screen.findByText('Signed in as ada@example.com');
+    window.removeEventListener('popstate', listener);
+    expect(seen).toEqual(['/members']);
+  });
 });
