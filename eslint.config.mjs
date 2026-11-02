@@ -16,6 +16,7 @@ export default tseslint.config(
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
     rules: {
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       // ADR-0016: only packages/db talks to Postgres directly.
       'no-restricted-imports': ['error', { paths: ['pg'], patterns: ['drizzle-orm/node-postgres*'] }],
     },
