@@ -57,7 +57,8 @@ CREATE TABLE audit_log (
   action text NOT NULL,
   target text NOT NULL,
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
+  -- clock_timestamp, not now(): entries written in one transaction keep their order.
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 --> statement-breakpoint
 CREATE INDEX audit_log_newest ON audit_log (tenant_id, created_at DESC, id DESC);
