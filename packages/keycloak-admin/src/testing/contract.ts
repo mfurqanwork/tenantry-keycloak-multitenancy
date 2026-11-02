@@ -65,6 +65,13 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
       await expect(s.dir.removeTenantOrigin(origin)).resolves.toBeUndefined();
     });
 
+    it('refuses a second organization with the same name, as Keycloak does', async () => {
+      const name = `n${randomUUID().slice(0, 8)}`;
+      const first = await s.dir.createOrganization({ alias: `a${name}`, name });
+      await expect(s.dir.createOrganization({ alias: `b${name}`, name })).rejects.toThrow(/409/);
+      await s.dir.deleteOrganization(first.id);
+    });
+
     it('treats deleting a missing organization as done', async () => {
       const alias = `d${randomUUID().slice(0, 8)}`;
       const { id } = await s.dir.createOrganization({ alias, name: alias });

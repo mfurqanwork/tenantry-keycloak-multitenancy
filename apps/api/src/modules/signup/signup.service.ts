@@ -55,7 +55,8 @@ export class SignupService {
           {
             name: 'create organization',
             run: async () => {
-              orgId = (await this.directory.createOrganization({ alias: input.slug, name: input.name })).id;
+              // Keycloak keeps organization names unique; display names are not, so the slug is the name.
+              orgId = (await this.directory.createOrganization({ alias: input.slug, name: input.slug })).id;
             },
             undo: () => this.directory.deleteOrganization(orgId),
           },

@@ -80,6 +80,11 @@ describe('POST /api/signup', () => {
     expect(orgsWithAlias(slug)).toHaveLength(1);
   });
 
+  it('lets two workspaces share a display name', async () => {
+    expect((await signup(newSlug(), 'Same Name')).status).toBe(201);
+    expect((await signup(newSlug(), 'Same Name')).status).toBe(201);
+  });
+
   it('answers 409 for a slug that is taken', async () => {
     const slug = newSlug();
     expect((await signup(slug)).status).toBe(201);

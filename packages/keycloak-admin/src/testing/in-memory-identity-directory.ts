@@ -43,7 +43,8 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
 
   createOrganization(input: { alias: string; name: string }): Promise<{ id: string }> {
     return this.run('createOrganization', () => {
-      if ([...this.orgs.values()].some((o) => o.alias === input.alias)) {
+      // Keycloak keeps both the alias and the name unique.
+      if ([...this.orgs.values()].some((o) => o.alias === input.alias || o.name === input.name)) {
         throw new DirectoryError('createOrganization', 409);
       }
       const id = randomUUID();
