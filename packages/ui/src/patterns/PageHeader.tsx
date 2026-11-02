@@ -15,7 +15,7 @@ interface PageHeaderProps {
 // Shared by all five page patterns: breadcrumb, the page's only h1, then its actions at the end.
 export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
   return (
-    <header className="tenantry-page-header">
+    <div className="tenantry-page-header">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumb noTrailingSlash>
           {breadcrumbs.map((crumb) => (
@@ -29,6 +29,6 @@ export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
         <h1 className="tenantry-page-header__title">{title}</h1>
         {actions && <div className="tenantry-page-header__actions">{actions}</div>}
       </div>
-    </header>
+    </div>
   );
 }

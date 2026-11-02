@@ -73,8 +73,15 @@ body {
   padding-inline: $spacing-05;
 }
 
+// Carbon's grid has column gutters only; wrapped tiles need a row gap to read as separate tiles.
 .tenantry-dashboard__tiles {
+  row-gap: $spacing-05;
   margin-block-end: $spacing-07;
+}
+
+// Steps keep their minimum width; on a phone the indicator scrolls instead of widening the page.
+.tenantry-wizard__progress {
+  overflow-x: auto;
 }
 
 .tenantry-wizard__actions {

@@ -1,4 +1,4 @@
-import { Button, ButtonSet, InlineLoading } from '@carbon/react';
+import { Button, InlineLoading } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { PageHeader, type Crumb } from './PageHeader.js';
 
@@ -27,18 +27,16 @@ export function SettingsPage({
       <PageHeader breadcrumbs={breadcrumbs} title={title} />
       <div className="tenantry-page__body">{children}</div>
       <div className="tenantry-save-bar">
-        <ButtonSet>
-          <Button kind="secondary" disabled={!dirty || saving} onClick={onDiscard}>
-            Discard
+        <Button kind="secondary" disabled={!dirty || saving} onClick={onDiscard}>
+          Discard
+        </Button>
+        {saving ? (
+          <InlineLoading description="Saving" className="tenantry-save-bar__loading" />
+        ) : (
+          <Button kind="primary" disabled={!dirty} onClick={onSave}>
+            Save
           </Button>
-          {saving ? (
-            <InlineLoading description="Saving" className="tenantry-save-bar__loading" />
-          ) : (
-            <Button kind="primary" disabled={!dirty} onClick={onSave}>
-              Save
-            </Button>
-          )}
-        </ButtonSet>
+        )}
       </div>
     </div>
   );

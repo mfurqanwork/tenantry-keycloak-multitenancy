@@ -27,11 +27,13 @@ export function WizardPage({
   return (
     <div className="tenantry-page">
       <PageHeader title={title} />
-      <ProgressIndicator currentIndex={currentStep} spaceEqually>
-        {steps.map((step) => (
-          <ProgressStep key={step} label={step} />
-        ))}
-      </ProgressIndicator>
+      <div className="tenantry-wizard__progress">
+        <ProgressIndicator currentIndex={currentStep} spaceEqually>
+          {steps.map((step) => (
+            <ProgressStep key={step} label={step} />
+          ))}
+        </ProgressIndicator>
+      </div>
       <div className="tenantry-page__body">{children}</div>
       <ButtonSet className="tenantry-wizard__actions">
         {onBack && (
