@@ -10,6 +10,10 @@ const config: AppConfig = {
   authInternalUrl: 'http://auth.tenantry.localhost',
   platformRealm: 'platform',
   logLevel: 'info',
+  baseDomain: 'tenantry.localhost',
+  publicPort: null,
+  backendClientId: 'tenantry-backend',
+  backendClientSecret: 'secret',
 };
 const indicator = () => new KeycloakHealthIndicator(config, new HealthIndicatorService());
 const respond = (status: number, body: unknown) => {
