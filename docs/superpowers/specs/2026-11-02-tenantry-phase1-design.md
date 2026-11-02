@@ -126,7 +126,9 @@ Each tenant table gets `ENABLE` and `FORCE ROW LEVEL SECURITY` and one policy fo
 7. Upsert `(iss, sub)` in `identities` and return our user id. The first time, create the `users` row from the token's `email` and `name`.
 8. Attach `TenantContext` (tenant id, user id, role, permissions). `@RequirePermission(p)` then gives 403 when `p` is missing.
 
-No header, query parameter or body field can set the tenant. The exact claim shape of the organization group mapper is pinned by the first task of the plan, against the real server.
+No header, query parameter or body field can set the tenant.
+
+Claim shape, checked against Keycloak 26.8.1: with scope `organization:<alias>` the access token carries `"organization": { "<alias>": { "groups": ["/admins"] } }`. A member in no group gets `"groups": []`. A user outside the organization gets no `organization` claim at all. Without the audience mapper, `aud` is `account`.
 
 **Invite claimer:** the user is in the organization (they accepted the Keycloak invite) but in none of its groups. Inside `tenantTx` it looks for an open invite for the token's email. If one exists, it adds the user to that role's group through `IdentityDirectory`, sets `accepted_at`, writes `member.joined` to the audit log, and continues with that role. Otherwise 403. The role then applies from the next token; the current request uses it at once.
 
@@ -135,10 +137,10 @@ No header, query parameter or body field can set the tenant. The exact claim sha
 Changes to `infra/keycloak/platform-realm.json`:
 
 - `registrationAllowed: true`.
-- Client `tenantry-web`: public, standard flow with PKCE (S256), redirect URIs `http://tenantry.localhost:*/*` and `http://*.tenantry.localhost:*/*` (the dev realm only; production templates come in Phase 6), web origins `+`.
+- Client `tenantry-web`: public, standard flow with PKCE (S256). Keycloak accepts a wildcard only at the end of a redirect URI, never in the host, so the realm file lists the apex host (`http://tenantry.localhost/*` and `http://tenantry.localhost:8080/*`), and signup adds each tenant's origin to the client's redirect URIs and web origins. Compensation removes it again.
 - Client scope `tenantry-api-audience` with an audience mapper for `tenantry-api`, as a default scope of `tenantry-web`.
-- The `organization` scope carries the Organization Group Membership mapper, so organization groups appear in the token.
-- Confidential client `tenantry-backend` with a service account holding only the `realm-management` roles that organization management needs. Task 1 of the plan finds the smallest set that works and records it.
+- `tenantry-web` and `tenantry-isolation-tests` each carry the Organization Group Membership mapper (`oidc-organization-group-membership-mapper`, access token only), so organization groups appear in the token. `organization` is already an optional scope of every client.
+- Confidential client `tenantry-backend` with a service account holding `realm-management` roles `manage-realm`, `view-users`, `manage-users` (the smallest set that passed every organization call against the local server) and `manage-clients` (for the tenant redirect URIs).
 - Client `tenantry-isolation-tests`: confidential, direct access grants only, with the same audience scope. It exists only in this local dev realm file, so the test suite can get tokens for test users without a browser. Its secret is in `.env.example` as a local value.
 
 The API gets `KEYCLOAK_BACKEND_CLIENT_ID` and `KEYCLOAK_BACKEND_CLIENT_SECRET`, validated at startup like the rest of its config.
@@ -155,7 +157,8 @@ The saga, each step recorded so a failure undoes what was done:
 2. Create the Keycloak organization (alias = slug, name = name).
 3. Create its groups `owners`, `admins`, `members`.
 4. Add the caller to the organization and to `owners`.
-5. Insert `tenant_identity`, set status `active`, write `tenant.created` to the audit log, all in one transaction.
+5. Add `http://<slug>.<base domain>[:port]` to `tenantry-web`'s redirect URIs and web origins.
+6. Insert `tenant_identity`, set status `active`, write `tenant.created` to the audit log, all in one transaction.
 
 On any failure after step 1, delete what Keycloak created, set status `failed`, and answer 502 with a problem document. A slug whose tenant is `failed` can be signed up again: the old row is replaced.
 
@@ -175,7 +178,7 @@ Guards on these: only an owner can make or unmake an owner; the last owner canno
 
 **Audit:** `AuditService.record(tx, ctx, action, target, metadata)` writes inside the caller's transaction. For a Keycloak change, the entry is written right after Keycloak succeeds. `GET /api/audit?before=<id>` (`audit:read`) returns 50 entries per page, newest first, with actor emails.
 
-**Projects:** `GET /api/projects` (`projects:read`), `POST /api/projects` (`projects:write`, `{ name }`, writes `project.created`). Members get both permissions.
+**Projects:** `GET /api/projects` and `GET /api/projects/:id` (`projects:read`), `POST /api/projects` (`projects:write`, `{ name }`, writes `project.created`). Members get both permissions. Asking for another tenant's project id on your own host answers 404: row-level security makes the row invisible, so the API cannot tell it apart from a missing one. The README row "Tenant A user requests tenant B data with A's token" changes its expected result from 403 to 404 to say so; calling B's host with A's token stays 403.
 
 **Tenant info:** `GET /api/tenants/:slug/auth-config` is public and returns `{ issuer, clientId, organization }` for active tenants. `GET /api/me` returns the user, role and permissions; the web app shows or hides controls from it.
 
@@ -211,9 +214,9 @@ CI gets a second job, `isolation`: copy `.env.example` to `.env`, `pnpm dev:stac
 
 ## Risks
 
-| Risk                                                           | Mitigation                                                                                    |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| The organization group claim shape differs from what we expect | Task 1 pins it with a test against the real server before the guard is written                |
-| `tenantry-backend` needs broader admin roles than hoped        | Task 1 finds the smallest set; it is recorded in the ADR and the realm file                   |
-| Keycloak invite emails need `verifyEmail` or a reachable SMTP  | Mailpit already receives the realm's mail; the isolation suite does not depend on email links |
-| A saga step fails after Keycloak changed something             | Each step has an undo; a test with a failing fake covers every step                           |
+| Risk                                                                  | Mitigation                                                                                    |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| A client with thousands of redirect URIs slows Keycloak               | Measured in Phase 6 with the realm-count tests; the README states the ceiling                 |
+| `manage-realm` and `manage-clients` are broad for one service account | Recorded in an ADR; Phase 6 narrows them with fine-grained admin permissions                  |
+| Keycloak invite emails need `verifyEmail` or a reachable SMTP         | Mailpit already receives the realm's mail; the isolation suite does not depend on email links |
+| A saga step fails after Keycloak changed something                    | Each step has an undo; a test with a failing fake covers every step                           |
