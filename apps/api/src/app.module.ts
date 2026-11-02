@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { TerminusModule } from '@nestjs/terminus';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
+import { loggerOptions } from './common/logging.js';
 import { ProblemFilter } from './common/problem.filter.js';
 import type { AppConfig } from './config/config.js';
 import { DatabaseHealthIndicator } from './health/db.health.js';
@@ -22,7 +23,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         InfrastructureModule.forConfig(config),
-        LoggerModule.forRoot({ pinoHttp: { level: config.logLevel } }),
+        LoggerModule.forRoot({ pinoHttp: loggerOptions(config.logLevel) }),
         TerminusModule,
         AuthModule,
         TenantsModule,
