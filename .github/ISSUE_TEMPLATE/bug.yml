@@ -13,8 +13,9 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      placeholder: "1. pnpm dev:stack
-2. ..."
+      placeholder: |
+        1. pnpm dev:stack
+        2. ...
     validations:
       required: true
   - type: input

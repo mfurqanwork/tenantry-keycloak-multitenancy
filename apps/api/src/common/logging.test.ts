@@ -19,7 +19,9 @@ describe('loggerOptions', () => {
     const { stream, lines } = capture();
     const logger = pino(loggerOptions('info'), stream);
     logger.info({
-      req: { headers: { authorization: 'Bearer secret-token', cookie: 'KEYCLOAK_SESSION=abc', host: 'acme.x' } },
+      req: {
+        headers: { authorization: 'Bearer secret-token', cookie: 'KEYCLOAK_SESSION=abc', host: 'acme.x' },
+      },
     });
     const line = lines.join('');
     expect(line).not.toContain('secret-token');
