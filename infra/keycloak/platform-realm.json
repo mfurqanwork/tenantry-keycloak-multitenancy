@@ -1,0 +1,17 @@
+{
+  "realm": "platform",
+  "displayName": "Tenantry",
+  "enabled": true,
+  "organizationsEnabled": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@tenantry.localhost",
+    "fromDisplayName": "Tenantry"
+  }
+}

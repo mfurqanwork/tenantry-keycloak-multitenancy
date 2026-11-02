@@ -38,14 +38,14 @@ The pnpm workspace uses Turborepo and TypeScript 5 in strict mode. `tsconfig.bas
 
 ## Local stack
 
-| Service     | Image                                                           | Reached at                                               |
-| ----------- | --------------------------------------------------------------- | -------------------------------------------------------- |
-| caddy       | `caddy:2`                                                       | host :80; Docker network alias `auth.tenantry.localhost` |
-| keycloak    | `quay.io/keycloak/keycloak:26.8.x` (exact patch pinned)         | `auth.tenantry.localhost`                                |
-| postgres    | `postgres:17`                                                   | one server with two databases: `tenantry` and `keycloak` |
-| mailpit     | `axllent/mailpit`                                               | `mail.tenantry.localhost`                                |
-| api         | built from `apps/api` (dev: `pnpm --filter api dev` with watch) | `/api/*` on any tenant host                              |
-| web, portal | Vite dev servers in containers, with HMR through Caddy          | `*.tenantry.localhost`, `*.portal.tenantry.localhost`    |
+| Service     | Image                                                                                                                                                                                                   | Reached at                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| caddy       | `caddy:2`                                                                                                                                                                                               | host :80; Docker network alias `auth.tenantry.localhost` |
+| keycloak    | `quay.io/keycloak/keycloak:26.8.x` (exact patch pinned)                                                                                                                                                 | `auth.tenantry.localhost`                                |
+| postgres    | `postgres:17`                                                                                                                                                                                           | one server with two databases: `tenantry` and `keycloak` |
+| mailpit     | `axllent/mailpit`                                                                                                                                                                                       | `mail.tenantry.localhost`                                |
+| api         | built from `apps/api` (dev: `pnpm --filter api dev` with watch)                                                                                                                                         | `/api/*` on any tenant host                              |
+| web, portal | `pnpm dev:stack`: built images serving static files. `pnpm dev`: Vite servers on the host with HMR, reached by Caddy through `host.docker.internal` (Windows file watching in containers is unreliable) | `*.tenantry.localhost`, `*.portal.tenantry.localhost`    |
 
 - **Caddy routing.** `auth.` goes to Keycloak and `mail.` to Mailpit. On `*.portal.tenantry.localhost`, `/api/*` goes to the API and everything else to portal. On `*.tenantry.localhost`, `/api/*` goes to the API and everything else to web. The original `Host` header is passed through, so the API can read the tenant slug in Phase 1.
 - **Keycloak settings.** `KC_HOSTNAME=http://auth.tenantry.localhost` and `KC_HTTP_ENABLED=true`, both dev only. The master admin comes from `.env`. `--import-realm` loads `platform-realm.json`, which has Organizations enabled, an empty client list and token lifetimes from the plan (5-minute access tokens).

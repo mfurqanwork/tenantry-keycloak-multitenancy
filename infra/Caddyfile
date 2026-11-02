@@ -1,0 +1,30 @@
+# Local routing. Caddy's * matches one label, so portal and web hosts never overlap.
+{
+	auto_https off
+}
+
+http://auth.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
+	reverse_proxy keycloak:8080
+}
+
+http://mail.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
+	reverse_proxy mailpit:8025
+}
+
+http://*.portal.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
+	handle {
+		reverse_proxy {$PORTAL_UPSTREAM}
+	}
+}
+
+http://*.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
+	handle {
+		reverse_proxy {$WEB_UPSTREAM}
+	}
+}

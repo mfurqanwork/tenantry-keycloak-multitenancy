@@ -13,7 +13,12 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && pnpm test:scripts",
     "test:scripts": "node --test \"scripts/lib/*.test.mjs\"",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev:stack": "node scripts/dev-stack.mjs",
+    "dev:infra": "node scripts/dev-stack.mjs --infra",
+    "dev": "node scripts/dev-stack.mjs --infra && turbo run dev",
+    "smoke": "node scripts/smoke.mjs",
+    "stack:down": "docker compose -f infra/docker-compose.yml --env-file .env down"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
