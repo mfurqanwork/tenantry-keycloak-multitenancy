@@ -89,3 +89,18 @@ body {
   display: flex;
   justify-content: flex-end;
 }
+
+// The account panel in the header: who is signed in, and the way out.
+.tenantry-account {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  align-items: flex-start;
+  padding: $spacing-05;
+}
+
+.tenantry-account__email {
+  @include type.type-style('body-compact-01');
+
+  overflow-wrap: anywhere;
+}

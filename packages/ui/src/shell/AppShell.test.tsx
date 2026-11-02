@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { forwardRef, type AnchorHTMLAttributes } from 'react';
-import { describe, expect, it } from 'vitest';
+import { userEvent } from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { stubColorScheme } from '../test/setup.js';
 import { TenantryThemeProvider } from '../theme/ThemeProvider.js';
 import { AppShell } from './AppShell.js';
@@ -44,6 +45,32 @@ describe('AppShell', () => {
   it('shows the product name', () => {
     renderShell();
     expect(screen.getByRole('banner')).toHaveTextContent('Tenantry');
+  });
+
+  it('shows the signed-in user and signs out from the account menu', async () => {
+    const onSignOut = vi.fn();
+    render(
+      <TenantryThemeProvider>
+        <AppShell
+          productName="Tenantry"
+          navItems={nav}
+          currentPath="/"
+          user={{ email: 'ada@example.com', onSignOut }}
+        >
+          <p>content</p>
+        </AppShell>
+      </TenantryThemeProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Account' }));
+    expect(screen.getByText('ada@example.com')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(onSignOut).toHaveBeenCalled();
+  });
+
+  it('has no account menu without a user', () => {
+    renderShell();
+    expect(screen.queryByRole('button', { name: 'Account' })).not.toBeInTheDocument();
   });
 
   it('renders navigation through the link component it is given', () => {

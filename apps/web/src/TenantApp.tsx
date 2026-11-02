@@ -10,6 +10,7 @@ import { AppShell } from '@tenantry/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { App } from './App.js';
 import { NotFoundPage } from './features/not-found/NotFoundPage.js';
+import { LoadMe } from './lib/me.js';
 import { SignedInApi } from './lib/SignedInApi.js';
 
 // A tenant host: ask the API which realm and organization this slug signs in to, then sign in.
@@ -47,7 +48,14 @@ export function TenantApp({ slug, signupUrl }: { slug: string; signupUrl: string
   return (
     <AuthProvider client={client} fallback={<InlineLoading description="Signing in" />}>
       <SignedInApi>
-        <App hostname={window.location.hostname} />
+        <LoadMe>
+          <App
+            hostname={window.location.hostname}
+            onSignOut={() => {
+              void client.signOut();
+            }}
+          />
+        </LoadMe>
       </SignedInApi>
     </AuthProvider>
   );
