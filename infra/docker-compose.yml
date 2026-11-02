@@ -97,6 +97,9 @@ services:
     environment:
       DATABASE_URL: postgres://tenantry_app:${TENANTRY_APP_PASSWORD}@postgres:5432/tenantry
       TENANTRY_AUTH_URL: ${TENANTRY_AUTH_URL}
+      TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN:-tenantry.localhost}
+      KEYCLOAK_BACKEND_CLIENT_ID: ${KEYCLOAK_BACKEND_CLIENT_ID}
+      KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
     depends_on:
       migrate: { condition: service_completed_successfully }
       keycloak: { condition: service_healthy }
