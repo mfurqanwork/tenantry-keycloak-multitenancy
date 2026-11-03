@@ -7,6 +7,7 @@ export { DetailPage } from './patterns/DetailPage.js';
 export { ListPage } from './patterns/ListPage.js';
 export { PageHeader, type Crumb } from './patterns/PageHeader.js';
 export { SettingsPage } from './patterns/SettingsPage.js';
+export { StatTile, TileGrid } from './patterns/tiles.js';
 export { WizardPage } from './patterns/WizardPage.js';
 export {
   readPreference,

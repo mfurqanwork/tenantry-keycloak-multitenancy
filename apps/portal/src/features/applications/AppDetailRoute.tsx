@@ -1,8 +1,6 @@
 import {
   Button,
   CodeSnippet,
-  Column,
-  Grid,
   InlineLoading,
   InlineNotification,
   PasswordInput,
@@ -15,10 +13,9 @@ import {
 import { confidential } from '@tenantry/auth';
 import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
 import { startTestLogin } from '@tenantry/oidc-client';
-import { DetailPage, PageHeader } from '@tenantry/ui';
+import { DetailPage, PageHeader, StatTile, TileGrid } from '@tenantry/ui';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { StatTile } from '../dashboard/DashboardRoute.js';
 import { TYPE_LABELS, type AppView, type SecretState } from './api.js';
 import { DeleteAppDialog, EditAppDialog, RotateSecretDialog } from './AppDialogs.js';
 import { snippetsFor } from './snippets.js';
@@ -117,19 +114,17 @@ export function AppDetailRoute() {
                 </CodeSnippet>
               </Stack>
             )}
-            <Grid narrow className="tenantry-dashboard__tiles">
-              {(
-                [
-                  ['Type', TYPE_LABELS[a.type]],
-                  ['Client ID', a.clientId],
-                  ['Registered', new Date(a.createdAt).toLocaleDateString()],
-                ] as const
-              ).map(([label, value]) => (
-                <Column key={label} sm={4} md={4} lg={4}>
-                  <StatTile label={label} value={value} />
-                </Column>
-              ))}
-            </Grid>
+            <TileGrid>
+              {[
+                <StatTile key="type" label="Type" value={TYPE_LABELS[a.type]} />,
+                <StatTile key="client" label="Client ID" value={a.clientId} />,
+                <StatTile
+                  key="registered"
+                  label="Registered"
+                  value={new Date(a.createdAt).toLocaleDateString()}
+                />,
+              ]}
+            </TileGrid>
           </Stack>
         }
         tabs={[

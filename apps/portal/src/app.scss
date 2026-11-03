@@ -2,18 +2,6 @@
 @use '@carbon/react/scss/theme';
 @use '@carbon/react/scss/type';
 
-.tenantry-stat__label {
-  @include type.type-style('label-01');
-
-  color: theme.$text-secondary;
-}
-
-.tenantry-stat__value {
-  @include type.type-style('productive-heading-04');
-
-  margin-block-start: $spacing-03;
-}
-
 // The branding page: a live preview of the typed colour, and the current logo.
 .tenantry-brand-preview {
   display: flex;
