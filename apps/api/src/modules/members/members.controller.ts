@@ -53,6 +53,13 @@ export class MembersController {
     return { userId, role: body.role };
   }
 
+  // Before ':userId', so "me" is never read as a user id. Membership is the only requirement.
+  @Delete('me')
+  @HttpCode(204)
+  leave(@Ctx() ctx: TenantContext, @CurrentTenant() tenant: TenantRecord, @SignedIn() user: SignedInUser) {
+    return this.members.leave(ctx, tenant, user);
+  }
+
   @Delete(':userId')
   @HttpCode(204)
   @RequirePermission('members:remove')

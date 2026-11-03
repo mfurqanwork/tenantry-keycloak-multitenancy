@@ -78,6 +78,21 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
       expect(await s.redirectUris('portal')).not.toContain(`${origin}/*`);
     });
 
+    it('lists the organizations a user belongs to, and none for a stranger', async () => {
+      const second = `w${randomUUID().slice(0, 8)}`;
+      const { id: secondId } = await s.dir.createOrganization({ alias: second, name: second });
+      const someone = await s.newUser();
+      const stranger = await s.newUser();
+      await s.dir.addMember(orgId, someone);
+      await s.dir.addMember(secondId, someone);
+      const orgs = await s.dir.listUserOrganizations(someone);
+      expect(orgs.map((o) => o.id).sort()).toEqual([orgId, secondId].sort());
+      expect(orgs.find((o) => o.id === secondId)).toEqual({ id: secondId, alias: second, name: second });
+      expect(await s.dir.listUserOrganizations(stranger)).toEqual([]);
+      await s.dir.removeMember(orgId, someone);
+      await s.dir.deleteOrganization(secondId);
+    });
+
     it('refuses a second organization with the same name, as Keycloak does', async () => {
       const name = `n${randomUUID().slice(0, 8)}`;
       const first = await s.dir.createOrganization({ alias: `a${name}`, name });

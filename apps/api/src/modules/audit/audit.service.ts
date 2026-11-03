@@ -9,7 +9,14 @@ export type AuditAction =
   | 'member.joined'
   | 'member.role_changed'
   | 'member.removed'
-  | 'project.created';
+  | 'member.left'
+  | 'project.created'
+  | 'branding.updated'
+  | 'branding.logo_updated'
+  | 'branding.logo_removed'
+  | 'domain.claimed'
+  | 'domain.verified'
+  | 'idp.linked';
 
 export interface AuditView {
   id: string;

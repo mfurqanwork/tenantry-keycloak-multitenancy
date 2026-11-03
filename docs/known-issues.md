@@ -22,12 +22,17 @@ Last updated: Phase 2 planning (2026-11-02).
 | Service account       | `tenantry-backend` holds `manage-realm` and `manage-clients`, broader than needed.                                                       | Fine-grained admin permissions, Phase 6         |
 | Invites               | Keycloak sends the invite email while our database transaction is open; if the audit write fails afterwards, a sent invite has no row.   | Outbox, Phase 6                                 |
 | Invites               | Keycloak 26.8 cannot withdraw a sent invitation; a revoked invite is enforced when the person first visits (they are removed again).     | When Keycloak adds it                           |
-| Errors                | A Keycloak outage outside signup answers 500 instead of 502.                                                                             | Phase 2 (quick fix)                             |
 | Users                 | Email and display name are copied on first sign-in and never refreshed; any platform user who opens a tenant address gets a `users` row. | Phase 3 (identity refresh)                      |
-| Members               | A plain member cannot leave a workspace (no `members:remove`).                                                                           | Phase 2 (quick fix)                             |
-| Docs                  | AGENTS.md hard rule 2 names `organization.<alias>.realm_access`; the code reads `.groups`.                                               | Phase 2 (quick fix)                             |
 | Dev realm             | `tenantry-isolation-tests` (password grant, fixed secret) is in the only realm file; production imports must not include it.             | Production realm template, Phase 6              |
 | Tests                 | The default 30-second key-set refetch cooldown has no test asserting a single refetch.                                                   | Phase 6                                         |
 | Signup                | If marking a failed signup also fails, the original error is hidden in the log.                                                          | Phase 6                                         |
 | Web UI                | The audit log shows raw ids as targets; breadcrumb and header-name links reload the page; "Load more" has no spinner.                    | Phase 2 (UI pass)                               |
 | Tokens                | A role change takes effect in the token within five minutes; identity-changing endpoints already use the live role.                      | By design (ADR-0019)                            |
+
+## Fixed
+
+| Phase | What was wrong                                                                             | Fix                                           |
+| ----- | ------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| 2     | A Keycloak outage outside signup answered 500 instead of 502.                              | Every Keycloak failure answers 502.           |
+| 2     | A plain member could not leave a workspace.                                                | `DELETE /api/members/me`, not the last owner. |
+| 2     | AGENTS.md hard rule 2 named `organization.<alias>.realm_access`; the code reads `.groups`. | Rule reworded.                                |

@@ -22,6 +22,8 @@ export interface IdentityDirectory {
   // Puts the member in this group and takes them out of the other two.
   setMemberGroup(orgId: string, kcUserId: string, group: GroupName): Promise<void>;
   listMembers(orgId: string): Promise<DirectoryMember[]>;
+  // Every organization the user is a member of, whatever their group.
+  listUserOrganizations(kcUserId: string): Promise<{ id: string; alias: string; name: string }[]>;
   inviteUser(orgId: string, email: string): Promise<void>;
   // Adds `${origin}/*` to the app's client (tenantry-web or tenantry-portal): redirect URIs and web
   // origins. Idempotent.

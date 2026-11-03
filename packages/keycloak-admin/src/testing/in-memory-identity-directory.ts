@@ -118,6 +118,14 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     });
   }
 
+  listUserOrganizations(kcUserId: string): Promise<{ id: string; alias: string; name: string }[]> {
+    return this.run('listUserOrganizations', () =>
+      [...this.orgs.entries()]
+        .filter(([, o]) => o.members.has(kcUserId))
+        .map(([id, o]) => ({ id, alias: o.alias, name: o.name })),
+    );
+  }
+
   inviteUser(orgId: string, email: string): Promise<void> {
     return this.run('inviteUser', () => {
       this.org('inviteUser', orgId);

@@ -172,6 +172,17 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       }));
     },
 
+    async listUserOrganizations(kcUserId) {
+      const orgs = await json<{ id: string; alias: string; name: string }[]>(
+        await call(
+          'listUserOrganizations',
+          'GET',
+          `/organizations/members/${encodeURIComponent(kcUserId)}/organizations`,
+        ),
+      );
+      return orgs.map(({ id, alias, name }) => ({ id, alias, name }));
+    },
+
     async inviteUser(orgId, email) {
       await call('inviteUser', 'POST', `${org(orgId)}/members/invite-user`, new URLSearchParams({ email }));
     },

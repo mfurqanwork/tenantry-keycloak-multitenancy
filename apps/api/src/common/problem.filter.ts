@@ -1,6 +1,7 @@
 import { Catch, HttpException, Logger, type ArgumentsHost, type ExceptionFilter } from '@nestjs/common';
+import { DirectoryError } from '@tenantry/keycloak-admin';
 import type { Response } from 'express';
-import { Problem } from './http-errors.js';
+import { BadGatewayProblem, Problem } from './http-errors.js';
 
 // Every error leaves the API as application/problem+json. Unexpected errors never echo their message.
 @Catch()
@@ -19,6 +20,11 @@ export class ProblemFilter implements ExceptionFilter {
 
   private toProblem(err: unknown): Problem {
     if (err instanceof Problem) return err;
+    // Keycloak is down or refused: our upstream failed, not us. Its message stays in the log.
+    if (err instanceof DirectoryError) {
+      this.logger.error(err);
+      return new BadGatewayProblem('The identity service is unavailable. Try again shortly.');
+    }
     if (err instanceof HttpException) {
       const status = err.getStatus();
       const title =

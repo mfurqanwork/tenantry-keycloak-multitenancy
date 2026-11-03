@@ -31,7 +31,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 These keep tenant isolation intact. A change that breaks one of them is wrong, even if tests pass.
 
 1. Never query tenant tables outside `tenantTx`. Only `packages/db` imports `pg` or `drizzle-orm/node-postgres`; lint enforces this, as it does the other import boundaries in ADR-0017.
-2. Never read the top-level `realm_access` claim. Standard-tier roles come only from `organization.<alias>.realm_access`; enterprise roles come from `resource_access.tenantry-api`.
+2. Never read the top-level `realm_access` claim. Standard-tier roles come only from `organization.<alias>.groups`; enterprise roles come from `resource_access.tenantry-api`.
 3. Never trust a tenant id from the client. The subdomain picks the tenant, and the token must prove it.
 4. Never call Keycloak admin endpoints from outside `packages/keycloak-admin`.
 5. Every identity change writes an audit entry.
