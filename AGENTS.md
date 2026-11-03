@@ -7,9 +7,9 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `apps/api`: the NestJS API. Every request passes `TenantAuthGuard` (`src/auth/`). Features live in `src/modules/<name>/` (module, controller, service, Zod schemas, tests); a module exports only its service (ADR-0017). `src/infrastructure/` is the only place that binds Postgres and Keycloak.
 - `apps/web`, `apps/portal`: the React + Vite SPAs, built on `@tenantry/ui`. Pages live in `src/features/<name>/` of each app.
 - `apps/login-theme`: the Keycloakify login theme, built into the Keycloak image (ADR-0021).
-- `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`.
+- `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`; `/testing` has the test helpers both apps use (`fakeApi`, `makeMe`, `renderWithApp`).
 - `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, Carbon tokens).
-- `packages/ui`: Carbon setup, `AppShell`, and the five page patterns.
+- `packages/ui`: Carbon setup, `AppShell`, the five page patterns, and `StatTile`/`TileGrid` for facts on tiles.
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.
 - `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory`, `RealmProvisioner` and `RealmApps` (customer apps, ADR-0011); `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
