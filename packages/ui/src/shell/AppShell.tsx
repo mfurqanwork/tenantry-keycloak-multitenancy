@@ -14,10 +14,19 @@ import {
   SkipToContent,
   Theme,
 } from '@carbon/react';
-import { Asleep, Light, Screen, UserAvatar, type CarbonIconType } from '@carbon/icons-react';
+import {
+  Asleep,
+  Enterprise,
+  Light,
+  Screen,
+  Switcher as SwitcherIcon,
+  UserAvatar,
+  type CarbonIconType,
+} from '@carbon/icons-react';
 import { useState, type ElementType, type ReactNode } from 'react';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
+import { HeaderSwitcherAction, HeaderSwitcherPanel, type SwitcherEntry } from './HeaderSwitcher.js';
 
 export interface NavItem {
   label: string;
@@ -33,8 +42,22 @@ interface AppShellProps {
   linkAs?: ElementType;
   // The signed-in person, for the account menu; no menu without one.
   user?: { email: string; onSignOut: () => void };
+  // The other apps of this workspace and the person's other workspaces; each switcher shows from two entries.
+  apps?: SwitcherEntry[];
+  workspaces?: WorkspaceEntry[];
+  // The tenant's logo, shown before the product name.
+  logoUrl?: string | null;
   children: ReactNode;
 }
+
+export interface WorkspaceEntry {
+  slug: string;
+  name: string;
+  href: string;
+  current: boolean;
+}
+
+type Panel = 'account' | 'apps' | 'workspaces';
 
 const THEME_ACTIONS: { preference: ThemePreference; label: string; Icon: CarbonIconType }[] = [
   { preference: 'light', label: 'Light theme', Icon: Light },
@@ -43,9 +66,24 @@ const THEME_ACTIONS: { preference: ThemePreference; label: string; Icon: CarbonI
 ];
 
 // The frame every screen sits in: a header that is dark in both themes, a side nav, and the main landmark.
-export function AppShell({ productName, navItems, currentPath, linkAs, user, children }: AppShellProps) {
+export function AppShell({
+  productName,
+  navItems,
+  currentPath,
+  linkAs,
+  user,
+  apps = [],
+  workspaces = [],
+  logoUrl = null,
+  children,
+}: AppShellProps) {
   const { preference, setPreference } = useThemePreference();
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [open, setOpen] = useState<Panel | null>(null);
+  const toggle = (panel: Panel) => {
+    setOpen(open === panel ? null : panel);
+  };
+  const accountOpen = open === 'account';
+  const workspaceEntries = workspaces.map(({ name, href, current }) => ({ label: name, href, current }));
   return (
     <HeaderContainer
       render={({ isSideNavExpanded, onClickSideNavExpand }) => (
@@ -60,6 +98,7 @@ export function AppShell({ productName, navItems, currentPath, linkAs, user, chi
                 onClick={onClickSideNavExpand}
               />
               <HeaderName href="/" prefix="">
+                {logoUrl && <img className="tenantry-header__logo" src={logoUrl} alt="" />}
                 {productName}
               </HeaderName>
               <HeaderGlobalBar>
@@ -75,6 +114,24 @@ export function AppShell({ productName, navItems, currentPath, linkAs, user, chi
                     <Icon size={20} />
                   </HeaderGlobalAction>
                 ))}
+                <HeaderSwitcherAction
+                  label="Switch workspace"
+                  Icon={Enterprise}
+                  entries={workspaceEntries}
+                  open={open === 'workspaces'}
+                  onToggle={() => {
+                    toggle('workspaces');
+                  }}
+                />
+                <HeaderSwitcherAction
+                  label="Switch app"
+                  Icon={SwitcherIcon}
+                  entries={apps}
+                  open={open === 'apps'}
+                  onToggle={() => {
+                    toggle('apps');
+                  }}
+                />
                 {user && (
                   <HeaderGlobalAction
                     aria-label="Account"
@@ -82,13 +139,19 @@ export function AppShell({ productName, navItems, currentPath, linkAs, user, chi
                     isActive={accountOpen}
                     tooltipAlignment="end"
                     onClick={() => {
-                      setAccountOpen(!accountOpen);
+                      toggle('account');
                     }}
                   >
                     <UserAvatar size={20} />
                   </HeaderGlobalAction>
                 )}
               </HeaderGlobalBar>
+              <HeaderSwitcherPanel
+                label="Switch workspace"
+                entries={workspaceEntries}
+                open={open === 'workspaces'}
+              />
+              <HeaderSwitcherPanel label="Switch app" entries={apps} open={open === 'apps'} />
               {user && (
                 <HeaderPanel aria-label="Account" expanded={accountOpen}>
                   <div className="tenantry-account">

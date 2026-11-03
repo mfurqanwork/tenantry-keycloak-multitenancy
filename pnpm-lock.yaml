@@ -357,6 +357,9 @@ importers:
       '@ibm/plex':
         specifier: 6.4.1
         version: 6.4.1
+      '@tenantry/brand':
+        specifier: workspace:*
+        version: link:../brand
       react:
         specifier: ^19.3.1
         version: 19.3.1
