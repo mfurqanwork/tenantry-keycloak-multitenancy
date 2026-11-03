@@ -1,9 +1,7 @@
 import { Select, SelectItem, TextInput } from '@carbon/react';
 import type { Role } from '@tenantry/auth';
 import { useState } from 'react';
-import { useApi } from '../../lib/api.js';
-import { FormDialog } from '../../lib/FormDialog.js';
-import { ROLE_LABELS } from '../../lib/roles.js';
+import { FormDialog, ROLE_LABELS, useApi } from '@tenantry/app-kit';
 
 function RoleSelect({
   roles,

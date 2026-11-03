@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import type { GroupName } from '@tenantry/auth';
+import type { GroupName, TenantApp } from '@tenantry/auth';
 import { DirectoryError } from '../errors.js';
-import type { DirectoryMember, IdentityDirectory } from '../identity-directory.js';
+import type { CompanyIdentityProvider, DirectoryMember, IdentityDirectory } from '../identity-directory.js';
 
 interface Org {
   alias: string;
   name: string;
+  // Domain name → the identity provider that signs it in.
+  domains: Map<string, string | null>;
+  idps: Set<string>;
   groups: boolean;
   members: Map<string, GroupName | null>;
 }
@@ -13,8 +16,9 @@ interface Org {
 // A Keycloak stand-in for unit tests. The contract test keeps it honest against the real server.
 export class InMemoryIdentityDirectory implements IdentityDirectory {
   readonly orgs = new Map<string, Org>();
-  readonly origins = new Set<string>();
+  readonly origins: Record<TenantApp, Set<string>> = { web: new Set(), portal: new Set() };
   readonly invites: { orgId: string; email: string }[] = [];
+  readonly identityProviders = new Map<string, { issuer: string; clientId: string }>();
   // Profiles for listMembers; tests register users they create.
   readonly users = new Map<string, { email: string | null; displayName: string | null }>();
   private readonly failing = new Set<keyof IdentityDirectory>();
@@ -55,7 +59,7 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
         throw new DirectoryError('createOrganization', 409);
       }
       const id = randomUUID();
-      this.orgs.set(id, { ...input, groups: false, members: new Map() });
+      this.orgs.set(id, { ...input, groups: false, members: new Map(), domains: new Map(), idps: new Set() });
       return { id };
     });
   }
@@ -118,6 +122,14 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     });
   }
 
+  listUserOrganizations(kcUserId: string): Promise<{ id: string; alias: string; name: string }[]> {
+    return this.run('listUserOrganizations', () =>
+      [...this.orgs.entries()]
+        .filter(([, o]) => o.members.has(kcUserId))
+        .map(([id, o]) => ({ id, alias: o.alias, name: o.name })),
+    );
+  }
+
   inviteUser(orgId: string, email: string): Promise<void> {
     return this.run('inviteUser', () => {
       this.org('inviteUser', orgId);
@@ -126,16 +138,63 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     });
   }
 
-  addTenantOrigin(origin: string): Promise<void> {
+  addTenantOrigin(origin: string, app: TenantApp): Promise<void> {
     return this.run('addTenantOrigin', () => {
-      this.origins.add(origin);
+      this.origins[app].add(origin);
       return undefined;
     });
   }
 
-  removeTenantOrigin(origin: string): Promise<void> {
+  // For assertions: an organization's domains and the provider linked to each.
+  domainsOf(orgId: string): { name: string; identityProviderAlias: string | null }[] {
+    const found = this.orgs.get(orgId);
+    return found
+      ? [...found.domains].map(([name, identityProviderAlias]) => ({ name, identityProviderAlias }))
+      : [];
+  }
+
+  addOrganizationDomain(orgId: string, domain: string): Promise<void> {
+    return this.run('addOrganizationDomain', () => {
+      const org = this.org('addOrganizationDomain', orgId);
+      if (!org.domains.has(domain)) org.domains.set(domain, null);
+      return undefined;
+    });
+  }
+
+  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<{ created: boolean }> {
+    return this.run('createOidcIdentityProvider', () => {
+      if (this.identityProviders.has(input.alias)) return { created: false };
+      this.identityProviders.set(input.alias, { issuer: input.issuer, clientId: input.clientId });
+      return { created: true };
+    });
+  }
+
+  linkIdentityProvider(orgId: string, alias: string, domain: string): Promise<void> {
+    return this.run('linkIdentityProvider', () => {
+      const org = this.org('linkIdentityProvider', orgId);
+      if (!this.identityProviders.has(alias)) throw new DirectoryError('linkIdentityProvider', 404);
+      if (!org.domains.has(domain))
+        throw new DirectoryError('linkIdentityProvider', 400, `no domain ${domain}`);
+      org.idps.add(alias);
+      org.domains.set(domain, alias);
+      return undefined;
+    });
+  }
+
+  deleteIdentityProvider(alias: string): Promise<void> {
+    return this.run('deleteIdentityProvider', () => {
+      this.identityProviders.delete(alias);
+      for (const org of this.orgs.values()) {
+        org.idps.delete(alias);
+        for (const [name, linked] of org.domains) if (linked === alias) org.domains.set(name, null);
+      }
+      return undefined;
+    });
+  }
+
+  removeTenantOrigin(origin: string, app: TenantApp): Promise<void> {
     return this.run('removeTenantOrigin', () => {
-      this.origins.delete(origin);
+      this.origins[app].delete(origin);
       return undefined;
     });
   }

@@ -1,5 +1,7 @@
 export { applyBrand } from './brand.js';
-export { AppShell, type NavItem } from './shell/AppShell.js';
+export { AppShell, type NavItem, type WorkspaceEntry } from './shell/AppShell.js';
+export type { SwitcherEntry } from './shell/HeaderSwitcher.js';
+export { BRAND_PROPERTIES } from './brand.js';
 export { DashboardPage } from './patterns/DashboardPage.js';
 export { DetailPage } from './patterns/DetailPage.js';
 export { ListPage } from './patterns/ListPage.js';

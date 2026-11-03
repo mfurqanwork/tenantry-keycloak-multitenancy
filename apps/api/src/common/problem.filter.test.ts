@@ -1,4 +1,5 @@
 import { NotFoundException, type ArgumentsHost } from '@nestjs/common';
+import { DirectoryError } from '@tenantry/keycloak-admin';
 import { describe, expect, it, vi } from 'vitest';
 import { ConflictProblem } from './http-errors.js';
 import { ProblemFilter } from './problem.filter.js';
@@ -23,6 +24,17 @@ describe('ProblemFilter', () => {
       status: 409,
       detail: 'Slug taken',
     });
+  });
+
+  it('answers 502 when Keycloak fails, without its message', () => {
+    const res = respond(new DirectoryError('listMembers', 503, 'upstream secret detail'));
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Bad Gateway',
+        detail: 'The identity service is unavailable. Try again shortly.',
+      }),
+    );
   });
 
   it("maps Nest's own HTTP exceptions", () => {

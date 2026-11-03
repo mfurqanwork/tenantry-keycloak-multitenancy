@@ -9,8 +9,7 @@ import {
 } from '@carbon/react';
 import { WizardPage } from '@tenantry/ui';
 import { useState } from 'react';
-import { useApi } from '../../lib/api.js';
-import { ApiErrorNotification } from '../../lib/ApiErrorNotification.js';
+import { ApiErrorNotification, useApi } from '@tenantry/app-kit';
 
 type Availability = { available: true } | { available: false; reason: 'format' | 'reserved' | 'taken' };
 

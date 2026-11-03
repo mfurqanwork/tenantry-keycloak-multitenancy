@@ -35,6 +35,9 @@ jobs:
       - run: pnpm build
       - run: pnpm dev:stack
       - run: pnpm smoke
+      - run: pnpm seed
+      # A second seed must change nothing.
+      - run: pnpm --silent seed | tee seed.log && grep -q 'nothing to change' seed.log
       - run: pnpm test:isolation
       - if: failure()
         run: docker compose -f infra/docker-compose.yml --env-file .env logs --no-color

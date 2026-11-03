@@ -1,0 +1,75 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme';
+@use '@carbon/react/scss/type';
+
+.tenantry-login {
+  min-block-size: 100vh;
+  background: theme.$background;
+}
+
+.tenantry-login__main {
+  display: grid;
+  gap: $spacing-05;
+  max-inline-size: calc(#{$spacing-13} * 3);
+  margin-inline: auto;
+  padding: $spacing-09 $spacing-05;
+}
+
+.tenantry-login__brand {
+  @include type.type-style('heading-03');
+
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+}
+
+.tenantry-login__logo {
+  block-size: $spacing-08;
+}
+
+.tenantry-login__card {
+  display: grid;
+  gap: $spacing-05;
+  padding: $spacing-07;
+}
+
+.tenantry-login__title {
+  @include type.type-style('heading-04');
+}
+
+.tenantry-login__username {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  align-items: baseline;
+
+  @include type.type-style('body-01');
+}
+
+.tenantry-login__group {
+  margin-block-end: $spacing-05;
+}
+
+.tenantry-login__error {
+  display: block;
+  color: theme.$text-error;
+}
+
+.tenantry-login__options,
+.tenantry-login__info {
+  @include type.type-style('body-compact-01');
+
+  margin-block-end: $spacing-05;
+}
+
+.tenantry-login__block {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.tenantry-login__providers {
+  display: grid;
+  gap: $spacing-03;
+  padding: 0;
+  list-style: none;
+}

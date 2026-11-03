@@ -12,6 +12,13 @@ export class OpenInviteExistsError extends Error {
   }
 }
 
+export class DomainTakenError extends Error {
+  override name = 'DomainTakenError';
+  constructor(domain: string) {
+    super(`${domain} is already verified by another workspace`);
+  }
+}
+
 // Drizzle wraps driver errors; the Postgres error code sits on the error or its cause.
 export function isUniqueViolation(err: unknown): boolean {
   const code = (e: unknown) => (e && typeof e === 'object' && 'code' in e ? e.code : undefined);

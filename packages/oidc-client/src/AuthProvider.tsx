@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuthClient, AuthUser } from './auth-client.js';
 
 export const CALLBACK_PATH = '/auth/callback';
@@ -22,6 +22,8 @@ export function AuthProvider({
   children: ReactNode;
 }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  // One redirect: a second check while the first redirect is leaving the page would start another.
+  const redirecting = useRef(false);
 
   useEffect(() => {
     // An object, so the flag read after an await is not narrowed to its initial value.
@@ -42,6 +44,28 @@ export function AuthProvider({
       run.cancelled = true;
     };
   }, [client]);
+
+  // Single logout: when the tab or window comes back, ask Keycloak whether the session still exists. Signing
+  // out in the other app ended it, so this app goes to the login page too (ADR-0020).
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || redirecting.current) return;
+      void client.checkSession().then((alive) => {
+        if (alive || redirecting.current) return;
+        redirecting.current = true;
+        setUser(null);
+        void client.signIn();
+      });
+    };
+    // A tab coming to the front fires visibilitychange; a window clicked beside another fires focus.
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [client, user]);
 
   if (!user) return <>{fallback}</>;
   return (

@@ -19,7 +19,9 @@
     "dev": "node scripts/dev-stack.mjs --infra && turbo run dev",
     "smoke": "node scripts/smoke.mjs",
     "stack:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
-    "test:isolation": "turbo run test:isolation --concurrency=1"
+    "test:isolation": "turbo run test:isolation --concurrency=1",
+    "ops": "turbo run build --filter=@tenantry/ops^... --output-logs=errors-only && pnpm --filter @tenantry/ops --silent run ops",
+    "seed": "pnpm ops seed"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

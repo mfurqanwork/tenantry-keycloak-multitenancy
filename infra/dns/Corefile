@@ -1,0 +1,8 @@
+# Local stand-in for a company's DNS (ADR-0022): answers the .test zone that `pnpm ops dns set-txt`
+# writes, so `pnpm ops domain verify` can check TXT records without a real domain. Dev only.
+test:53 {
+	file /zones/test.db
+	reload 2s
+	log
+	errors
+}

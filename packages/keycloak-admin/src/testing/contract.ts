@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { IdentityDirectory } from '../identity-directory.js';
+import type { IdentityDirectory, TenantApp } from '../identity-directory.js';
 
 export interface ContractSubject {
   dir: IdentityDirectory;
   newUser(): Promise<string>;
+  // The redirect URIs the app's client holds now.
+  redirectUris(app: TenantApp): Promise<string[]>;
+  // An OIDC issuer the directory can reach for company login (the corp-demo realm against Keycloak).
+  companyIssuer: string;
+  // How the organization's domains look now: name, and the identity provider that signs it in.
+  orgDomains(orgId: string): Promise<{ name: string; identityProviderAlias: string | null }[]>;
   cleanup(): Promise<void>;
 }
 
@@ -59,10 +65,74 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
 
     it('registers and removes a tenant origin, idempotently', async () => {
       const origin = `http://x${randomUUID().slice(0, 8)}.tenantry.localhost:8080`;
-      await s.dir.addTenantOrigin(origin);
-      await s.dir.addTenantOrigin(origin);
-      await s.dir.removeTenantOrigin(origin);
-      await expect(s.dir.removeTenantOrigin(origin)).resolves.toBeUndefined();
+      await s.dir.addTenantOrigin(origin, 'web');
+      await s.dir.addTenantOrigin(origin, 'web');
+      expect((await s.redirectUris('web')).filter((u) => u === `${origin}/*`)).toHaveLength(1);
+      await s.dir.removeTenantOrigin(origin, 'web');
+      await expect(s.dir.removeTenantOrigin(origin, 'web')).resolves.toBeUndefined();
+      expect(await s.redirectUris('web')).not.toContain(`${origin}/*`);
+    });
+
+    it("adds a portal origin to the portal's client only", async () => {
+      const origin = `http://p${randomUUID().slice(0, 8)}.portal.tenantry.localhost:8080`;
+      await s.dir.addTenantOrigin(origin, 'portal');
+      expect(await s.redirectUris('portal')).toContain(`${origin}/*`);
+      expect(await s.redirectUris('web')).not.toContain(`${origin}/*`);
+      await s.dir.removeTenantOrigin(origin, 'portal');
+      expect(await s.redirectUris('portal')).not.toContain(`${origin}/*`);
+    });
+
+    it('lists the organizations a user belongs to, and none for a stranger', async () => {
+      const second = `w${randomUUID().slice(0, 8)}`;
+      const { id: secondId } = await s.dir.createOrganization({ alias: second, name: second });
+      const someone = await s.newUser();
+      const stranger = await s.newUser();
+      await s.dir.addMember(orgId, someone);
+      await s.dir.addMember(secondId, someone);
+      const orgs = await s.dir.listUserOrganizations(someone);
+      expect(orgs.map((o) => o.id).sort()).toEqual([orgId, secondId].sort());
+      expect(orgs.find((o) => o.id === secondId)).toEqual({ id: secondId, alias: second, name: second });
+      expect(await s.dir.listUserOrganizations(stranger)).toEqual([]);
+      await s.dir.removeMember(orgId, someone);
+      await s.dir.deleteOrganization(secondId);
+    });
+
+    it("links a company identity provider to the organization's domain, idempotently", async () => {
+      const alias = `idp${randomUUID().slice(0, 8)}`;
+      const domain = `${alias}.test`;
+      const { id } = await s.dir.createOrganization({ alias, name: alias });
+      await s.dir.addOrganizationDomain(id, domain);
+      await s.dir.addOrganizationDomain(id, domain);
+      expect(await s.orgDomains(id)).toEqual([{ name: domain, identityProviderAlias: null }]);
+      const provider = {
+        alias,
+        issuer: s.companyIssuer,
+        clientId: 'tenantry-platform',
+        clientSecret: 'contract-secret',
+      };
+      // The caller learns whether this call made the provider, so it never undoes one it did not make.
+      expect(await s.dir.createOidcIdentityProvider(provider)).toEqual({ created: true });
+      expect(await s.dir.createOidcIdentityProvider(provider)).toEqual({ created: false });
+      await s.dir.linkIdentityProvider(id, alias, domain);
+      await s.dir.linkIdentityProvider(id, alias, domain);
+      expect(await s.orgDomains(id)).toEqual([{ name: domain, identityProviderAlias: alias }]);
+      await s.dir.deleteIdentityProvider(alias);
+      await expect(s.dir.deleteIdentityProvider(alias)).resolves.toBeUndefined();
+      await s.dir.deleteOrganization(id);
+    });
+
+    it('refuses to link a domain the organization does not have', async () => {
+      const alias = `idq${randomUUID().slice(0, 8)}`;
+      const { id } = await s.dir.createOrganization({ alias, name: alias });
+      await s.dir.createOidcIdentityProvider({
+        alias,
+        issuer: s.companyIssuer,
+        clientId: 'tenantry-platform',
+        clientSecret: 'contract-secret',
+      });
+      await expect(s.dir.linkIdentityProvider(id, alias, `${alias}.test`)).rejects.toThrow();
+      await s.dir.deleteIdentityProvider(alias);
+      await s.dir.deleteOrganization(id);
     });
 
     it('refuses a second organization with the same name, as Keycloak does', async () => {

@@ -1,0 +1,181 @@
+import { findDomain, listIdps, platformRepository, tenantTx, type TenantRecord } from '@tenantry/db';
+import type { DevUsers } from '@tenantry/keycloak-admin/dev';
+import { claimDomain, verifyDomain } from '../commands/domain.js';
+import { linkIdp } from '../commands/idp.js';
+import type { OpsDeps } from '../deps.js';
+import { verificationRecord } from '../dns/txt.js';
+import type { ApiCall } from './http.js';
+import { solidPng } from './png.js';
+
+type Group = 'owners' | 'admins' | 'members';
+
+interface Person {
+  email: string;
+  firstName: string;
+  lastName: string;
+  workspaces: Record<string, Group>;
+}
+
+// The demo (docs/demo-script.md). Local test accounts only, all with SEED_PASSWORD.
+export const WORKSPACES = [
+  { slug: 'acme', name: 'Acme', color: '#0f62fe', owner: 'ada@example.test' },
+  { slug: 'globex', name: 'Globex', color: '#198038', owner: 'gil@example.test' },
+] as const;
+
+export const PEOPLE: Person[] = [
+  { email: 'ada@example.test', firstName: 'Ada', lastName: 'Acme', workspaces: { acme: 'owners' } },
+  { email: 'ben@example.test', firstName: 'Ben', lastName: 'Acme', workspaces: { acme: 'admins' } },
+  { email: 'cy@example.test', firstName: 'Cy', lastName: 'Acme', workspaces: { acme: 'members' } },
+  { email: 'gil@example.test', firstName: 'Gil', lastName: 'Globex', workspaces: { globex: 'owners' } },
+  { email: 'gwen@example.test', firstName: 'Gwen', lastName: 'Globex', workspaces: { globex: 'admins' } },
+  { email: 'gus@example.test', firstName: 'Gus', lastName: 'Globex', workspaces: { globex: 'members' } },
+  {
+    email: 'pat@example.test',
+    firstName: 'Pat',
+    lastName: 'Both',
+    workspaces: { acme: 'members', globex: 'members' },
+  },
+];
+
+// Company login for acme: people at acme.test sign in through the corp-demo realm (ADR-0022).
+export const COMPANY = { tenant: 'acme', domain: 'acme.test', alias: 'acme-corp', person: 'alice@acme.test' };
+
+export interface SeedDeps extends OpsDeps {
+  users: DevUsers;
+  api: ApiCall;
+  // A user's access token through the dev-only password-grant client, for one workspace or none.
+  tokenFor: (email: string, slug?: string) => Promise<string>;
+  password: string;
+  baseDomain: string;
+  company: { issuer: string; clientSecret: string };
+  setTxt: (name: string, value: string) => void;
+}
+
+// Creates or completes the demo; a second run changes nothing.
+export async function seed(deps: SeedDeps): Promise<number> {
+  const changes: string[] = [];
+  const quiet = { ...deps, out: () => undefined };
+  const platform = platformRepository(deps.db);
+
+  for (const p of PEOPLE) {
+    const { created } = await deps.users.ensureUser('platform', { ...p, password: deps.password });
+    if (created) changes.push(`user ${p.email}`);
+  }
+  const alice = await deps.users.ensureUser('corp-demo', {
+    email: COMPANY.person,
+    firstName: 'Alice',
+    lastName: 'Anders',
+    password: deps.password,
+  });
+  if (alice.created) changes.push(`company user ${COMPANY.person}`);
+
+  for (const w of WORKSPACES) {
+    let tenant = await platform.findTenantBySlug(w.slug);
+    if (tenant?.status !== 'active') {
+      const res = await deps.api(deps.baseDomain, 'POST', '/api/signup', {
+        token: await deps.tokenFor(w.owner),
+        body: { name: w.name, slug: w.slug },
+      });
+      if (res.status !== 201)
+        throw new Error(`signup ${w.slug}: ${String(res.status)} ${JSON.stringify(res.body)}`);
+      changes.push(`workspace ${w.slug}`);
+      tenant = await platform.findTenantBySlug(w.slug);
+    }
+    if (!tenant?.kcOrgId) throw new Error(`workspace ${w.slug} has no organization`);
+    await ensureMembers(deps, tenant, changes);
+    await ensureBranding(deps, tenant, w, changes);
+  }
+
+  const acme = await platform.findTenantBySlug(COMPANY.tenant);
+  if (acme) await ensureCompanyLogin(deps, quiet, acme, changes);
+
+  deps.out(
+    changes.length ? `Seeded: ${changes.join(', ')}.` : 'The demo is already seeded: nothing to change.',
+  );
+  return 0;
+}
+
+async function ensureMembers(deps: SeedDeps, tenant: TenantRecord, changes: string[]) {
+  const orgId = tenant.kcOrgId ?? '';
+  const members = await deps.directory.listMembers(orgId);
+  for (const p of PEOPLE) {
+    const group = p.workspaces[tenant.slug];
+    if (!group) continue;
+    const { id } = await deps.users.ensureUser('platform', { ...p, password: deps.password });
+    const current = members.find((m) => m.kcUserId === id);
+    if (!current) await deps.directory.addMember(orgId, id);
+    if (current?.group !== group) {
+      await deps.directory.setMemberGroup(orgId, id, group);
+      changes.push(`${p.email} in ${tenant.slug} as ${group}`);
+    }
+  }
+}
+
+async function ensureBranding(
+  deps: SeedDeps,
+  tenant: TenantRecord,
+  w: (typeof WORKSPACES)[number],
+  changes: string[],
+) {
+  const host = `${tenant.slug}.${deps.baseDomain}`;
+  const token = await deps.tokenFor(w.owner, tenant.slug);
+  if (tenant.branding.primaryColor !== w.color) {
+    const res = await deps.api(host, 'PUT', '/api/branding', { token, body: { primaryColor: w.color } });
+    if (res.status !== 200) throw new Error(`branding ${tenant.slug}: ${String(res.status)}`);
+    changes.push(`${tenant.slug} colour`);
+  }
+  if (tenant.branding.logoVersion === null) {
+    const boundary = 'tenantryseed';
+    const raw = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="logo.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      solidPng(w.color),
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const res = await deps.api(host, 'POST', '/api/branding/logo', {
+      token,
+      raw,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+    });
+    if (res.status !== 201) throw new Error(`logo ${tenant.slug}: ${String(res.status)}`);
+    changes.push(`${tenant.slug} logo`);
+  }
+}
+
+async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, acme: TenantRecord, changes: string[]) {
+  const { tenant, domain, alias } = COMPANY;
+  const linked = await tenantTx(deps.db, acme.id, (tx) => listIdps(tx));
+  if (!linked.some((idp) => idp.alias === alias)) {
+    await claimDomain(quiet, { tenant, domain });
+    const claimed = await tenantTx(deps.db, acme.id, (tx) => findDomain(tx, domain));
+    if (!claimed?.verifiedAt) {
+      const record = verificationRecord(domain, claimed?.verificationToken ?? '');
+      deps.setTxt(record.name, record.value);
+      // CoreDNS answers once it has reloaded the zone; give it a moment.
+      for (let i = 0; i < 10 && (await verifyDomain(quiet, { tenant, domain })) !== 0; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+    const code = await linkIdp(deps, {
+      tenant,
+      domain,
+      alias,
+      issuer: deps.company.issuer,
+      clientId: 'tenantry-platform',
+      clientSecret: deps.company.clientSecret,
+    });
+    if (code !== 0) throw new Error(`could not link ${alias} to ${domain}`);
+    changes.push(`company login for ${domain}`);
+  }
+  // Alice gets the member role through an invite, claimed the first time she signs in (ADR-0019).
+  const members = await deps.directory.listMembers(acme.kcOrgId ?? '');
+  if (!members.some((m) => m.email === COMPANY.person)) {
+    const res = await deps.api(`${acme.slug}.${deps.baseDomain}`, 'POST', '/api/members/invites', {
+      token: await deps.tokenFor('ada@example.test', acme.slug),
+      body: { email: COMPANY.person, role: 'member' },
+    });
+    if (res.status === 201) changes.push(`invite for ${COMPANY.person}`);
+    else if (res.status !== 409) throw new Error(`invite ${COMPANY.person}: ${String(res.status)}`);
+  }
+}

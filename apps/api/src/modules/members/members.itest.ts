@@ -224,3 +224,36 @@ describe('removing members', () => {
     expect((await as(owner).del(`/api/members/${await userIdOf(owner.user)}`)).status).toBe(409);
   });
 });
+
+describe('leaving a workspace', () => {
+  it('lets a member leave, with an audit entry', async () => {
+    expect((await as(member).del('/api/members/me')).status).toBe(204);
+    expect((await t.directory.listMembers(acme.kcOrgId)).some((m) => m.kcUserId === member.user.sub)).toBe(
+      false,
+    );
+    expect(await actions()).toContain('member.left');
+  });
+
+  it('lets an owner leave while another owner stays', async () => {
+    const second = await t.member(acme, 'owners');
+    expect((await as(second).del('/api/members/me')).status).toBe(204);
+  });
+
+  it('refuses the last owner', async () => {
+    const res = await as(owner).del('/api/members/me');
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ detail: 'You are the last owner. Make someone else an owner first.' });
+  });
+
+  it('refuses someone whose token is for another workspace', async () => {
+    const other = await t.seedTenant();
+    const outsider = await t.member(other, 'members');
+    const res = await t.request({
+      host: acme.host,
+      method: 'DELETE',
+      path: '/api/members/me',
+      token: outsider.token,
+    });
+    expect(res.status).toBe(403);
+  });
+});

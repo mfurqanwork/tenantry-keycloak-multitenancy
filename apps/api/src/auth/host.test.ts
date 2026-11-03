@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slugFromHost } from './host.js';
+import { slugFromHost, tenantFromHost } from './host.js';
 
 const base = 'tenantry.localhost';
 
@@ -28,5 +28,25 @@ describe('slugFromHost', () => {
   it('has no tenant without a host', () => {
     expect(slugFromHost(undefined, base)).toBeNull();
     expect(slugFromHost('', base)).toBeNull();
+  });
+});
+
+describe('tenantFromHost', () => {
+  it('reads the web app host', () => {
+    expect(tenantFromHost('acme.tenantry.localhost:8080', base)).toEqual({ slug: 'acme', app: 'web' });
+  });
+
+  it('reads the portal host as the same tenant', () => {
+    expect(tenantFromHost('acme.portal.tenantry.localhost:8080', base)).toEqual({
+      slug: 'acme',
+      app: 'portal',
+    });
+    expect(slugFromHost('ACME.portal.tenantry.localhost.', base)).toBe('acme');
+  });
+
+  it('has no tenant on the bare portal host or deeper names', () => {
+    expect(tenantFromHost('portal.tenantry.localhost', base)).toBeNull();
+    expect(tenantFromHost('a.b.portal.tenantry.localhost', base)).toBeNull();
+    expect(tenantFromHost('acme.portal.eviltenantry.localhost', base)).toBeNull();
   });
 });

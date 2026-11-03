@@ -110,3 +110,9 @@ body {
 .tenantry-page__body > .cds--stack-vertical {
   grid-template-columns: minmax(0, 1fr);
 }
+
+// A tenant's logo in the header, before the product name; its height follows the spacing scale.
+.tenantry-header__logo {
+  block-size: $spacing-07;
+  margin-inline-end: $spacing-03;
+}

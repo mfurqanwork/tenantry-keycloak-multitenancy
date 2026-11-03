@@ -150,6 +150,22 @@ export class MembersService {
     });
   }
 
+  // Anyone may leave a workspace they belong to, except its last owner.
+  async leave(ctx: TenantContext, tenant: TenantRecord, actor: SignedInUser): Promise<void> {
+    const { orgId } = this.identity(tenant);
+    await this.underLock(ctx, async (tx) => {
+      const members = await this.directory.listMembers(orgId);
+      const me = members.find((m) => m.kcUserId === actor.kcUserId);
+      if (!me) throw new ForbiddenProblem();
+      const role = roleOf(me);
+      if (role === 'owner' && members.filter((m) => roleOf(m) === 'owner').length <= 1) {
+        throw new ConflictProblem('You are the last owner. Make someone else an owner first.');
+      }
+      await this.directory.removeMember(orgId, actor.kcUserId);
+      await this.audit.record(tx, ctx, 'member.left', ctx.userId, { email: me.email, role });
+    });
+  }
+
   private identity(tenant: TenantRecord): { orgId: string; issuer: string } {
     if (!tenant.kcOrgId || !tenant.issuer) throw new Error(`tenant ${tenant.slug} has no organization`);
     return { orgId: tenant.kcOrgId, issuer: tenant.issuer };

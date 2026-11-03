@@ -6,3 +6,5 @@ coverage/
 *.log
 .superpowers/
 nul
+dist_keycloak/
+infra/dns/zones/*.db

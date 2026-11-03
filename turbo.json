@@ -22,6 +22,10 @@
     "test:isolation": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "@tenantry/ops#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
     }
   }
 }

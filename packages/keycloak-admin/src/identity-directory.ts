@@ -1,6 +1,6 @@
-import type { GroupName } from '@tenantry/auth';
+import type { GroupName, TenantApp } from '@tenantry/auth';
 
-export type { GroupName } from '@tenantry/auth';
+export type { GroupName, TenantApp } from '@tenantry/auth';
 
 export interface DirectoryMember {
   kcUserId: string;
@@ -22,8 +22,31 @@ export interface IdentityDirectory {
   // Puts the member in this group and takes them out of the other two.
   setMemberGroup(orgId: string, kcUserId: string, group: GroupName): Promise<void>;
   listMembers(orgId: string): Promise<DirectoryMember[]>;
+  // Every organization the user is a member of, whatever their group.
+  listUserOrganizations(kcUserId: string): Promise<{ id: string; alias: string; name: string }[]>;
   inviteUser(orgId: string, email: string): Promise<void>;
-  // Adds `${origin}/*` to tenantry-web's redirect URIs and the origin to its web origins. Idempotent.
-  addTenantOrigin(origin: string): Promise<void>;
-  removeTenantOrigin(origin: string): Promise<void>;
+  // Adds `${origin}/*` to the app's client (tenantry-web or tenantry-portal): redirect URIs and web
+  // origins. Idempotent.
+  addTenantOrigin(origin: string, app: TenantApp): Promise<void>;
+  removeTenantOrigin(origin: string, app: TenantApp): Promise<void>;
+
+  // Company login (ADR-0022), used by the operator scripts only.
+  // Adds a verified email domain to the organization. Idempotent.
+  addOrganizationDomain(orgId: string, domain: string): Promise<void>;
+  // An OIDC identity provider in the realm, configured from the issuer's discovery document. When the
+  // alias exists already, nothing changes and `created` is false, so callers never undo what they did
+  // not make.
+  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<{ created: boolean }>;
+  // Links the provider to the organization and makes it sign in that domain's people (Keycloak sends
+  // them there by the email domain). The organization must already have the domain. Idempotent.
+  linkIdentityProvider(orgId: string, alias: string, domain: string): Promise<void>;
+  // A missing provider counts as deleted.
+  deleteIdentityProvider(alias: string): Promise<void>;
+}
+
+export interface CompanyIdentityProvider {
+  alias: string;
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
 }

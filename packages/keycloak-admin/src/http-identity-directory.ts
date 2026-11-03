@@ -1,4 +1,4 @@
-import { roleForGroupPath, ROLES, groupForRole, type GroupName } from '@tenantry/auth';
+import { roleForGroupPath, ROLES, groupForRole, type GroupName, type TenantApp } from '@tenantry/auth';
 import { createAdminTokenSource } from './admin-token.js';
 import { DirectoryError } from './errors.js';
 import type { DirectoryMember, IdentityDirectory } from './identity-directory.js';
@@ -9,8 +9,9 @@ export interface HttpIdentityDirectoryOptions {
   realm: string;
   clientId: string;
   clientSecret: string;
-  // The SPA client whose redirect URIs list each tenant's origin.
+  // The SPA clients whose redirect URIs list each tenant's origins.
   webClientId: string;
+  portalClientId: string;
   fetch?: typeof fetch;
 }
 
@@ -25,6 +26,10 @@ interface KcGroup {
   id: string;
   name: string;
   path?: string;
+}
+interface KcOrganization {
+  id: string;
+  domains?: { name: string; verified?: boolean; identityProviderAlias?: string; autoRedirect?: boolean }[];
 }
 interface KcClient {
   id: string;
@@ -73,14 +78,15 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
     return ids;
   }
 
-  // Concurrent signups would otherwise read-modify-write tenantry-web and lose each other's origins.
+  // Concurrent signups would otherwise read-modify-write a client and lose each other's origins.
   let clientQueue: Promise<unknown> = Promise.resolve();
-  function editWebClient(operation: string, edit: (c: KcClient) => KcClient): Promise<void> {
+  function editAppClient(operation: string, app: TenantApp, edit: (c: KcClient) => KcClient): Promise<void> {
+    const clientId = app === 'portal' ? o.portalClientId : o.webClientId;
     const run = clientQueue.then(async () => {
       const [client] = await json<KcClient[]>(
-        await call(operation, 'GET', `/clients?clientId=${encodeURIComponent(o.webClientId)}`),
+        await call(operation, 'GET', `/clients?clientId=${encodeURIComponent(clientId)}`),
       );
-      if (!client) throw new DirectoryError(operation, 404, `client ${o.webClientId} not found`);
+      if (!client) throw new DirectoryError(operation, 404, `client ${clientId} not found`);
       await call(operation, 'PUT', `/clients/${client.id}`, edit(client));
     });
     clientQueue = run.catch(() => undefined);
@@ -170,22 +176,100 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       }));
     },
 
+    async listUserOrganizations(kcUserId) {
+      const orgs = await json<{ id: string; alias: string; name: string }[]>(
+        await call(
+          'listUserOrganizations',
+          'GET',
+          `/organizations/members/${encodeURIComponent(kcUserId)}/organizations`,
+        ),
+      );
+      return orgs.map(({ id, alias, name }) => ({ id, alias, name }));
+    },
+
     async inviteUser(orgId, email) {
       await call('inviteUser', 'POST', `${org(orgId)}/members/invite-user`, new URLSearchParams({ email }));
     },
 
-    addTenantOrigin(origin) {
+    addTenantOrigin(origin, app) {
       const uri = `${origin}/*`;
-      return editWebClient('addTenantOrigin', (c) => ({
+      return editAppClient('addTenantOrigin', app, (c) => ({
         ...c,
         redirectUris: [...new Set([...(c.redirectUris ?? []), uri])],
         webOrigins: [...new Set([...(c.webOrigins ?? []), origin])],
       }));
     },
 
-    removeTenantOrigin(origin) {
+    async addOrganizationDomain(orgId, domain) {
+      const current = await json<KcOrganization>(await call('addOrganizationDomain', 'GET', org(orgId)));
+      const domains = current.domains ?? [];
+      if (domains.some((d) => d.name === domain)) return;
+      await call('addOrganizationDomain', 'PUT', org(orgId), {
+        ...current,
+        domains: [...domains, { name: domain, verified: true }],
+      });
+    },
+
+    async createOidcIdentityProvider(input) {
+      // Keycloak reads the issuer's discovery document itself and returns the endpoint settings.
+      const discovered = await json<Record<string, string>>(
+        await call('createOidcIdentityProvider', 'POST', '/identity-provider/import-config', {
+          providerId: 'oidc',
+          fromUrl: `${input.issuer}/.well-known/openid-configuration`,
+        }),
+      );
+      const res = await call(
+        'createOidcIdentityProvider',
+        'POST',
+        '/identity-provider/instances',
+        {
+          alias: input.alias,
+          providerId: 'oidc',
+          enabled: true,
+          trustEmail: true,
+          config: {
+            ...discovered,
+            clientId: input.clientId,
+            clientSecret: input.clientSecret,
+            clientAuthMethod: 'client_secret_post',
+            syncMode: 'IMPORT',
+            defaultScope: 'openid email profile',
+          },
+        },
+        [409],
+      );
+      return { created: res.status !== 409 };
+    },
+
+    // Keycloak 26.8 keeps the provider for a domain on the organization's domain entry.
+    async linkIdentityProvider(orgId, alias, domain) {
+      await call('linkIdentityProvider', 'POST', `${org(orgId)}/identity-providers`, alias, [409]);
+      const current = await json<KcOrganization>(await call('linkIdentityProvider', 'GET', org(orgId)));
+      const domains = current.domains ?? [];
+      if (!domains.some((d) => d.name === domain)) {
+        throw new DirectoryError('linkIdentityProvider', 400, `organization has no domain ${domain}`);
+      }
+      await call('linkIdentityProvider', 'PUT', org(orgId), {
+        ...current,
+        domains: domains.map((d) =>
+          d.name === domain ? { ...d, identityProviderAlias: alias, autoRedirect: true } : d,
+        ),
+      });
+    },
+
+    async deleteIdentityProvider(alias) {
+      await call(
+        'deleteIdentityProvider',
+        'DELETE',
+        `/identity-provider/instances/${encodeURIComponent(alias)}`,
+        undefined,
+        [404],
+      );
+    },
+
+    removeTenantOrigin(origin, app) {
       const uri = `${origin}/*`;
-      return editWebClient('removeTenantOrigin', (c) => ({
+      return editAppClient('removeTenantOrigin', app, (c) => ({
         ...c,
         redirectUris: (c.redirectUris ?? []).filter((u) => u !== uri),
         webOrigins: (c.webOrigins ?? []).filter((w) => w !== origin),

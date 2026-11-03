@@ -11,10 +11,12 @@ import { HealthController } from './health/health.controller.js';
 import { KeycloakHealthIndicator } from './health/keycloak.health.js';
 import { InfrastructureModule } from './infrastructure/infrastructure.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
+import { BrandingModule } from './modules/branding/branding.module.js';
 import { MembersModule } from './modules/members/members.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
 import { SignupModule } from './modules/signup/signup.module.js';
 import { TenantsModule } from './modules/tenants/tenants.module.js';
+import { WorkspacesModule } from './modules/workspaces/workspaces.module.js';
 
 @Module({})
 export class AppModule {
@@ -31,6 +33,8 @@ export class AppModule {
         ProjectsModule,
         SignupModule,
         MembersModule,
+        WorkspacesModule,
+        BrandingModule,
       ],
       controllers: [HealthController],
       providers: [

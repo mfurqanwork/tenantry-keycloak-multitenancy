@@ -1,6 +1,13 @@
 import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { isUniqueViolation, SlugTakenError } from '../errors.js';
-import { identities, tenantIdentity, tenants, users, type TenantStatus } from '../schema/index.js';
+import {
+  identities,
+  tenantIdentity,
+  tenants,
+  users,
+  type TenantBranding,
+  type TenantStatus,
+} from '../schema/index.js';
 import type { Executor } from './executor.js';
 
 export interface TenantRecord {
@@ -11,7 +18,13 @@ export interface TenantRecord {
   realm: string | null;
   issuer: string | null;
   kcOrgId: string | null;
+  branding: TenantBranding;
 }
+
+const brandingOf = (stored: Partial<TenantBranding> | null): TenantBranding => ({
+  primaryColor: stored?.primaryColor ?? null,
+  logoVersion: stored?.logoVersion ?? null,
+});
 
 export interface IdentityInput {
   issuer: string;
@@ -22,8 +35,8 @@ export interface IdentityInput {
 
 // The only access to tables that span tenants (tenants, tenant_identity, users, identities).
 export function platformRepository(ex: Executor) {
-  const findTenant = async (where: ReturnType<typeof eq>): Promise<TenantRecord | null> => {
-    const [row] = await ex
+  const selectTenants = () =>
+    ex
       .select({
         id: tenants.id,
         slug: tenants.slug,
@@ -32,16 +45,45 @@ export function platformRepository(ex: Executor) {
         realm: tenantIdentity.realm,
         issuer: tenantIdentity.issuer,
         kcOrgId: tenantIdentity.kcOrgId,
+        branding: tenants.branding,
       })
       .from(tenants)
-      .leftJoin(tenantIdentity, eq(tenantIdentity.tenantId, tenants.id))
-      .where(and(where, eq(tenants.tier, 'standard')));
-    return row ?? null;
+      .leftJoin(tenantIdentity, eq(tenantIdentity.tenantId, tenants.id));
+
+  const findTenant = async (where: ReturnType<typeof eq>): Promise<TenantRecord | null> => {
+    const [row] = await selectTenants().where(and(where, eq(tenants.tier, 'standard')));
+    return row ? { ...row, branding: brandingOf(row.branding) } : null;
   };
 
   return {
     findTenantBySlug: (slug: string) => findTenant(eq(tenants.slug, slug)),
     findTenantById: (id: string) => findTenant(eq(tenants.id, id)),
+
+    async listActiveTenants(): Promise<TenantRecord[]> {
+      const rows = await selectTenants()
+        .where(and(eq(tenants.status, 'active'), eq(tenants.tier, 'standard')))
+        .orderBy(tenants.slug);
+      return rows.map((row) => ({ ...row, branding: brandingOf(row.branding) }));
+    },
+
+    async findActiveTenantsBySlugs(slugs: string[]): Promise<TenantRecord[]> {
+      if (slugs.length === 0) return [];
+      const rows = await selectTenants().where(
+        and(inArray(tenants.slug, slugs), eq(tenants.status, 'active'), eq(tenants.tier, 'standard')),
+      );
+      return rows.map((row) => ({ ...row, branding: brandingOf(row.branding) }));
+    },
+
+    // Merges into the stored object: setting the colour keeps the logo version, and the other way round.
+    async setBranding(tenantId: string, patch: Partial<TenantBranding>): Promise<TenantBranding> {
+      const [row] = await ex
+        .update(tenants)
+        .set({ branding: sql`${tenants.branding} || ${JSON.stringify(patch)}::jsonb` })
+        .where(eq(tenants.id, tenantId))
+        .returning({ branding: tenants.branding });
+      if (!row) throw new Error(`tenant ${tenantId} not found`);
+      return brandingOf(row.branding);
+    },
 
     // A failed signup leaves its row behind, and so does one whose process died mid-way (still
     // provisioning after ten minutes); the next signup for that slug replaces either.

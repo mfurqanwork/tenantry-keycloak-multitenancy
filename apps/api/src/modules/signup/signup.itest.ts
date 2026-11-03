@@ -48,7 +48,8 @@ describe('POST /api/signup', () => {
     expect(await t.directory.listMembers(orgId)).toEqual([
       expect.objectContaining({ kcUserId: owner.sub, group: 'owners' }),
     ]);
-    expect(t.directory.origins.has(`http://${slug}.tenantry.localhost`)).toBe(true);
+    expect(t.directory.origins.web.has(`http://${slug}.tenantry.localhost`)).toBe(true);
+    expect(t.directory.origins.portal.has(`http://${slug}.portal.tenantry.localhost`)).toBe(true);
     const audit = await tenantTx(t.db, tenant?.id ?? '', (tx) => listAudit(tx, { limit: 5 }));
     expect(audit.map((e) => e.action)).toEqual(['tenant.created']);
 
@@ -74,7 +75,8 @@ describe('POST /api/signup', () => {
     expect(res.status).toBe(502);
     expect((await platformRepository(t.db).findTenantBySlug(slug))?.status).toBe('failed');
     expect(orgsWithAlias(slug)).toEqual([]);
-    expect(t.directory.origins.has(`http://${slug}.tenantry.localhost`)).toBe(false);
+    expect(t.directory.origins.web.has(`http://${slug}.tenantry.localhost`)).toBe(false);
+    expect(t.directory.origins.portal.has(`http://${slug}.portal.tenantry.localhost`)).toBe(false);
 
     t.directory.clearFailures();
     expect((await signup(slug)).status).toBe(201);

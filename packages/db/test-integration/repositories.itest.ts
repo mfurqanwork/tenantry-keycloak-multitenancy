@@ -88,6 +88,7 @@ describe('platformRepository: tenants', () => {
       realm: 'platform',
       issuer: 'http://issuer',
       kcOrgId: 'org-1',
+      branding: { primaryColor: null, logoVersion: null },
     });
     expect((await platform.findTenantById(id))?.slug).toBe(slug);
   });

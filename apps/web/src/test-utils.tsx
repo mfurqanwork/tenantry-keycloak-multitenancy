@@ -4,8 +4,7 @@ import { TenantryThemeProvider } from '@tenantry/ui';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { vi } from 'vitest';
-import { ApiProvider, type Api } from './lib/api.js';
-import { MeProvider, type Me } from './lib/me.js';
+import { type Api, ApiProvider, type Me, MeProvider } from '@tenantry/app-kit';
 
 export const ALL: Permission[] = [
   'members:read',
@@ -38,7 +37,9 @@ export function fakeApi(
   return {
     get: vi.fn(answer),
     post: vi.fn((path: string) => answer(`POST ${path}`)),
+    put: vi.fn((path: string) => answer(`PUT ${path}`)),
     patch: vi.fn((path: string) => answer(`PATCH ${path}`)),
+    upload: vi.fn((path: string) => answer(`UPLOAD ${path}`)),
     del: vi.fn((path: string) => answer(`DELETE ${path}`)),
   } as never;
 }

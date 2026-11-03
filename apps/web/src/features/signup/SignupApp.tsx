@@ -2,9 +2,8 @@ import { InlineLoading } from '@carbon/react';
 import { AuthProvider, CALLBACK_PATH, createAuthClient } from '@tenantry/oidc-client';
 import { AppShell } from '@tenantry/ui';
 import { useMemo } from 'react';
+import { RouterLink, SignedInApi } from '@tenantry/app-kit';
 import { apexAuthConfig } from '../../lib/host.js';
-import { RouterLink } from '../../lib/RouterLink.js';
-import { SignedInApi } from '../../lib/SignedInApi.js';
 import { SignupRoute } from './SignupRoute.js';
 
 // The apex host: sign in (or register) in Keycloak, then create a workspace (ADR-0018).

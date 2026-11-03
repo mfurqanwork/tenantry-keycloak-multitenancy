@@ -1,15 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiProblem, ApiProvider, type Api } from '../../lib/api.js';
+import { type Api, ApiProblem, ApiProvider } from '@tenantry/app-kit';
 import { SignupRoute } from './SignupRoute.js';
 
 function fakeApi(overrides: Partial<Api> = {}): Api {
   return {
     get: vi.fn().mockResolvedValue({ available: true }),
     post: vi.fn().mockResolvedValue({ slug: 'acme', url: 'http://acme.tenantry.localhost' }),
+    put: vi.fn(),
     patch: vi.fn(),
     del: vi.fn(),
+    upload: vi.fn(),
     ...overrides,
   };
 }

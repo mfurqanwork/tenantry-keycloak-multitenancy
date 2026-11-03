@@ -3,6 +3,12 @@ import { check, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-cor
 
 export type TenantStatus = 'provisioning' | 'active' | 'failed';
 
+// What a tenant has set. A key it never set is absent; the repository reads it as null.
+export interface TenantBranding {
+  primaryColor: string | null;
+  logoVersion: number | null;
+}
+
 // Spans tenants: reached only through platformRepository.
 export const tenants = pgTable(
   'tenants',
@@ -12,7 +18,7 @@ export const tenants = pgTable(
     name: text('name').notNull(),
     tier: text('tier').notNull().default('standard'),
     status: text('status').$type<TenantStatus>().notNull().default('provisioning'),
-    branding: jsonb('branding').$type<Record<string, unknown>>().notNull().default({}),
+    branding: jsonb('branding').$type<Partial<TenantBranding>>().notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
