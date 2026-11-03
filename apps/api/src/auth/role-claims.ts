@@ -1,4 +1,4 @@
-import { roleForGroupPath, type Role } from '@tenantry/auth';
+import { roleForGroupPath, ROLES, type Role } from '@tenantry/auth';
 
 export type Membership = { member: false } | { member: true; roles: Role[] };
 
@@ -17,4 +17,20 @@ export function rolesFromClaims(payload: Record<string, unknown>, alias: string)
     .map(roleForGroupPath)
     .filter((r): r is Role => r !== null);
   return { member: true, roles };
+}
+
+// AGENTS.md rule 2, Enterprise: roles come only from our API client's roles in the tenant's own realm
+// (ADR-0004), never from realm_access or another client. A token with none of our roles is no member.
+export function rolesFromClientRoles(
+  payload: Record<string, unknown>,
+  clientId = 'tenantry-api',
+): Membership {
+  const access = payload['resource_access'];
+  if (!isRecord(access)) return { member: false };
+  const block = access[clientId];
+  if (!isRecord(block) || !Array.isArray(block['roles'])) return { member: false };
+  const roles = block['roles'].filter(
+    (r): r is Role => typeof r === 'string' && (ROLES as readonly string[]).includes(r),
+  );
+  return roles.length ? { member: true, roles } : { member: false };
 }

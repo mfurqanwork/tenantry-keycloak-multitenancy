@@ -165,7 +165,22 @@ export function platformRepository(ex: Executor) {
         .select({ userId: identities.userId })
         .from(identities)
         .where(and(eq(identities.issuer, input.issuer), eq(identities.subject, input.subject)));
-      if (existing) return existing;
+      if (existing) {
+        // Keycloak owns email and name: keep ours in step with the newest token.
+        await ex
+          .update(users)
+          .set({ email: input.email, displayName: input.displayName })
+          .where(
+            and(
+              eq(users.id, existing.userId),
+              or(
+                sql`${users.email} is distinct from ${input.email}`,
+                sql`${users.displayName} is distinct from ${input.displayName}`,
+              ),
+            ),
+          );
+        return existing;
+      }
       return ex.transaction(async (tx) => {
         const [user] = await tx
           .insert(users)

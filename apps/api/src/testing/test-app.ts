@@ -48,6 +48,17 @@ export interface TestApp {
     headers?: Record<string, string>;
   }): Promise<TestResponse<T>>;
   seedTenant(): Promise<TestTenant>;
+  // An enterprise tenant: realm ent-<slug>, its own issuer at the test issuer, no organization.
+  seedEnterpriseTenant(): Promise<TestTenant & { issuer: string; realm: string }>;
+  // A token from that tenant's realm, carrying these tenantry-api client roles.
+  enterpriseToken(
+    tenant: { issuer: string },
+    user: TestUser,
+    roles: string[],
+    extra?: Record<string, unknown>,
+  ): Promise<string>;
+  // A platform-realm client-credentials token for the operator scripts (tenantry-ops).
+  operatorToken(extra?: Record<string, unknown>): Promise<string>;
   newUser(): TestUser;
   // Puts the user in the tenant's organization (and group) in the fake directory.
   join(tenant: TestTenant, user: TestUser, group: 'owners' | 'admins' | 'members' | null): Promise<void>;
@@ -151,6 +162,32 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
       await platform.activateTenant(id, { realm: 'platform', issuer: issuer.issuer, kcOrgId: org.id });
       return { id, slug, kcOrgId: org.id, host: `${slug}.tenantry.localhost` };
     },
+    async seedEnterpriseTenant() {
+      const slug = `e${randomUUID().slice(0, 8)}`;
+      const realm = `ent-${slug}`;
+      const realmIssuer = `${issuer.baseUrl}/realms/${realm}`;
+      const platform = platformRepository(db);
+      const { id } = await platform.insertProvisioningTenant({
+        slug,
+        name: `Enterprise ${slug}`,
+        tier: 'enterprise',
+      });
+      await platform.activateTenant(id, { realm, issuer: realmIssuer, kcOrgId: null, templateVersion: 1 });
+      return { id, slug, kcOrgId: '', host: `${slug}.tenantry.localhost`, issuer: realmIssuer, realm };
+    },
+    enterpriseToken: (tenant, user, roles, extra = {}) =>
+      issuer.sign({
+        iss: tenant.issuer,
+        sub: user.sub,
+        email: user.email,
+        aud: 'tenantry-api',
+        azp: 'tenantry-web',
+        email_verified: true,
+        ...(roles.length ? { resource_access: { 'tenantry-api': { roles } } } : {}),
+        ...extra,
+      }),
+    operatorToken: (extra = {}) =>
+      issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
     newUser() {
       const sub = randomUUID();
       const user = { sub, email: `${sub.slice(0, 8)}@example.com` };

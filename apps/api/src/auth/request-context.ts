@@ -15,4 +15,6 @@ export interface AuthedRequest extends Request {
   tenant?: TenantRecord;
   tenantContext?: TenantContext;
   signedIn?: SignedInUser;
+  // Set on @OperatorOnly() routes: which operator client called.
+  operator?: { clientId: string };
 }

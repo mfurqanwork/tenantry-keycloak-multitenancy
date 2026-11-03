@@ -12,11 +12,12 @@ export interface TestIssuer {
   close(): Promise<void>;
 }
 
-// A local stand-in for the platform realm: serves a key set and signs tokens with it.
+// A local stand-in for Keycloak: serves one key set for every realm and signs tokens with it. Tokens
+// carry the platform issuer unless a test sets another realm's `iss`.
 export async function makeTestIssuer(realm = 'platform'): Promise<TestIssuer> {
   let key = await newKey();
   const server: Server = createServer((req, res) => {
-    if (req.url === `/realms/${realm}/protocol/openid-connect/certs`) {
+    if (/^\/realms\/[^/]+\/protocol\/openid-connect\/certs$/.test(req.url ?? '')) {
       res.setHeader('content-type', 'application/json');
       res.end(JSON.stringify({ keys: [key.publicJwk] }));
     } else {
