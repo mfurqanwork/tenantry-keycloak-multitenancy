@@ -201,3 +201,10 @@ test('every product client states implicitFlowEnabled: false', () => {
     assert.equal(productClient(name).implicitFlowEnabled, false, name);
   }
 });
+
+// Operator calls to the API (Phase 3): tenantry-ops tokens must be for tenantry-api.
+test('tenantry-ops tokens carry the tenantry-api audience', () => {
+  const ops = client('tenantry-ops');
+  assert.equal(audience(ops)?.config['included.custom.audience'], 'tenantry-api');
+  assert.equal(audience(ops)?.config['access.token.claim'], 'true');
+});

@@ -17,7 +17,8 @@ export interface DevUserInput {
 }
 
 export interface DevUsers {
-  // Finds the user by email or creates it (username = email, email verified), and sets the password.
+  // Finds the user by email or creates it (username = email), sets the password, and leaves the email
+  // verified with nothing pending.
   ensureUser(realm: string, input: DevUserInput): Promise<{ id: string; created: boolean }>;
   deleteUser(realm: string, id: string): Promise<void>;
 }
@@ -72,6 +73,9 @@ export function createDevUsers(o: DevUsersOptions): DevUsers {
         });
         id = res.headers.get('location')?.split('/').pop();
         if (!id) throw new DirectoryError('ensureUser', res.status, 'no Location header');
+      } else {
+        // An account made elsewhere (an invite, an enterprise first owner) is ready to use for the demo.
+        await call('ensureUser', 'PUT', `${users(realm)}/${id}`, { emailVerified: true, requiredActions: [] });
       }
       await call('ensureUser', 'PUT', `${users(realm)}/${id}/reset-password`, {
         type: 'password',

@@ -17,6 +17,7 @@ interface Upgrade {
   toVersion: number;
   differences: { path: string }[];
   applied: boolean;
+  error?: string;
 }
 
 let t: TestApp;
@@ -159,6 +160,18 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
     const tenant = await platformRepository(t.db).findTenantBySlug(s);
     expect((await auditOf(tenant?.id ?? '')).map((e) => e.action)).toContain('tenant.upgraded');
     expect((await upgrade({ slug: s, dryRun: true })).body[0]?.differences).toEqual([]);
+  });
+
+  it('reports a realm it cannot reach and still upgrades the others', async () => {
+    const broken = await t.seedEnterpriseTenant();
+    const s = slug();
+    await provision({ slug: s, name: 'Healthy', adminEmail: `owner@${s}.test` });
+    const res = await upgrade({ dryRun: true });
+    expect(res.status).toBe(200);
+    const byRealm = new Map(res.body.map((r) => [r.slug, r]));
+    expect(byRealm.get(broken.slug)?.applied).toBe(false);
+    expect(byRealm.get(broken.slug)?.error).toMatch(/404/);
+    expect(byRealm.get(s)).toMatchObject({ applied: false, differences: [] });
   });
 
   it('answers 404 for a slug that is not an enterprise tenant', async () => {

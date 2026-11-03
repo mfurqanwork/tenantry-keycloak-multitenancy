@@ -1,6 +1,15 @@
-import { findDomain, listIdps, platformRepository, tenantTx, type TenantRecord } from '@tenantry/db';
+import {
+  findDomain,
+  insertAudit,
+  listIdps,
+  platformRepository,
+  putLogo,
+  tenantTx,
+  type TenantRecord,
+} from '@tenantry/db';
 import type { DevUsers } from '@tenantry/keycloak-admin/dev';
 import { claimDomain, verifyDomain } from '../commands/domain.js';
+import { provisionEnterprise } from '../commands/enterprise.js';
 import { linkIdp } from '../commands/idp.js';
 import type { OpsDeps } from '../deps.js';
 import { verificationRecord } from '../dns/txt.js';
@@ -37,6 +46,14 @@ export const PEOPLE: Person[] = [
   },
 ];
 
+// The enterprise demo (Phase 3): its own realm, built through the API like any operator would.
+export const ENTERPRISE = {
+  slug: 'initech',
+  name: 'Initech',
+  owner: 'owner@initech.test',
+  color: '#4d5358',
+} as const;
+
 // Company login for acme: people at acme.test sign in through the corp-demo realm (ADR-0022).
 export const COMPANY = { tenant: 'acme', domain: 'acme.test', alias: 'acme-corp', person: 'alice@acme.test' };
 
@@ -49,6 +66,8 @@ export interface SeedDeps extends OpsDeps {
   baseDomain: string;
   company: { issuer: string; clientSecret: string };
   setTxt: (name: string, value: string) => void;
+  // A tenantry-ops client-credentials token, for the operator-only enterprise endpoints.
+  operatorToken: () => Promise<string>;
 }
 
 // Creates or completes the demo; a second run changes nothing.
@@ -88,6 +107,7 @@ export async function seed(deps: SeedDeps): Promise<number> {
 
   const acme = await platform.findTenantBySlug(COMPANY.tenant);
   if (acme) await ensureCompanyLogin(deps, quiet, acme, changes);
+  await ensureEnterprise(deps, changes);
 
   deps.out(
     changes.length ? `Seeded: ${changes.join(', ')}.` : 'The demo is already seeded: nothing to change.',
@@ -177,5 +197,50 @@ async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, acme: TenantRe
     });
     if (res.status === 201) changes.push(`invite for ${COMPANY.person}`);
     else if (res.status !== 409) throw new Error(`invite ${COMPANY.person}: ${String(res.status)}`);
+  }
+}
+
+async function ensureEnterprise(deps: SeedDeps, changes: string[]) {
+  const platform = platformRepository(deps.db);
+  const before = await platform.findTenantBySlug(ENTERPRISE.slug);
+  if (before?.status !== 'active') {
+    const code = await provisionEnterprise(
+      {
+        api: deps.api,
+        operatorToken: deps.operatorToken,
+        baseDomain: deps.baseDomain,
+        out: () => undefined,
+        err: deps.err,
+      },
+      { slug: ENTERPRISE.slug, name: ENTERPRISE.name, adminEmail: ENTERPRISE.owner },
+    );
+    if (code !== 0) throw new Error(`could not provision ${ENTERPRISE.slug}`);
+    changes.push(`enterprise workspace ${ENTERPRISE.slug}`);
+  }
+  const tenant = await platform.findTenantBySlug(ENTERPRISE.slug);
+  if (!tenant?.realm) throw new Error(`${ENTERPRISE.slug} has no realm`);
+  // The first owner signs in with the demo password instead of the set-password email.
+  await deps.users.ensureUser(tenant.realm, {
+    email: ENTERPRISE.owner,
+    firstName: 'Olivia',
+    lastName: 'Owner',
+    password: deps.password,
+  });
+  // Brand it in the database directly: the realm allows no password grant for an owner token (ADR-0010).
+  if (tenant.branding.primaryColor !== ENTERPRISE.color || tenant.branding.logoVersion === null) {
+    await tenantTx(deps.db, tenant.id, async (tx) => {
+      await putLogo(tx, { contentType: 'image/png', bytes: solidPng(ENTERPRISE.color) });
+      await platformRepository(tx).setBranding(tenant.id, {
+        primaryColor: ENTERPRISE.color,
+        logoVersion: Date.now(),
+      });
+      await insertAudit(tx, {
+        actorUserId: null,
+        action: 'branding.updated',
+        target: tenant.id,
+        metadata: { via: 'ops', seed: true, to: ENTERPRISE.color },
+      });
+    });
+    changes.push(`${ENTERPRISE.slug} colour and logo`);
   }
 }

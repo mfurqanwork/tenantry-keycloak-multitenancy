@@ -32,6 +32,8 @@ export interface UpgradeResult {
   toVersion: number;
   differences: TemplateDiff[];
   applied: boolean;
+  // Set when the realm could not be read; nothing was changed in it.
+  error?: string;
 }
 
 // Operator changes have no person behind them; the audit entry says they came from the scripts.
@@ -141,7 +143,22 @@ export class EnterpriseService {
       const vars = this.vars(tenant);
       const template = loadRealmTemplate(TEMPLATE_VERSION, vars);
       const clients = loadProductClients(vars);
-      const differences = await this.provisioner.diff(realm, template, clients);
+      let differences: TemplateDiff[];
+      try {
+        differences = await this.provisioner.diff(realm, template, clients);
+      } catch (err) {
+        // One unreachable realm must not stop the upgrade of the others; the operator sees why.
+        results.push({
+          slug: tenant.slug,
+          realm,
+          fromVersion: tenant.templateVersion,
+          toVersion: TEMPLATE_VERSION,
+          differences: [],
+          applied: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        continue;
+      }
       const outdated = tenant.templateVersion !== TEMPLATE_VERSION;
       const applied = !input.dryRun && (differences.length > 0 || outdated);
       if (applied) {
