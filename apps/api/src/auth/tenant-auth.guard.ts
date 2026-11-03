@@ -73,6 +73,14 @@ export class TenantAuthGuard implements CanActivate {
     // 7. Our user id for (iss, sub), created only for members; email and name follow the token.
     const user = await this.identify(payload, tenant.issuer);
     let role = highestRole(membership.roles);
+    if (tenant.tier === 'enterprise' && role) {
+      await this.invites.acceptOnSignIn({
+        tenant,
+        userId: user.userId,
+        email: user.email,
+        emailVerified: payload['email_verified'] === true,
+      });
+    }
     role ??= await this.invites.claim({
       tenant,
       userId: user.userId,

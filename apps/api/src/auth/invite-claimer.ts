@@ -65,4 +65,27 @@ export class InviteClaimer {
       return null;
     });
   }
+
+  // Enterprise: the invite gave the role when it created the account, so the first sign-in only closes
+  // the invite and records the join. Nothing happens for a person without an open invite.
+  async acceptOnSignIn(input: {
+    tenant: TenantRecord;
+    userId: string;
+    email: string | null;
+    emailVerified: boolean;
+  }): Promise<void> {
+    const { tenant, userId, email, emailVerified } = input;
+    if (!email || !emailVerified) return;
+    await tenantTx(this.db, tenant.id, async (tx) => {
+      const invite = await findOpenInviteByEmail(tx, email, { lock: true });
+      if (!invite) return;
+      await markInviteAccepted(tx, invite.id);
+      await insertAudit(tx, {
+        actorUserId: userId,
+        action: 'member.joined',
+        target: userId,
+        metadata: { role: invite.role, inviteId: invite.id },
+      });
+    });
+  }
 }

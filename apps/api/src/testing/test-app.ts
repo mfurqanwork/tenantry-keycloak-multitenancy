@@ -5,10 +5,12 @@ import type { Server } from 'node:http';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { createDb, platformRepository, type Db, type Pool } from '@tenantry/db';
-import { InMemoryIdentityDirectory } from '@tenantry/keycloak-admin/testing';
+import { InMemoryIdentityDirectory, InMemoryRealmMembers } from '@tenantry/keycloak-admin/testing';
+import { organizationMembers } from '@tenantry/keycloak-admin';
 import { AppModule } from '../app.module.js';
 import type { AppConfig } from '../config/config.js';
-import { DB_POOL, IDENTITY_DIRECTORY } from '../infrastructure/tokens.js';
+import type { MemberDirectories } from '../infrastructure/member-directories.js';
+import { DB_POOL, IDENTITY_DIRECTORY, MEMBER_DIRECTORIES } from '../infrastructure/tokens.js';
 import { stackEnv } from './env.js';
 import { makeTestIssuer, type TestIssuer } from './tokens.js';
 
@@ -59,6 +61,8 @@ export interface TestApp {
   ): Promise<string>;
   // A platform-realm client-credentials token for the operator scripts (tenantry-ops).
   operatorToken(extra?: Record<string, unknown>): Promise<string>;
+  // The in-memory member directory of an enterprise realm (its tenantry-api roles).
+  realmMembers(realm: string): InMemoryRealmMembers;
   newUser(): TestUser;
   // Puts the user in the tenant's organization (and group) in the fake directory.
   join(tenant: TestTenant, user: TestUser, group: 'owners' | 'admins' | 'members' | null): Promise<void>;
@@ -80,6 +84,23 @@ export interface TestApp {
 export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<TestApp> {
   const issuer = await makeTestIssuer();
   const directory = new InMemoryIdentityDirectory();
+  const realmMembers = new Map<string, InMemoryRealmMembers>();
+  const realmOf = (realm: string) => {
+    let found = realmMembers.get(realm);
+    if (!found) {
+      found = new InMemoryRealmMembers();
+      realmMembers.set(realm, found);
+    }
+    return found;
+  };
+  const memberDirectories: MemberDirectories = {
+    forTenant: (tenant) =>
+      Promise.resolve(
+        tenant.tier === 'enterprise'
+          ? realmOf(tenant.realm ?? '')
+          : organizationMembers(directory, tenant.kcOrgId ?? ''),
+      ),
+  };
   const config: AppConfig = {
     port: 0,
     databaseUrl: stackEnv('DATABASE_URL'),
@@ -91,6 +112,10 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     publicPort: null,
     backendClientId: 'unused',
     backendClientSecret: 'unused',
+    provisionerClientId: 'unused',
+    provisionerClientSecret: 'unused',
+    secretsDir: '.secrets-test',
+    smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
   };
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.forConfig(config)],
@@ -98,6 +123,8 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
   })
     .overrideProvider(IDENTITY_DIRECTORY)
     .useValue(directory)
+    .overrideProvider(MEMBER_DIRECTORIES)
+    .useValue(memberDirectories)
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix('api');
@@ -188,6 +215,7 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
       }),
     operatorToken: (extra = {}) =>
       issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
+    realmMembers: realmOf,
     newUser() {
       const sub = randomUUID();
       const user = { sub, email: `${sub.slice(0, 8)}@example.com` };

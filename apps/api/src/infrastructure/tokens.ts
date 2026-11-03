@@ -2,3 +2,7 @@
 export const DB_POOL = Symbol('DB_POOL');
 export const DB = Symbol('DB');
 export const IDENTITY_DIRECTORY = Symbol('IDENTITY_DIRECTORY');
+// One member directory per tenant, whatever its tier (Standard: organizations; Enterprise: its realm).
+export const MEMBER_DIRECTORIES = Symbol('MEMBER_DIRECTORIES');
+export const SECRET_STORE = Symbol('SECRET_STORE');
+export const REALM_PROVISIONER = Symbol('REALM_PROVISIONER');

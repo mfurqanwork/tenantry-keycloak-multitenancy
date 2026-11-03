@@ -12,6 +12,11 @@ export interface AppConfig {
   publicPort: number | null;
   backendClientId: string;
   backendClientSecret: string;
+  // Enterprise realms (ADR-0010, ADR-0023).
+  provisionerClientId: string;
+  provisionerClientSecret: string;
+  secretsDir: string;
+  smtp: { host: string; port: string; from: string };
 }
 
 export class ConfigError extends Error {
@@ -29,6 +34,12 @@ const schema = z.object({
   TENANTRY_BASE_DOMAIN: z.string().min(1).default('tenantry.localhost'),
   KEYCLOAK_BACKEND_CLIENT_ID: z.string().min(1),
   KEYCLOAK_BACKEND_CLIENT_SECRET: z.string().min(1),
+  KEYCLOAK_PROVISIONER_CLIENT_ID: z.string().min(1).default('tenantry-provisioner'),
+  KEYCLOAK_PROVISIONER_CLIENT_SECRET: z.string().min(1).default('unset'),
+  TENANTRY_SECRETS_DIR: z.string().min(1).default('.secrets'),
+  TENANTRY_SMTP_HOST: z.string().min(1).default('mailpit'),
+  TENANTRY_SMTP_PORT: z.string().min(1).default('1025'),
+  TENANTRY_SMTP_FROM: z.string().min(1).default('no-reply@tenantry.localhost'),
 });
 
 // Fails fast at startup, naming every bad variable at once.
@@ -50,6 +61,10 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     publicPort: new URL(e.TENANTRY_AUTH_URL).port ? Number(new URL(e.TENANTRY_AUTH_URL).port) : null,
     backendClientId: e.KEYCLOAK_BACKEND_CLIENT_ID,
     backendClientSecret: e.KEYCLOAK_BACKEND_CLIENT_SECRET,
+    provisionerClientId: e.KEYCLOAK_PROVISIONER_CLIENT_ID,
+    provisionerClientSecret: e.KEYCLOAK_PROVISIONER_CLIENT_SECRET,
+    secretsDir: e.TENANTRY_SECRETS_DIR,
+    smtp: { host: e.TENANTRY_SMTP_HOST, port: e.TENANTRY_SMTP_PORT, from: e.TENANTRY_SMTP_FROM },
   };
 }
 
