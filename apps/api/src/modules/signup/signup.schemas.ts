@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { validateSlug } from './slug.js';
+import { validateSlug } from '../../common/slug.js';
 
 export const signupBody = z.object({
   name: z.string().trim().min(1).max(80),

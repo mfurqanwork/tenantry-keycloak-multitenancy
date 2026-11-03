@@ -16,7 +16,9 @@ export type AuditAction =
   | 'branding.logo_removed'
   | 'domain.claimed'
   | 'domain.verified'
-  | 'idp.linked';
+  | 'idp.linked'
+  | 'tenant.provisioning'
+  | 'tenant.upgraded';
 
 export interface AuditView {
   id: string;

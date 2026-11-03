@@ -8,7 +8,7 @@ import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import { DB, IDENTITY_DIRECTORY } from '../../infrastructure/tokens.js';
 import { AuditService } from '../audit/audit.service.js';
 import { runSaga, SagaFailedError } from './signup.saga.js';
-import { validateSlug } from './slug.js';
+import { validateSlug } from '../../common/slug.js';
 
 export type Availability =
   { available: true } | { available: false; reason: 'format' | 'reserved' | 'taken' };

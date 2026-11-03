@@ -5,12 +5,23 @@ import type { Server } from 'node:http';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { createDb, platformRepository, type Db, type Pool } from '@tenantry/db';
-import { InMemoryIdentityDirectory, InMemoryRealmMembers } from '@tenantry/keycloak-admin/testing';
+import {
+  InMemoryIdentityDirectory,
+  InMemoryRealmMembers,
+  InMemoryRealmProvisioner,
+} from '@tenantry/keycloak-admin/testing';
+import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { organizationMembers } from '@tenantry/keycloak-admin';
 import { AppModule } from '../app.module.js';
 import type { AppConfig } from '../config/config.js';
 import type { MemberDirectories } from '../infrastructure/member-directories.js';
-import { DB_POOL, IDENTITY_DIRECTORY, MEMBER_DIRECTORIES } from '../infrastructure/tokens.js';
+import {
+  DB_POOL,
+  IDENTITY_DIRECTORY,
+  MEMBER_DIRECTORIES,
+  REALM_PROVISIONER,
+  SECRET_STORE,
+} from '../infrastructure/tokens.js';
 import { stackEnv } from './env.js';
 import { makeTestIssuer, type TestIssuer } from './tokens.js';
 
@@ -63,6 +74,9 @@ export interface TestApp {
   operatorToken(extra?: Record<string, unknown>): Promise<string>;
   // The in-memory member directory of an enterprise realm (its tenantry-api roles).
   realmMembers(realm: string): InMemoryRealmMembers;
+  // Enterprise provisioning against an in-memory Keycloak and secrets store.
+  provisioner: InMemoryRealmProvisioner;
+  secrets: SecretStore;
   newUser(): TestUser;
   // Puts the user in the tenant's organization (and group) in the fake directory.
   join(tenant: TestTenant, user: TestUser, group: 'owners' | 'admins' | 'members' | null): Promise<void>;
@@ -85,6 +99,15 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
   const issuer = await makeTestIssuer();
   const directory = new InMemoryIdentityDirectory();
   const realmMembers = new Map<string, InMemoryRealmMembers>();
+  const provisioner = new InMemoryRealmProvisioner();
+  const stored = new Map<string, string>();
+  const secrets: SecretStore = {
+    get: (key) => Promise.resolve(stored.get(key) ?? null),
+    put: (key, value) => {
+      stored.set(key, value);
+      return Promise.resolve();
+    },
+  };
   const realmOf = (realm: string) => {
     let found = realmMembers.get(realm);
     if (!found) {
@@ -125,6 +148,10 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     .useValue(directory)
     .overrideProvider(MEMBER_DIRECTORIES)
     .useValue(memberDirectories)
+    .overrideProvider(REALM_PROVISIONER)
+    .useValue(provisioner)
+    .overrideProvider(SECRET_STORE)
+    .useValue(secrets)
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix('api');
@@ -216,6 +243,8 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     operatorToken: (extra = {}) =>
       issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
     realmMembers: realmOf,
+    provisioner,
+    secrets,
     newUser() {
       const sub = randomUUID();
       const user = { sub, email: `${sub.slice(0, 8)}@example.com` };
