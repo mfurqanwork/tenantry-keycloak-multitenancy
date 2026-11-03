@@ -122,3 +122,82 @@ test('the corp-demo realm is the stand-in company IdP, with no password in the f
   assert.equal(alice.emailVerified, true);
   assert.equal(alice.credentials, undefined);
 });
+
+// Enterprise realms (Phase 3, ADR-0010): one versioned template, our product clients beside it.
+const template = JSON.parse(
+  readFileSync(
+    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v1.json', import.meta.url),
+    'utf8',
+  ),
+);
+const productClient = (name) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../packages/keycloak-admin/templates/product-clients/${name}.json`, import.meta.url),
+      'utf8',
+    ),
+  );
+
+test('the enterprise template enforces PKCE and safe redirect URIs on public clients, and no implicit or password grant anywhere', () => {
+  assert.equal(template.templateVersion, 1);
+  const profile = (name) => template.clientProfiles.profiles.find((p) => p.name === name);
+  const policy = (name) => template.clientPolicies.policies.find((p) => p.name === name);
+  assert.deepEqual(
+    profile('tenantry-public-clients')
+      .executors.map((e) => e.executor)
+      .sort(),
+    ['pkce-enforcer', 'secure-redirect-uris-enforcer'],
+  );
+  const redirects = profile('tenantry-public-clients').executors.find(
+    (e) => e.executor === 'secure-redirect-uris-enforcer',
+  );
+  // http only where the environment allows it (local development); never a wildcard host.
+  assert.equal(redirects.configuration['allow-http-scheme'], '${ALLOW_HTTP_REDIRECTS}');
+  assert.equal(redirects.configuration['allow-wildcard-context-path'], true);
+  assert.deepEqual(
+    profile('tenantry-all-clients')
+      .executors.map((e) => e.executor)
+      .sort(),
+    ['reject-implicit-grant', 'reject-ropc-grant'],
+  );
+  assert.deepEqual(policy('tenantry-public-clients').conditions, [
+    { condition: 'client-access-type', configuration: { type: ['public'] } },
+  ]);
+  assert.equal(policy('tenantry-all-clients').conditions[0].condition, 'any-client');
+  for (const name of ['tenantry-public-clients', 'tenantry-all-clients'])
+    assert.equal(policy(name).enabled, true);
+});
+
+test('the enterprise template keeps the platform realm basics', () => {
+  assert.equal(template.realm.verifyEmail, true);
+  assert.equal(template.realm.loginTheme, 'tenantry');
+  assert.equal(template.realm.registrationAllowed, false);
+  assert.equal(template.realm.accessTokenLifespan, 300);
+  assert.equal(template.realm.bruteForceProtected, true);
+});
+
+test('tenantry-api defines exactly the three tenant roles, and the apps put it in the audience', () => {
+  const apiClient = productClient('tenantry-api');
+  assert.equal(apiClient.bearerOnly, true);
+  assert.deepEqual(apiClient.roles.map((r) => r.name).sort(), ['admin', 'member', 'owner']);
+  for (const name of ['tenantry-web', 'tenantry-portal']) {
+    const app = productClient(name);
+    assert.equal(app.publicClient, true);
+    assert.equal(app.attributes['pkce.code.challenge.method'], 'S256');
+    assert.equal(audience(app)?.config['included.client.audience'], 'tenantry-api');
+    assert.ok(!JSON.stringify(app.redirectUris).includes('*.'), `${name} has a wildcard host`);
+  }
+});
+
+test('product-client templates carry no secret', () => {
+  for (const name of ['tenantry-web', 'tenantry-portal', 'tenantry-api', 'tenantry-backend']) {
+    assert.equal(productClient(name).secret, undefined, name);
+  }
+});
+
+// Keycloak 26.8.1's reject-implicit-grant check fails with a 500 when a client leaves it unset.
+test('every product client states implicitFlowEnabled: false', () => {
+  for (const name of ['tenantry-web', 'tenantry-portal', 'tenantry-api', 'tenantry-backend']) {
+    assert.equal(productClient(name).implicitFlowEnabled, false, name);
+  }
+});

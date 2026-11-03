@@ -1,0 +1,97 @@
+{
+  "templateVersion": 1,
+  "realm": {
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "verifyEmail": true,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "loginTheme": "tenantry",
+    "accessTokenLifespan": 300,
+    "ssoSessionIdleTimeout": 1800,
+    "ssoSessionMaxLifespan": 36000,
+    "bruteForceProtected": true,
+    "failureFactor": 10,
+    "permanentLockout": false,
+    "passwordPolicy": "length(12) and notUsername and notEmail",
+    "smtpServer": {
+      "host": "${SMTP_HOST}",
+      "port": "${SMTP_PORT}",
+      "from": "${SMTP_FROM}",
+      "fromDisplayName": "${DISPLAY_NAME}"
+    }
+  },
+  "clientProfiles": {
+    "profiles": [
+      {
+        "name": "tenantry-public-clients",
+        "description": "Browser apps: PKCE and safe redirect URIs",
+        "executors": [
+          {
+            "executor": "pkce-enforcer",
+            "configuration": {
+              "auto-configure": "false"
+            }
+          },
+          {
+            "executor": "secure-redirect-uris-enforcer",
+            "configuration": {
+              "allow-http-scheme": "${ALLOW_HTTP_REDIRECTS}",
+              "allow-wildcard-context-path": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "tenantry-all-clients",
+        "description": "Every client: no implicit flow, no password grant",
+        "executors": [
+          {
+            "executor": "reject-implicit-grant",
+            "configuration": {
+              "auto-configure": "false"
+            }
+          },
+          {
+            "executor": "reject-ropc-grant",
+            "configuration": {
+              "auto-configure": "false"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "clientPolicies": {
+    "policies": [
+      {
+        "name": "tenantry-public-clients",
+        "description": "The baseline for browser apps",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "client-access-type",
+            "configuration": {
+              "type": ["public"]
+            }
+          }
+        ],
+        "profiles": ["tenantry-public-clients"]
+      },
+      {
+        "name": "tenantry-all-clients",
+        "description": "The baseline for every client",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "any-client",
+            "configuration": {}
+          }
+        ],
+        "profiles": ["tenantry-all-clients"]
+      }
+    ]
+  }
+}

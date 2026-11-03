@@ -1,0 +1,11 @@
+{
+  "clientId": "tenantry-backend",
+  "name": "Tenantry backend",
+  "enabled": true,
+  "publicClient": false,
+  "serviceAccountsEnabled": true,
+  "standardFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "implicitFlowEnabled": false,
+  "serviceAccountRealmManagementRoles": ["manage-users", "view-users", "manage-clients"]
+}
