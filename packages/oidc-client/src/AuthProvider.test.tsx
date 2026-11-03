@@ -1,9 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient, AuthUser } from './auth-client.js';
 import { AuthProvider, useAuth } from './AuthProvider.js';
 
-function fakeClient(user: AuthUser | null): AuthClient & { signIn: ReturnType<typeof vi.fn> } {
+function fakeClient(
+  user: AuthUser | null,
+): AuthClient & { signIn: ReturnType<typeof vi.fn>; checkSession: ReturnType<typeof vi.fn> } {
   return {
     settings: { authority: 'x', client_id: 'y', redirect_uri: 'z', response_type: 'code', scope: 'openid' },
     signIn: vi.fn().mockResolvedValue(undefined),
@@ -11,7 +14,13 @@ function fakeClient(user: AuthUser | null): AuthClient & { signIn: ReturnType<ty
     getAccessToken: vi.fn().mockResolvedValue(user ? 'token' : null),
     signOut: vi.fn().mockResolvedValue(undefined),
     user: vi.fn().mockResolvedValue(user),
+    checkSession: vi.fn().mockResolvedValue(true),
   };
+}
+
+function showTab() {
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
 }
 
 function Who() {
@@ -77,5 +86,43 @@ describe('AuthProvider', () => {
     await screen.findByText('Signed in as ada@example.com');
     window.removeEventListener('popstate', listener);
     expect(seen).toEqual(['/members']);
+  });
+
+  it('checks the session when the tab comes back, and signs in again once if it has ended', async () => {
+    window.history.replaceState(null, '', '/');
+    const client = fakeClient({ email: 'ada@example.com', name: null });
+    render(
+      <AuthProvider client={client} fallback={<p>Signing in</p>}>
+        <Who />
+      </AuthProvider>,
+    );
+    await screen.findByText('Signed in as ada@example.com');
+    client.checkSession.mockResolvedValue(false);
+    act(() => {
+      showTab();
+      showTab();
+    });
+    await waitFor(() => {
+      expect(client.signIn).toHaveBeenCalledTimes(1);
+    });
+    expect(client.checkSession).toHaveBeenCalled();
+  });
+
+  it('does nothing while the session is alive', async () => {
+    window.history.replaceState(null, '', '/');
+    const client = fakeClient({ email: 'ada@example.com', name: null });
+    render(
+      <AuthProvider client={client} fallback={<p>Signing in</p>}>
+        <Who />
+      </AuthProvider>,
+    );
+    await screen.findByText('Signed in as ada@example.com');
+    act(() => {
+      showTab();
+    });
+    await waitFor(() => {
+      expect(client.checkSession).toHaveBeenCalled();
+    });
+    expect(client.signIn).not.toHaveBeenCalled();
   });
 });

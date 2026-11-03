@@ -22,8 +22,12 @@ export interface AuthClient {
   handleCallback: () => Promise<string>;
   // A current access token, renewed with the refresh token when it has expired; null when signed out.
   getAccessToken: () => Promise<string | null>;
+  // Ends the Keycloak session, which signs this person out of every app (ADR-0020).
   signOut: () => Promise<void>;
   user: () => Promise<AuthUser | null>;
+  // Asks Keycloak whether the session still exists by trading the refresh token. False, and the user
+  // forgotten, when it has ended (signed out in another app, or expired).
+  checkSession: () => Promise<boolean>;
 }
 
 // Authorization code with PKCE (S256, the oidc-client-ts default). Tokens live in sessionStorage,
@@ -43,17 +47,28 @@ export function createAuthClient(config: AuthConfig & { redirectUri: string }): 
     automaticSilentRenew: false,
   });
 
+  // One refresh at a time: two requests (or a request and a focus check) share it.
+  let refreshing: Promise<Awaited<ReturnType<UserManager['signinSilent']>>> | null = null;
+  const refresh = async () => {
+    refreshing ??= (async () => {
+      try {
+        return await manager.signinSilent();
+      } catch {
+        await manager.removeUser();
+        return null;
+      } finally {
+        refreshing = null;
+      }
+    })();
+    return refreshing;
+  };
+
   const current = async () => {
     const user = await manager.getUser();
     if (!user) return null;
     if (!user.expired) return user;
     // Access tokens live five minutes; trade the refresh token rather than redirecting.
-    try {
-      return user.refresh_token ? await manager.signinSilent() : null;
-    } catch {
-      await manager.removeUser();
-      return null;
-    }
+    return user.refresh_token ? refresh() : null;
   };
 
   return {
@@ -70,7 +85,15 @@ export function createAuthClient(config: AuthConfig & { redirectUri: string }): 
     async getAccessToken() {
       return (await current())?.access_token ?? null;
     },
-    signOut: () => manager.signoutRedirect(),
+    async signOut() {
+      const user = await manager.getUser();
+      await manager.signoutRedirect(user?.id_token ? { id_token_hint: user.id_token } : {});
+    },
+    async checkSession() {
+      const user = await manager.getUser();
+      if (!user?.refresh_token) return false;
+      return (await refresh()) !== null;
+    },
     async user() {
       const user = await current();
       if (!user) return null;
