@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { listAudit, platformRepository, tenantTx } from '@tenantry/db';
-import type { RealmProvisioner } from '@tenantry/keycloak-admin';
+import { TEMPLATE_VERSION, type RealmProvisioner } from '@tenantry/keycloak-admin';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from '../../testing/test-app.js';
 
@@ -70,7 +70,7 @@ describe('POST /api/platform/enterprise-tenants', () => {
       realm: `ent-${s}`,
       issuer: `${t.issuer.baseUrl}/realms/ent-${s}`,
       kcOrgId: null,
-      templateVersion: 1,
+      templateVersion: TEMPLATE_VERSION,
     });
     const realm = t.provisioner.realms.get(`ent-${s}`);
     expect(realm?.admins.has(`owner@${s}.test`)).toBe(true);

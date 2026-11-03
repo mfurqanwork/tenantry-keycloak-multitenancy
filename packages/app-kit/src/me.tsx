@@ -8,7 +8,7 @@ import { useResource } from './useResource.js';
 // these permissions; the API decides again on every call.
 export interface Me {
   user: { id: string; email: string | null; displayName: string | null };
-  tenant: { slug: string; name: string };
+  tenant: { slug: string; name: string; tier: 'standard' | 'enterprise' };
   role: Role | null;
   permissions: Permission[];
 }

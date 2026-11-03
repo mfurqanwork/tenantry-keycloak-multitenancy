@@ -11,7 +11,7 @@ import {
   InMemoryRealmProvisioner,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
-import { organizationMembers } from '@tenantry/keycloak-admin';
+import { organizationMembers, TEMPLATE_VERSION } from '@tenantry/keycloak-admin';
 import { AppModule } from '../app.module.js';
 import type { AppConfig } from '../config/config.js';
 import type { MemberDirectories } from '../infrastructure/member-directories.js';
@@ -226,7 +226,12 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
         name: `Enterprise ${slug}`,
         tier: 'enterprise',
       });
-      await platform.activateTenant(id, { realm, issuer: realmIssuer, kcOrgId: null, templateVersion: 1 });
+      await platform.activateTenant(id, {
+        realm,
+        issuer: realmIssuer,
+        kcOrgId: null,
+        templateVersion: TEMPLATE_VERSION,
+      });
       return { id, slug, kcOrgId: '', host: `${slug}.tenantry.localhost`, issuer: realmIssuer, realm };
     },
     enterpriseToken: (tenant, user, roles, extra = {}) =>

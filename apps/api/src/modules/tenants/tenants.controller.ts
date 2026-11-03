@@ -26,7 +26,7 @@ export class TenantsController {
   me(@Ctx() ctx: TenantContext, @CurrentTenant() tenant: TenantRecord, @SignedIn() user: SignedInUser) {
     return {
       user: { id: user.userId, email: user.email, displayName: user.displayName },
-      tenant: { slug: tenant.slug, name: tenant.name },
+      tenant: { slug: tenant.slug, name: tenant.name, tier: tenant.tier },
       role: ctx.roles[0] ?? null,
       permissions: [...ctx.permissions].sort(),
     };

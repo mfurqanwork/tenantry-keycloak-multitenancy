@@ -12,7 +12,7 @@ export const ADMIN: Permission[] = ['members:read', 'audit:read'];
 export function makeMe(role: Me['role'], permissions: Permission[]): Me {
   return {
     user: { id: 'u-me', email: 'me@example.com', displayName: 'Me' },
-    tenant: { slug: 'acme', name: 'Acme' },
+    tenant: { slug: 'acme', name: 'Acme', tier: 'enterprise' },
     role,
     permissions,
   };
