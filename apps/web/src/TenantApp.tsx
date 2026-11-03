@@ -14,7 +14,7 @@ export function TenantApp({ slug, signupUrl }: { slug: string; signupUrl: string
         </AppShell>
       }
     >
-      {(session) => <App hostname={window.location.hostname} onSignOut={session.signOut} />}
+      {(session) => <App onSignOut={session.signOut} />}
     </TenantAuth>
   );
 }

@@ -1,10 +1,6 @@
 import { Tile } from '@carbon/react';
+import { ROLE_LABELS, useMe } from '@tenantry/app-kit';
 import { DashboardPage } from '@tenantry/ui';
-
-// The subdomain names the tenant (ADR-0005); Phase 1 checks it against the token.
-export function tenantSlug(hostname: string): string {
-  return hostname.split('.')[0] ?? '';
-}
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
@@ -15,14 +11,15 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function DashboardRoute({ hostname }: { hostname: string }) {
+// The workspace at a glance, the same facts the portal's dashboard leads with.
+export function DashboardRoute() {
+  const me = useMe();
   return (
     <DashboardPage
       title="Dashboard"
       tiles={[
-        <StatTile key="tenant" label="Tenant" value={tenantSlug(hostname)} />,
-        <StatTile key="realm" label="Realm" value="platform" />,
-        <StatTile key="status" label="Status" value="Phase 0" />,
+        <StatTile key="workspace" label="Workspace" value={me.tenant.name} />,
+        <StatTile key="role" label="Your role" value={me.role ? ROLE_LABELS[me.role] : 'None'} />,
       ]}
     />
   );
