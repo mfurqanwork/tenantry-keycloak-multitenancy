@@ -109,7 +109,8 @@ export function platformRepository(ex: Executor) {
     },
 
     // A failed signup leaves its row behind, and so does one whose process died mid-way (still
-    // provisioning after ten minutes); the next signup for that slug replaces either.
+    // provisioning after ten minutes); the next signup for that slug replaces either. An enterprise
+    // row is never replaced: rerunning the provisioning finishes it.
     async insertProvisioningTenant(input: {
       slug: string;
       name: string;
@@ -122,6 +123,8 @@ export function platformRepository(ex: Executor) {
             .where(
               and(
                 eq(tenants.slug, input.slug),
+                // Only Standard signups are replaced; an operator finishes an enterprise run (ADR-0010).
+                eq(tenants.tier, 'standard'),
                 or(
                   eq(tenants.status, 'failed'),
                   and(
