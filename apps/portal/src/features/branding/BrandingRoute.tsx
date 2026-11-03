@@ -125,7 +125,12 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
         />
         <div ref={preview} className="tenantry-brand-preview" aria-label="Preview" role="group">
           <Button kind="primary">Primary button</Button>
-          <Link href="#preview" onClick={(event) => { event.preventDefault(); }}>
+          <Link
+            href="#preview"
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+          >
             A link
           </Link>
         </div>

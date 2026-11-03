@@ -25,6 +25,22 @@ describe('portal app', () => {
     expect(screen.getAllByRole('link', { name: 'Branding' }).length).toBeGreaterThan(0);
   });
 
+  it('shows Applications to everyone who may read apps, and opens the list', async () => {
+    const routes = api();
+    routes.get.mockImplementation((path: string) =>
+      Promise.resolve(
+        path === '/api/apps'
+          ? { apps: [] }
+          : path === '/api/me/workspaces'
+            ? WORKSPACES
+            : { name: 'Acme', primaryColor: null, logoUrl: null },
+      ),
+    );
+    renderPortal(<App />, { api: routes, me: makeMe('member', ['apps:read']), path: '/applications' });
+    expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
+    expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
+  });
+
   it('hides Branding from admins', () => {
     renderPortal(<App />, { api: api(), me: makeMe('admin', ADMIN) });
     expect(screen.queryByRole('link', { name: 'Branding' })).not.toBeInTheDocument();

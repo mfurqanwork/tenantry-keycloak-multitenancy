@@ -2,12 +2,14 @@ import type { Permission } from '@tenantry/auth';
 import { appLinks, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
 import { AppShell, type NavItem } from '@tenantry/ui';
 import { Route, Routes, useLocation } from 'react-router';
+import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
 import { BrandingRoute } from './features/branding/BrandingRoute.js';
 import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
 
 // Each page and the permission that shows it; the API checks again on every call.
 const PAGES: (NavItem & { needs?: Permission })[] = [
   { label: 'Dashboard', href: '/' },
+  { label: 'Applications', href: '/applications', needs: 'apps:read' },
   { label: 'Branding', href: '/branding', needs: 'tenant:settings' },
 ];
 
@@ -39,6 +41,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
     >
       <Routes>
         <Route path="/" element={<DashboardRoute />} />
+        {me.can('apps:read') && <Route path="/applications" element={<ApplicationsRoute />} />}
         {me.can('tenant:settings') && (
           <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
         )}
