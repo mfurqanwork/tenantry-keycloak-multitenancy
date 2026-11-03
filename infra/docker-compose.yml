@@ -122,6 +122,7 @@ services:
       KEYCLOAK_PROVISIONER_CLIENT_ID: ${KEYCLOAK_PROVISIONER_CLIENT_ID:-tenantry-provisioner}
       KEYCLOAK_PROVISIONER_CLIENT_SECRET: ${KEYCLOAK_PROVISIONER_CLIENT_SECRET:-dev-provisioner-secret}
       TENANTRY_SECRETS_DIR: /repo/.secrets
+      TENANTRY_MAX_APPS_PER_TENANT: ${TENANTRY_MAX_APPS_PER_TENANT:-20}
     volumes:
       - ../.secrets:/repo/.secrets
     depends_on:

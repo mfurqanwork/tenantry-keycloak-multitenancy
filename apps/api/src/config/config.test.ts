@@ -33,6 +33,7 @@ describe('loadConfig', () => {
       provisionerClientSecret: 'unset',
       secretsDir: '.secrets',
       smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
+      maxAppsPerTenant: 20,
     });
   });
 
@@ -65,5 +66,12 @@ describe('loadConfig', () => {
   it('defaults the internal URL to the public one', () => {
     const config = loadConfig(base);
     expect(config.authInternalUrl).toBe('http://auth.tenantry.localhost');
+  });
+
+  it('reads the app cap per workspace', () => {
+    expect(loadConfig({ ...base, TENANTRY_MAX_APPS_PER_TENANT: '5' }).maxAppsPerTenant).toBe(5);
+    expect(() => loadConfig({ ...base, TENANTRY_MAX_APPS_PER_TENANT: '0' })).toThrow(
+      /TENANTRY_MAX_APPS_PER_TENANT/,
+    );
   });
 });
