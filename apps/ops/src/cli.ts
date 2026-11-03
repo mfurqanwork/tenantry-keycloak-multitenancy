@@ -1,10 +1,13 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createAppPool, createDb } from '@tenantry/db';
 import { createHttpIdentityDirectory } from '@tenantry/keycloak-admin';
 import { createDevUsers } from '@tenantry/keycloak-admin/dev';
 import { setTxt } from './commands/dns.js';
+import { listAppsCommand, registerAppCommand, rotateAppCommand } from './commands/apps.js';
 import { claimDomain, verifyDomain } from './commands/domain.js';
 import { provisionEnterprise, upgradeEnterprise, type EnterpriseDeps } from './commands/enterprise.js';
 import { linkIdp } from './commands/idp.js';
@@ -26,10 +29,16 @@ const USAGE = `Usage: pnpm ops <command>
   dns set-txt <name> <value>     (dev only: writes the local DNS zone)
   enterprise provision --slug <slug> --name <name> --admin-email <email>
   enterprise upgrade [--tenant <slug>] [--dry-run]
+  apps list     --tenant <slug>
+  apps register --tenant <slug> --name <name> --type web|spa|native|m2m [--redirect <uri>]... [--post-logout <uri>]...
+                (prints the client secret once)
+  apps rotate   --tenant <slug> --app <id>
   seed                           (dev only: the demo workspaces and accounts; also pnpm seed)`;
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const ZONE_FILE = fileURLToPath(new URL('../../../infra/dns/zones/test.db', import.meta.url));
+// The example customer app's settings, written by the seed (git-ignored; it holds a secret).
+const EXAMPLE_ENV = fileURLToPath(new URL('../../../examples/customer-app/.env', import.meta.url));
 
 // SIGUSR1 makes CoreDNS reload its configuration and zones, in place.
 function reloadDns(): void {
@@ -142,6 +151,14 @@ async function seedWith(deps: OpsDeps): Promise<number> {
     setTxt: (name, value) => {
       setTxt(ZONE_FILE, name, value, zoneOut, reloadDns);
     },
+    authInternalUrl: internal,
+    exampleAppEnv: {
+      read: () => (existsSync(EXAMPLE_ENV) ? readFileSync(EXAMPLE_ENV, 'utf8') : null),
+      write: (text) => {
+        mkdirSync(dirname(EXAMPLE_ENV), { recursive: true });
+        writeFileSync(EXAMPLE_ENV, text, { mode: 0o600 });
+      },
+    },
   });
 }
 
@@ -161,6 +178,10 @@ async function main(argv: string[]): Promise<number> {
       name: { type: 'string' },
       'admin-email': { type: 'string' },
       'dry-run': { type: 'boolean' },
+      type: { type: 'string' },
+      app: { type: 'string' },
+      redirect: { type: 'string', multiple: true },
+      'post-logout': { type: 'string', multiple: true },
     },
   });
   if (values['client-secret']) {
@@ -222,6 +243,18 @@ async function main(argv: string[]): Promise<number> {
         ...(values.tenant ? { tenant: values.tenant } : {}),
         dryRun: values['dry-run'] === true,
       });
+    case 'apps list':
+      return listAppsCommand(enterpriseDeps(), { tenant: need('tenant') });
+    case 'apps register':
+      return registerAppCommand(enterpriseDeps(), {
+        tenant: need('tenant'),
+        name: need('name'),
+        type: need('type'),
+        redirectUris: values.redirect ?? [],
+        postLogoutRedirectUris: values['post-logout'] ?? [],
+      });
+    case 'apps rotate':
+      return rotateAppCommand(enterpriseDeps(), { tenant: need('tenant'), app: need('app') });
     case 'tenants sync-origins':
       return run(syncOrigins);
     default:

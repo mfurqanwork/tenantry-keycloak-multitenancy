@@ -206,6 +206,15 @@ export class EnterpriseService {
     return results;
   }
 
+  // The active enterprise tenant at this address, for the operator's app commands.
+  async activeEnterprise(slug: string): Promise<TenantRecord> {
+    const tenant = await platformRepository(this.db).findTenantBySlug(slug);
+    if (tenant?.tier !== 'enterprise' || tenant.status !== 'active' || !tenant.realm) {
+      throw new NotFoundProblem('No enterprise workspace at this address.');
+    }
+    return tenant;
+  }
+
   // A resumed run keeps the first owner the run began with; another address would make a second owner.
   private async sameFirstOwner(tenantId: string, adminEmail: string): Promise<void> {
     const entries = await tenantTx(this.db, tenantId, (tx) => listAudit(tx, { limit: 50 }));
