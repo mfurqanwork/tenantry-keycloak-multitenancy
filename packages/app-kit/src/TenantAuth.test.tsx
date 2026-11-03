@@ -6,10 +6,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// Answers the API's auth-config; Keycloak itself (discovery, the redirect) never answers in these tests.
 function stubAuthConfig(status: number, body?: unknown) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(new Response(body ? JSON.stringify(body) : null, { status }))),
+    vi.fn((url: string) =>
+      url.includes('/auth-config')
+        ? Promise.resolve(new Response(body ? JSON.stringify(body) : null, { status }))
+        : new Promise<Response>(() => undefined),
+    ),
   );
 }
 
