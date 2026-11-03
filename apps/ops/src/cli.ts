@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createAppPool, createDb } from '@tenantry/db';
 import { createHttpIdentityDirectory } from '@tenantry/keycloak-admin';
+import { createDevUsers } from '@tenantry/keycloak-admin/dev';
 import { setTxt } from './commands/dns.js';
 import { claimDomain, verifyDomain } from './commands/domain.js';
 import { linkIdp } from './commands/idp.js';
@@ -10,6 +11,8 @@ import { syncOrigins } from './commands/tenants.js';
 import type { OpsDeps } from './deps.js';
 import { resolveTxt } from './dns/txt.js';
 import { stackEnv } from './env.js';
+import { apiClient } from './seed/http.js';
+import { seed } from './seed/seed.js';
 
 const USAGE = `Usage: pnpm ops <command>
 
@@ -17,7 +20,8 @@ const USAGE = `Usage: pnpm ops <command>
   domain verify --tenant <slug> --domain <domain>
   idp link      --tenant <slug> --domain <domain> --alias <alias> --issuer <url> --client-id <id> --client-secret <secret>
   tenants sync-origins
-  dns set-txt <name> <value>     (dev only: writes the local DNS zone)`;
+  dns set-txt <name> <value>     (dev only: writes the local DNS zone)
+  seed                           (dev only: the demo workspaces and accounts; also pnpm seed)`;
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const ZONE_FILE = fileURLToPath(new URL('../../../infra/dns/zones/test.db', import.meta.url));
@@ -65,6 +69,46 @@ function realDeps(): { deps: OpsDeps; close: () => Promise<void> } {
   };
 }
 
+// The demo needs dev-only access: Keycloak's bootstrap admin for accounts and the password-grant test
+// client for tokens. Neither exists in a production realm.
+async function seedWith(deps: OpsDeps): Promise<number> {
+  const internal = stackEnv('TENANTRY_AUTH_INTERNAL_URL', stackEnv('TENANTRY_AUTH_URL'));
+  const zoneOut = () => undefined;
+  return seed({
+    ...deps,
+    users: createDevUsers({
+      baseUrl: internal,
+      adminUsername: stackEnv('KC_BOOTSTRAP_ADMIN_USERNAME'),
+      adminPassword: stackEnv('KC_BOOTSTRAP_ADMIN_PASSWORD'),
+    }),
+    api: apiClient(Number(stackEnv('TENANTRY_HTTP_PORT', '80'))),
+    async tokenFor(email, slug) {
+      const res = await fetch(`${internal}/realms/platform/protocol/openid-connect/token`, {
+        method: 'POST',
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: 'tenantry-isolation-tests',
+          client_secret: stackEnv('TENANTRY_ISOLATION_CLIENT_SECRET'),
+          username: email,
+          password: stackEnv('SEED_PASSWORD'),
+          scope: slug ? `openid organization:${slug}` : 'openid',
+        }),
+      });
+      if (!res.ok) throw new Error(`token for ${email}: ${String(res.status)}`);
+      return ((await res.json()) as { access_token: string }).access_token;
+    },
+    password: stackEnv('SEED_PASSWORD'),
+    baseDomain: stackEnv('TENANTRY_BASE_DOMAIN', 'tenantry.localhost'),
+    company: {
+      issuer: `${stackEnv('TENANTRY_AUTH_URL')}/realms/corp-demo`,
+      clientSecret: stackEnv('CORP_DEMO_CLIENT_SECRET'),
+    },
+    setTxt: (name, value) => {
+      setTxt(ZONE_FILE, name, value, zoneOut, reloadDns);
+    },
+  });
+}
+
 async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
@@ -104,6 +148,7 @@ async function main(argv: string[]): Promise<number> {
       await close();
     }
   };
+  if (group === 'seed') return run(seedWith);
   switch (`${group ?? ''} ${command ?? ''}`) {
     case 'domain claim':
       return run((deps) => claimDomain(deps, { tenant: need('tenant'), domain: need('domain') }));

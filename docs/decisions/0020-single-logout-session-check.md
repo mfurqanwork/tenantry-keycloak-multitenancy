@@ -11,7 +11,7 @@ Keycloak offers two ways to tell other apps. Back-channel logout calls each clie
 ## Decision
 
 - "Sign out" calls Keycloak's end-session endpoint with `id_token_hint` and `post_logout_redirect_uri` set to the app's own address. That ends the Keycloak session, and with it every refresh token issued in it.
-- Each app checks the session itself: when its tab becomes visible, `@tenantry/oidc-client` trades the refresh token (`checkSession`). Keycloak answers `invalid_grant` ("Session not active") once the session has ended, so the app forgets its tokens and sends the person to sign in, which shows the Keycloak login page.
+- Each app checks the session itself: when its tab becomes visible or its window regains focus, `@tenantry/oidc-client` trades the refresh token (`checkSession`). Keycloak answers `invalid_grant` ("Session not active") once the session has ended, so the app forgets its tokens and sends the person to sign in, which shows the Keycloak login page.
 - The same happens on any API call after the access token expires, because renewing it also uses the refresh token.
 - Each app signs in with its own public client (`tenantry-web`, `tenantry-portal`). Signup registers both origins.
 - Silent sign-in is the plain redirect: with a live Keycloak session the authorization redirect returns at once. No iframes.

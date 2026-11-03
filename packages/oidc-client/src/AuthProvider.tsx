@@ -11,7 +11,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-
 // Renders children only for a signed-in user: finishes a callback, or sends the visitor to sign in.
 export function AuthProvider({
   client,
@@ -46,7 +45,7 @@ export function AuthProvider({
     };
   }, [client]);
 
-  // Single logout: when the tab comes back, ask Keycloak whether the session still exists. Signing
+  // Single logout: when the tab or window comes back, ask Keycloak whether the session still exists. Signing
   // out in the other app ended it, so this app goes to the login page too (ADR-0020).
   useEffect(() => {
     if (!user) return;
@@ -59,9 +58,12 @@ export function AuthProvider({
         void client.signIn();
       });
     };
+    // A tab coming to the front fires visibilitychange; a window clicked beside another fires focus.
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
     };
   }, [client, user]);
 

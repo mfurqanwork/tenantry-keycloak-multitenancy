@@ -40,6 +40,13 @@ async function admin(method: string, path: string, body?: unknown): Promise<Resp
   return res;
 }
 
+// A read with the bootstrap admin, for checking what is (or is not) in Keycloak.
+export async function adminGet(path: string): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(`${ADMIN}${path}`, { headers: { authorization: `Bearer ${await adminToken()}` } });
+  const text = await res.text();
+  return { status: res.status, body: text ? (JSON.parse(text) as unknown) : undefined };
+}
+
 export async function createUser(label: string): Promise<TestUser> {
   const username = `iso-${label}-${randomUUID().slice(0, 8)}`;
   const email = `${username}@example.com`;

@@ -1,0 +1,56 @@
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { createDevUsers } from '../src/dev/dev-users.js';
+
+function env(key: string): string {
+  const file = new URL('../../../.env', import.meta.url);
+  let value = process.env[key];
+  if (!value && existsSync(file)) {
+    value = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'))?.[1]?.trim();
+  }
+  if (!value) throw new Error(`${key} is not set: copy .env.example to .env`);
+  return value;
+}
+
+const users = createDevUsers({
+  baseUrl: env('TENANTRY_AUTH_INTERNAL_URL'),
+  adminUsername: env('KC_BOOTSTRAP_ADMIN_USERNAME'),
+  adminPassword: env('KC_BOOTSTRAP_ADMIN_PASSWORD'),
+});
+
+describe('dev users (seed only)', () => {
+  it('creates a verified user with a password once, and finds it the second time', async () => {
+    const email = `seed-${randomUUID().slice(0, 8)}@example.test`;
+    const input = { email, firstName: 'Seed', lastName: 'Test', password: `Pw-${randomUUID()}` };
+    const first = await users.ensureUser('platform', input);
+    expect(first.created).toBe(true);
+    const again = await users.ensureUser('platform', input);
+    expect(again).toEqual({ id: first.id, created: false });
+    const token = await fetch(
+      `${env('TENANTRY_AUTH_INTERNAL_URL')}/realms/platform/protocol/openid-connect/token`,
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: 'tenantry-isolation-tests',
+          client_secret: env('TENANTRY_ISOLATION_CLIENT_SECRET'),
+          username: email,
+          password: input.password,
+        }),
+      },
+    );
+    expect(token.status).toBe(200);
+    await users.deleteUser('platform', first.id);
+  });
+
+  it('sets the password of a user that already exists without one', async () => {
+    const result = await users.ensureUser('corp-demo', {
+      email: 'alice@acme.test',
+      firstName: 'Alice',
+      lastName: 'Anders',
+      password: env('SEED_PASSWORD'),
+    });
+    expect(result.id).toMatch(/[0-9a-f-]{36}/);
+  });
+});

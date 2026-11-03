@@ -125,4 +125,22 @@ describe('AuthProvider', () => {
     });
     expect(client.signIn).not.toHaveBeenCalled();
   });
+
+  it('checks the session when the window regains focus (two windows side by side stay visible)', async () => {
+    window.history.replaceState(null, '', '/');
+    const client = fakeClient({ email: 'ada@example.com', name: null });
+    render(
+      <AuthProvider client={client} fallback={<p>Signing in</p>}>
+        <Who />
+      </AuthProvider>,
+    );
+    await screen.findByText('Signed in as ada@example.com');
+    client.checkSession.mockResolvedValue(false);
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => {
+      expect(client.signIn).toHaveBeenCalledTimes(1);
+    });
+  });
 });
