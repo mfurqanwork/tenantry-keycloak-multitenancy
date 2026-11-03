@@ -51,6 +51,8 @@ export function uriProblem(uri: string, kind: 'redirect' | 'origin', type: AppTy
     return url.origin === uri.replace(/\/$/, '') ? null : 'An origin has no path.';
   }
   if (uri.includes('#')) return 'No fragment (#) in a redirect URI.';
+  // Keycloak reads a trailing * as "any path from here": too broad for a customer's redirect.
+  if (uri.includes('*')) return 'No wildcards in a redirect URI.';
   if (web) return webProblem(url);
   if (type !== 'native') return 'Custom schemes are for mobile and desktop apps.';
   return url.protocol.slice(0, -1).includes('.') ? null : 'A custom scheme needs a dot, like com.example.app.';

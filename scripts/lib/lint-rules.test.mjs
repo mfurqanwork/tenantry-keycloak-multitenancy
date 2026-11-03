@@ -47,3 +47,20 @@ test('only packages/db imports pg', async () => {
     1,
   );
 });
+
+test('app code never imports the test-only helpers; tests and test-utils do', async () => {
+  const source = "import { fakeApi } from '@tenantry/app-kit/testing';\nvoid fakeApi;";
+  const testingErrors = async (path) => {
+    const file = new URL(path, ROOT);
+    writeFileSync(file, `${source}\nexport {};\n`);
+    try {
+      const [result] = await eslint.lintFiles([file.pathname.replace(/^\/([A-Za-z]:)/, '$1')]);
+      return result.messages.filter((m) => m.ruleId === '@typescript-eslint/no-restricted-imports');
+    } finally {
+      rmSync(file);
+    }
+  };
+  assert.equal((await testingErrors('apps/portal/src/lint-probe.ts')).length, 1);
+  assert.equal((await testingErrors('apps/web/src/lint-probe.tsx')).length, 1);
+  assert.equal((await testingErrors('apps/portal/src/lint-probe.test.ts')).length, 0);
+});

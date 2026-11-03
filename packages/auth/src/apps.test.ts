@@ -32,6 +32,8 @@ describe('redirect URIs', () => {
     ['https:/*.evil.test/cb', 'web', 'No wildcards in the host.'],
     ['https:\\\\*.evil.test/cb', 'web', 'No wildcards in the host.'],
     ['http:127.0.0.1:4000/cb', 'web', 'Enter a full URI.'],
+    ['https://hr.initech.com/*', 'web', 'No wildcards in a redirect URI.'],
+    ['com.initech.hr:/*', 'native', 'No wildcards in a redirect URI.'],
   ])('refuses %s for %s', (uri, type, message) => {
     expect(uriProblem(uri, 'redirect', type)).toBe(message);
   });
