@@ -89,3 +89,36 @@ test('tenantry-portal is a public PKCE client like tenantry-web, with tenant ori
   assert.equal(audience(portal)?.config['included.custom.audience'], 'tenantry-api');
   assert.equal(groupMapper(portal)?.config['access.token.claim'], 'true');
 });
+
+// Company login (ADR-0022) is run by operators through `pnpm ops`, with their own service account:
+// the API's account never manages identity providers.
+test('tenantry-ops is a service account that may also manage identity providers', () => {
+  const ops = client('tenantry-ops');
+  assert.equal(ops.publicClient, false);
+  assert.equal(ops.serviceAccountsEnabled, true);
+  assert.equal(ops.standardFlowEnabled, false);
+  assert.equal(ops.directAccessGrantsEnabled, false);
+  assert.equal(ops.secret, env.KEYCLOAK_OPS_CLIENT_SECRET);
+  const sa = (realm.users ?? []).find((u) => u.username === 'service-account-tenantry-ops');
+  assert.ok(sa, 'service account user is missing');
+  assert.deepEqual([...sa.clientRoles['realm-management']].sort(), [
+    'manage-clients',
+    'manage-identity-providers',
+    'manage-realm',
+    'manage-users',
+    'view-identity-providers',
+    'view-users',
+  ]);
+});
+
+test('the corp-demo realm is the stand-in company IdP, with no password in the file', () => {
+  const corp = JSON.parse(
+    readFileSync(new URL('../../infra/keycloak/corp-demo-realm.json', import.meta.url), 'utf8'),
+  );
+  const tenantry = corp.clients.find((c) => c.clientId === 'tenantry-platform');
+  assert.equal(tenantry.publicClient, false);
+  assert.equal(tenantry.secret, env.CORP_DEMO_CLIENT_SECRET);
+  const alice = corp.users.find((u) => u.email === 'alice@acme.test');
+  assert.equal(alice.emailVerified, true);
+  assert.equal(alice.credentials, undefined);
+});

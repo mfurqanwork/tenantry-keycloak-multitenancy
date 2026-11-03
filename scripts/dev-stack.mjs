@@ -1,6 +1,7 @@
 // Starts the local stack. Default: everything in Docker. --infra: only Caddy, Keycloak, Postgres and
 // Mailpit, with Caddy forwarding app traffic to the API and Vite servers running on the host.
 import { execFileSync } from 'node:child_process';
+import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ensureEnv, ROOT } from './lib/env.mjs';
 import { busyPorts } from './lib/port.mjs';
@@ -57,7 +58,29 @@ const run = (args) =>
     env: { ...process.env, ...upstreams },
   });
 
-run(['up', '-d', '--build', '--wait', ...(infraOnly ? ['caddy', 'keycloak', 'postgres', 'mailpit'] : [])]);
+// The local DNS server (company login, ADR-0022) needs its zone file before it starts; `pnpm ops dns
+// set-txt` adds records to it later. Git ignores it.
+const zone = new URL('../infra/dns/zones/test.db', import.meta.url);
+if (!existsSync(zone)) {
+  writeFileSync(
+    zone,
+    [
+      '$ORIGIN test.',
+      '@ 60 IN SOA ns.test. admin.test. 1 7200 3600 1209600 60',
+      '@ 60 IN NS ns.test.',
+      'ns 60 IN A 127.0.0.1',
+      '',
+    ].join('\n'),
+  );
+}
+
+run([
+  'up',
+  '-d',
+  '--build',
+  '--wait',
+  ...(infraOnly ? ['caddy', 'keycloak', 'postgres', 'mailpit', 'dns'] : []),
+]);
 if (infraOnly) run(['run', '--rm', '--build', 'migrate']);
 // Caddy reads its bind-mounted Caddyfile only at start; a restart picks up edits since the last run.
 run(['restart', 'caddy']);

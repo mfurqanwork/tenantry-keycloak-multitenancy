@@ -25,3 +25,4 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0019](0019-keycloak-org-invites.md)        | Invites through Keycloak organization invites                |
 | [0020](0020-single-logout-session-check.md) | Single logout through the Keycloak session, checked on focus |
 | [0021](0021-keycloakify-login-theme.md)     | Keycloakify login theme JAR in the Keycloak image            |
+| [0022](0022-company-idp-by-operator.md)     | Company login linked by an operator, after a DNS proof       |

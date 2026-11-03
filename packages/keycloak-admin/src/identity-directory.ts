@@ -29,4 +29,22 @@ export interface IdentityDirectory {
   // origins. Idempotent.
   addTenantOrigin(origin: string, app: TenantApp): Promise<void>;
   removeTenantOrigin(origin: string, app: TenantApp): Promise<void>;
+
+  // Company login (ADR-0022), used by the operator scripts only.
+  // Adds a verified email domain to the organization. Idempotent.
+  addOrganizationDomain(orgId: string, domain: string): Promise<void>;
+  // An OIDC identity provider in the realm, configured from the issuer's discovery document. Idempotent.
+  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<void>;
+  // Links the provider to the organization and makes it sign in that domain's people (Keycloak sends
+  // them there by the email domain). The organization must already have the domain. Idempotent.
+  linkIdentityProvider(orgId: string, alias: string, domain: string): Promise<void>;
+  // A missing provider counts as deleted.
+  deleteIdentityProvider(alias: string): Promise<void>;
+}
+
+export interface CompanyIdentityProvider {
+  alias: string;
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
 }

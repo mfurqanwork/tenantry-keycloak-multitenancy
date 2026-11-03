@@ -10,6 +10,8 @@ runIdentityDirectoryContract('in-memory', () => {
     dir,
     newUser: () => Promise.resolve(randomUUID()),
     redirectUris: (app) => Promise.resolve([...dir.origins[app]].map((o) => `${o}/*`)),
+    companyIssuer: 'http://corp.example/realms/corp-demo',
+    orgDomains: (orgId) => Promise.resolve(dir.domainsOf(orgId)),
     cleanup: () => Promise.resolve(),
   });
 });

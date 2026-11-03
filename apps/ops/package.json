@@ -1,0 +1,24 @@
+{
+  "name": "@tenantry/ops",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ops": "tsx src/cli.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:isolation": "vitest run -c vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@tenantry/auth": "workspace:*",
+    "@tenantry/db": "workspace:*",
+    "@tenantry/keycloak-admin": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
+  }
+}

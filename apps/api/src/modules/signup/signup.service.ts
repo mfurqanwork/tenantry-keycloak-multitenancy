@@ -1,3 +1,4 @@
+import { tenantOrigin } from '@tenantry/auth';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { SlugTakenError, platformRepository, tenantTx, type Db } from '@tenantry/db';
 import type { IdentityDirectory } from '@tenantry/keycloak-admin';
@@ -7,7 +8,6 @@ import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import { DB, IDENTITY_DIRECTORY } from '../../infrastructure/tokens.js';
 import { AuditService } from '../audit/audit.service.js';
 import { runSaga, SagaFailedError } from './signup.saga.js';
-import { tenantOrigin } from '../../common/tenant-origin.js';
 import { validateSlug } from './slug.js';
 
 export type Availability =

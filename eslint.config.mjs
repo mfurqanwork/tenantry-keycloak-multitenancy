@@ -49,7 +49,8 @@ export default tseslint.config(
   { files: ['packages/db/**'], rules: { 'no-restricted-imports': restrict({ pg: false }) } },
   { files: ['packages/oidc-client/**'], rules: { 'no-restricted-imports': restrict({ oidc: false }) } },
   {
-    files: ['apps/api/src/infrastructure/**'],
+    // The two places that build the Keycloak HTTP client: the API's wiring and the operator CLI's.
+    files: ['apps/api/src/infrastructure/**', 'apps/ops/src/cli.ts'],
     rules: { 'no-restricted-imports': restrict({ keycloak: false }) },
   },
   { files: ['apps/api/src/modules/**'], rules: { 'no-restricted-imports': restrict({ modules: true }) } },

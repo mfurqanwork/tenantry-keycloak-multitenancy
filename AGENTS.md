@@ -15,7 +15,8 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`; `/testing` has the in-memory fake.
 - `packages/oidc-client`: the only code that imports `oidc-client-ts`.
 - `tests/isolation`: the README guarantees, run against the whole stack.
-- `infra/`: Compose, Caddy, the Keycloak realm and the Postgres init script.
+- `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`.
+- `infra/`: Compose, Caddy, the Keycloak realms (`platform`, and the dev-only `corp-demo`), CoreDNS (dev only) and the Postgres init script.
 - `docs/decisions/`: ADRs. A change to a recorded decision needs a new or updated ADR.
 
 ## Commands
@@ -27,6 +28,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 | `pnpm smoke`                                                | Checks the running stack                                                      |
 | `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                  |
+| `pnpm ops <command>`                                        | Operator commands: company domains and identity providers, origins (ADR-0022) |
 | `pnpm stack:down`                                           | Stops the stack                                                               |
 
 ## Hard rules

@@ -107,6 +107,17 @@
       "implicitFlowEnabled": false
     },
     {
+      "clientId": "tenantry-ops",
+      "name": "Tenantry operator scripts",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-ops-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false
+    },
+    {
       "clientId": "tenantry-isolation-tests",
       "name": "Isolation tests (local dev realm only)",
       "enabled": true,
@@ -149,6 +160,21 @@
       "serviceAccountClientId": "tenantry-backend",
       "clientRoles": {
         "realm-management": ["manage-realm", "view-users", "manage-users", "manage-clients"]
+      }
+    },
+    {
+      "username": "service-account-tenantry-ops",
+      "enabled": true,
+      "serviceAccountClientId": "tenantry-ops",
+      "clientRoles": {
+        "realm-management": [
+          "manage-realm",
+          "view-users",
+          "manage-users",
+          "manage-clients",
+          "manage-identity-providers",
+          "view-identity-providers"
+        ]
       }
     }
   ]

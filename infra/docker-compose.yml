@@ -61,6 +61,8 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
     volumes:
       - ./keycloak/platform-realm.json:/opt/keycloak/data/import/platform-realm.json:ro
+      # The stand-in company identity provider for company login (ADR-0022). Dev only.
+      - ./keycloak/corp-demo-realm.json:/opt/keycloak/data/import/corp-demo-realm.json:ro
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
@@ -74,6 +76,17 @@ services:
       interval: 10s
       retries: 30
       start_period: 120s
+
+  # Answers the .test zone for domain verification (ADR-0022). Dev only, on loopback.
+  dns:
+    image: coredns/coredns:1.12.1
+    command: ['-conf', '/etc/coredns/Corefile']
+    ports:
+      - '127.0.0.1:${TENANTRY_DNS_PORT:-1053}:53/udp'
+      - '127.0.0.1:${TENANTRY_DNS_PORT:-1053}:53/tcp'
+    volumes:
+      - ./dns/Corefile:/etc/coredns/Corefile:ro
+      - ./dns/zones:/zones:ro
 
   mailpit:
     image: axllent/mailpit:v1.27

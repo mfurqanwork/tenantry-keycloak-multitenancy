@@ -19,3 +19,9 @@ test('keycloak is built from infra/keycloak/Dockerfile so the theme JAR is insid
   assert.match(keycloak, /dockerfile: infra\/keycloak\/Dockerfile/);
   assert.doesNotMatch(keycloak, /^\s+image:/m);
 });
+
+test('the dev DNS server answers on loopback only', () => {
+  const dns = /^ {2}dns:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(compose)?.[1] ?? '';
+  assert.match(dns, /image: coredns\/coredns:1\.12\.1/);
+  assert.match(dns, /'127\.0\.0\.1:\$\{TENANTRY_DNS_PORT:-1053\}:53\/udp'/);
+});

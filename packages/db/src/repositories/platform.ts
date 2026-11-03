@@ -59,6 +59,13 @@ export function platformRepository(ex: Executor) {
     findTenantBySlug: (slug: string) => findTenant(eq(tenants.slug, slug)),
     findTenantById: (id: string) => findTenant(eq(tenants.id, id)),
 
+    async listActiveTenants(): Promise<TenantRecord[]> {
+      const rows = await selectTenants()
+        .where(and(eq(tenants.status, 'active'), eq(tenants.tier, 'standard')))
+        .orderBy(tenants.slug);
+      return rows.map((row) => ({ ...row, branding: brandingOf(row.branding) }));
+    },
+
     async findActiveTenantsBySlugs(slugs: string[]): Promise<TenantRecord[]> {
       if (slugs.length === 0) return [];
       const rows = await selectTenants().where(

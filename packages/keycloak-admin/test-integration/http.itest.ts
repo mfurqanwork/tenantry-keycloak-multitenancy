@@ -39,8 +39,9 @@ runIdentityDirectoryContract('Keycloak over HTTP', async () => {
     dir: createHttpIdentityDirectory({
       baseUrl,
       realm: 'platform',
-      clientId: env('KEYCLOAK_BACKEND_CLIENT_ID'),
-      clientSecret: env('KEYCLOAK_BACKEND_CLIENT_SECRET'),
+      // The operator account: the only one that may manage identity providers (ADR-0022).
+      clientId: env('KEYCLOAK_OPS_CLIENT_ID'),
+      clientSecret: env('KEYCLOAK_OPS_CLIENT_SECRET'),
       webClientId: 'tenantry-web',
       portalClientId: 'tenantry-portal',
     }),
@@ -63,6 +64,17 @@ runIdentityDirectoryContract('Keycloak over HTTP', async () => {
       });
       const [found] = (await res.json()) as { redirectUris?: string[] }[];
       return found?.redirectUris ?? [];
+    },
+    companyIssuer: `${env('TENANTRY_AUTH_URL')}/realms/corp-demo`,
+    async orgDomains(orgId) {
+      const res = await fetch(`${baseUrl}/admin/realms/platform/organizations/${orgId}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const org = (await res.json()) as { domains?: { name: string; identityProviderAlias?: string }[] };
+      return (org.domains ?? []).map((d) => ({
+        name: d.name,
+        identityProviderAlias: d.identityProviderAlias ?? null,
+      }));
     },
     async cleanup() {
       for (const id of created) {

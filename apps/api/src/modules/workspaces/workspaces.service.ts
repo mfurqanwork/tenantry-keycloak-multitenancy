@@ -1,8 +1,8 @@
+import { tenantOrigin } from '@tenantry/auth';
 import { Inject, Injectable } from '@nestjs/common';
 import { platformRepository, type Db, type TenantRecord } from '@tenantry/db';
 import type { IdentityDirectory } from '@tenantry/keycloak-admin';
 import type { SignedInUser } from '../../auth/request-context.js';
-import { tenantOrigin } from '../../common/tenant-origin.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import { DB, IDENTITY_DIRECTORY } from '../../infrastructure/tokens.js';
 

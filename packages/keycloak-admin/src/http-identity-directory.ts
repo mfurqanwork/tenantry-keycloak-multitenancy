@@ -27,6 +27,10 @@ interface KcGroup {
   name: string;
   path?: string;
 }
+interface KcOrganization {
+  id: string;
+  domains?: { name: string; verified?: boolean; identityProviderAlias?: string; autoRedirect?: boolean }[];
+}
 interface KcClient {
   id: string;
   redirectUris?: string[];
@@ -194,6 +198,72 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
         redirectUris: [...new Set([...(c.redirectUris ?? []), uri])],
         webOrigins: [...new Set([...(c.webOrigins ?? []), origin])],
       }));
+    },
+
+    async addOrganizationDomain(orgId, domain) {
+      const current = await json<KcOrganization>(await call('addOrganizationDomain', 'GET', org(orgId)));
+      const domains = current.domains ?? [];
+      if (domains.some((d) => d.name === domain)) return;
+      await call('addOrganizationDomain', 'PUT', org(orgId), {
+        ...current,
+        domains: [...domains, { name: domain, verified: true }],
+      });
+    },
+
+    async createOidcIdentityProvider(input) {
+      // Keycloak reads the issuer's discovery document itself and returns the endpoint settings.
+      const discovered = await json<Record<string, string>>(
+        await call('createOidcIdentityProvider', 'POST', '/identity-provider/import-config', {
+          providerId: 'oidc',
+          fromUrl: `${input.issuer}/.well-known/openid-configuration`,
+        }),
+      );
+      await call(
+        'createOidcIdentityProvider',
+        'POST',
+        '/identity-provider/instances',
+        {
+          alias: input.alias,
+          providerId: 'oidc',
+          enabled: true,
+          trustEmail: true,
+          config: {
+            ...discovered,
+            clientId: input.clientId,
+            clientSecret: input.clientSecret,
+            clientAuthMethod: 'client_secret_post',
+            syncMode: 'IMPORT',
+            defaultScope: 'openid email profile',
+          },
+        },
+        [409],
+      );
+    },
+
+    // Keycloak 26.8 keeps the provider for a domain on the organization's domain entry.
+    async linkIdentityProvider(orgId, alias, domain) {
+      await call('linkIdentityProvider', 'POST', `${org(orgId)}/identity-providers`, alias, [409]);
+      const current = await json<KcOrganization>(await call('linkIdentityProvider', 'GET', org(orgId)));
+      const domains = current.domains ?? [];
+      if (!domains.some((d) => d.name === domain)) {
+        throw new DirectoryError('linkIdentityProvider', 400, `organization has no domain ${domain}`);
+      }
+      await call('linkIdentityProvider', 'PUT', org(orgId), {
+        ...current,
+        domains: domains.map((d) =>
+          d.name === domain ? { ...d, identityProviderAlias: alias, autoRedirect: true } : d,
+        ),
+      });
+    },
+
+    async deleteIdentityProvider(alias) {
+      await call(
+        'deleteIdentityProvider',
+        'DELETE',
+        `/identity-provider/instances/${encodeURIComponent(alias)}`,
+        undefined,
+        [404],
+      );
     },
 
     removeTenantOrigin(origin, app) {
