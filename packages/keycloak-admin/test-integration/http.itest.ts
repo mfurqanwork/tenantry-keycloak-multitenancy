@@ -1,35 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
 import { createHttpIdentityDirectory } from '../src/http-identity-directory.js';
 import { runIdentityDirectoryContract } from '../src/testing/contract.js';
-
-// Same .env as the stack; real environment variables win (CI).
-function env(key: string): string {
-  const file = new URL('../../../.env', import.meta.url);
-  let value = process.env[key];
-  if (!value && existsSync(file)) {
-    value = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'))?.[1]?.trim();
-  }
-  if (!value) throw new Error(`${key} is not set: copy .env.example to .env`);
-  return value;
-}
-
-const baseUrl = env('TENANTRY_AUTH_INTERNAL_URL');
-
-// Test users are made with the bootstrap admin, which the API itself never uses.
-async function adminToken(): Promise<string> {
-  const res = await fetch(`${baseUrl}/realms/master/protocol/openid-connect/token`, {
-    method: 'POST',
-    body: new URLSearchParams({
-      grant_type: 'password',
-      client_id: 'admin-cli',
-      username: env('KC_BOOTSTRAP_ADMIN_USERNAME'),
-      password: env('KC_BOOTSTRAP_ADMIN_PASSWORD'),
-    }),
-  });
-  if (!res.ok) throw new Error(`admin token: ${res.status}`);
-  return ((await res.json()) as { access_token: string }).access_token;
-}
+import { adminToken, baseUrl, env } from './stack.js';
 
 runIdentityDirectoryContract('Keycloak over HTTP', async () => {
   const token = await adminToken();

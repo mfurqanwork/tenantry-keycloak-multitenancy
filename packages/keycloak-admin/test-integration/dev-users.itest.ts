@@ -1,17 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createDevUsers } from '../src/dev/dev-users.js';
-
-function env(key: string): string {
-  const file = new URL('../../../.env', import.meta.url);
-  let value = process.env[key];
-  if (!value && existsSync(file)) {
-    value = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'))?.[1]?.trim();
-  }
-  if (!value) throw new Error(`${key} is not set: copy .env.example to .env`);
-  return value;
-}
+import { env } from './stack.js';
 
 const users = createDevUsers({
   baseUrl: env('TENANTRY_AUTH_INTERNAL_URL'),
