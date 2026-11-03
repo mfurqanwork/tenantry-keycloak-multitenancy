@@ -85,9 +85,11 @@ describe('platformRepository: tenants', () => {
       slug,
       name: 'Active',
       status: 'active',
+      tier: 'standard',
       realm: 'platform',
       issuer: 'http://issuer',
       kcOrgId: 'org-1',
+      templateVersion: null,
       branding: { primaryColor: null, logoVersion: null },
     });
     expect((await platform.findTenantById(id))?.slug).toBe(slug);

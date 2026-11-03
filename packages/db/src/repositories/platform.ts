@@ -7,6 +7,7 @@ import {
   users,
   type TenantBranding,
   type TenantStatus,
+  type TenantTier,
 } from '../schema/index.js';
 import type { Executor } from './executor.js';
 
@@ -15,9 +16,13 @@ export interface TenantRecord {
   slug: string;
   name: string;
   status: TenantStatus;
+  // Standard: an organization in the platform realm. Enterprise: its own realm (ADR-0001).
+  tier: TenantTier;
   realm: string | null;
   issuer: string | null;
   kcOrgId: string | null;
+  // The realm template an enterprise tenant was built from or last upgraded to; null for Standard.
+  templateVersion: number | null;
   branding: TenantBranding;
 }
 
@@ -42,26 +47,44 @@ export function platformRepository(ex: Executor) {
         slug: tenants.slug,
         name: tenants.name,
         status: tenants.status,
+        tier: tenants.tier,
         realm: tenantIdentity.realm,
         issuer: tenantIdentity.issuer,
         kcOrgId: tenantIdentity.kcOrgId,
+        templateVersion: tenantIdentity.templateVersion,
         branding: tenants.branding,
       })
       .from(tenants)
       .leftJoin(tenantIdentity, eq(tenantIdentity.tenantId, tenants.id));
 
   const findTenant = async (where: ReturnType<typeof eq>): Promise<TenantRecord | null> => {
-    const [row] = await selectTenants().where(and(where, eq(tenants.tier, 'standard')));
+    const [row] = await selectTenants().where(where);
     return row ? { ...row, branding: brandingOf(row.branding) } : null;
+  };
+
+  // Which realm and issuer the guard accepts for this tenant. Writing it again replaces it (a resumed
+  // provisioning run).
+  const registerIdentity = async (
+    id: string,
+    identity: { realm: string; issuer: string; kcOrgId: string | null; templateVersion?: number },
+  ): Promise<void> => {
+    await ex
+      .insert(tenantIdentity)
+      .values({ tenantId: id, ...identity })
+      .onConflictDoUpdate({ target: tenantIdentity.tenantId, set: identity });
+  };
+
+  const markTenantActive = async (id: string): Promise<void> => {
+    await ex.update(tenants).set({ status: 'active' }).where(eq(tenants.id, id));
   };
 
   return {
     findTenantBySlug: (slug: string) => findTenant(eq(tenants.slug, slug)),
     findTenantById: (id: string) => findTenant(eq(tenants.id, id)),
 
-    async listActiveTenants(): Promise<TenantRecord[]> {
+    async listActiveTenants(o: { tier?: TenantTier } = {}): Promise<TenantRecord[]> {
       const rows = await selectTenants()
-        .where(and(eq(tenants.status, 'active'), eq(tenants.tier, 'standard')))
+        .where(and(eq(tenants.status, 'active'), o.tier ? eq(tenants.tier, o.tier) : undefined))
         .orderBy(tenants.slug);
       return rows.map((row) => ({ ...row, branding: brandingOf(row.branding) }));
     },
@@ -87,7 +110,11 @@ export function platformRepository(ex: Executor) {
 
     // A failed signup leaves its row behind, and so does one whose process died mid-way (still
     // provisioning after ten minutes); the next signup for that slug replaces either.
-    async insertProvisioningTenant(input: { slug: string; name: string }): Promise<{ id: string }> {
+    async insertProvisioningTenant(input: {
+      slug: string;
+      name: string;
+      tier?: TenantTier;
+    }): Promise<{ id: string }> {
       try {
         return await ex.transaction(async (tx) => {
           await tx
@@ -114,12 +141,19 @@ export function platformRepository(ex: Executor) {
       }
     },
 
+    registerIdentity,
+    markTenantActive,
+
     async activateTenant(
       id: string,
-      identity: { realm: string; issuer: string; kcOrgId: string },
+      identity: { realm: string; issuer: string; kcOrgId: string | null; templateVersion?: number },
     ): Promise<void> {
-      await ex.insert(tenantIdentity).values({ tenantId: id, ...identity });
-      await ex.update(tenants).set({ status: 'active' }).where(eq(tenants.id, id));
+      await registerIdentity(id, identity);
+      await markTenantActive(id);
+    },
+
+    async setTemplateVersion(id: string, templateVersion: number): Promise<void> {
+      await ex.update(tenantIdentity).set({ templateVersion }).where(eq(tenantIdentity.tenantId, id));
     },
 
     async markTenantFailed(id: string): Promise<void> {
