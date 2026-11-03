@@ -62,14 +62,15 @@ export function formAction(html: string): string {
 export class Browser {
   private readonly jar = new Jar();
 
-  constructor(private readonly redirectUri: string) {}
+  // Where to stop following redirects (the app's redirect URI); a sign-in sets it for its own flow.
+  constructor(public stopAt: string) {}
 
   async open(url: string, init: { method?: string; form?: Record<string, string> } = {}): Promise<Page> {
     let next = url;
     let method = init.method ?? 'GET';
     let body: URLSearchParams | undefined = init.form ? new URLSearchParams(init.form) : undefined;
     for (let hops = 0; hops < 20; hops++) {
-      if (next.startsWith(this.redirectUri)) return { url: next, status: 302, html: '' };
+      if (next.startsWith(this.stopAt)) return { url: next, status: 302, html: '' };
       const target = local(next);
       const res = await fetch(target, {
         method,
@@ -103,11 +104,14 @@ export async function signInWithBrowser(o: {
   redirectUri: string;
   username: string;
   password: string;
+  // A browser that keeps its cookies for later steps (single sign-on into another app).
+  browser?: Browser;
 }): Promise<string> {
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   const oidc = `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect`;
-  const browser = new Browser(o.redirectUri);
+  const browser = o.browser ?? new Browser(o.redirectUri);
+  browser.stopAt = o.redirectUri;
   const login = await browser.open(
     `${oidc}/auth?${new URLSearchParams({
       client_id: o.clientId,
