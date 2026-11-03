@@ -47,15 +47,19 @@ export function createAuthClient(config: AuthConfig & { redirectUri: string }): 
     automaticSilentRenew: false,
   });
 
-  // One refresh at a time: two requests (or a request and a focus check) share it.
-  let refreshing: Promise<Awaited<ReturnType<UserManager['signinSilent']>>> | null = null;
-  const refresh = async () => {
+  // One refresh at a time: two requests (or a request and a focus check) share it. Only Keycloak's
+  // invalid_grant means the session is over; a network failure or a Keycloak error leaves it unknown,
+  // and the person stays signed in (ADR-0020).
+  type Refreshed = { user: Awaited<ReturnType<UserManager['signinSilent']>>; ended: false } | { ended: true };
+  let refreshing: Promise<Refreshed | null> | null = null;
+  const refresh = async (): Promise<Refreshed | null> => {
     refreshing ??= (async () => {
       try {
-        return await manager.signinSilent();
-      } catch {
+        return { user: await manager.signinSilent(), ended: false as const };
+      } catch (err) {
+        if ((err as { error?: unknown }).error !== 'invalid_grant') return null;
         await manager.removeUser();
-        return null;
+        return { ended: true as const };
       } finally {
         refreshing = null;
       }
@@ -68,7 +72,9 @@ export function createAuthClient(config: AuthConfig & { redirectUri: string }): 
     if (!user) return null;
     if (!user.expired) return user;
     // Access tokens live five minutes; trade the refresh token rather than redirecting.
-    return user.refresh_token ? refresh() : null;
+    if (!user.refresh_token) return null;
+    const refreshed = await refresh();
+    return refreshed && !refreshed.ended ? refreshed.user : null;
   };
 
   return {
@@ -92,7 +98,8 @@ export function createAuthClient(config: AuthConfig & { redirectUri: string }): 
     async checkSession() {
       const user = await manager.getUser();
       if (!user?.refresh_token) return false;
-      return (await refresh()) !== null;
+      // Unknown (Keycloak unreachable) counts as alive; only an ended session signs the app out.
+      return (await refresh())?.ended !== true;
     },
     async user() {
       const user = await current();

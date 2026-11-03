@@ -41,9 +41,18 @@ describe('checkSession', () => {
   });
 
   it('forgets the user when Keycloak has ended the session', async () => {
-    manager.signinSilent.mockRejectedValue(new Error('invalid_grant: Session not active'));
+    // oidc-client-ts rejects with an ErrorResponse that carries the OAuth error code.
+    manager.signinSilent.mockRejectedValue(
+      Object.assign(new Error('Session not active'), { error: 'invalid_grant' }),
+    );
     await expect(client().checkSession()).resolves.toBe(false);
     expect(manager.removeUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the person signed in when Keycloak cannot be reached', async () => {
+    manager.signinSilent.mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(client().checkSession()).resolves.toBe(true);
+    expect(manager.removeUser).not.toHaveBeenCalled();
   });
 
   it('is false with nobody signed in', async () => {
