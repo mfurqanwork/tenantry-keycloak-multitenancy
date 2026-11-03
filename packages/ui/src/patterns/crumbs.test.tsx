@@ -31,4 +31,17 @@ describe('page breadcrumbs', () => {
     expect(crumb).toHaveAttribute('data-router-link');
     expect(crumb).toHaveAttribute('href', '/');
   });
+
+  it("keeps the header's product name inside the app too", () => {
+    render(
+      <TenantryThemeProvider>
+        <AppShell productName="Acme Inc" navItems={[]} currentPath="/members" linkAs={FakeRouterLink}>
+          <p>page</p>
+        </AppShell>
+      </TenantryThemeProvider>,
+    );
+    const name = screen.getByRole('link', { name: 'Acme Inc' });
+    expect(name).toHaveAttribute('data-router-link');
+    expect(name).toHaveAttribute('href', '/');
+  });
 });

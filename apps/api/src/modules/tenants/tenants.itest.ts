@@ -65,4 +65,17 @@ describe('GET /api/me', () => {
     expect(res.body.permissions).toContain('members:invite');
     expect(res.body.permissions).not.toContain('tenant:settings');
   });
+
+  describe('auth-config for an enterprise tenant', () => {
+    it("names the tenant's own realm and client, with no organization", async () => {
+      const ent = await t.seedEnterpriseTenant();
+      const web = await t.request({ host: ent.host, path: `/api/tenants/${ent.slug}/auth-config` });
+      expect(web.body).toEqual({ issuer: ent.issuer, clientId: 'tenantry-web', organization: null });
+      const portal = await t.request({
+        host: `${ent.slug}.portal.tenantry.localhost`,
+        path: `/api/tenants/${ent.slug}/auth-config`,
+      });
+      expect(portal.body).toEqual({ issuer: ent.issuer, clientId: 'tenantry-portal', organization: null });
+    });
+  });
 });

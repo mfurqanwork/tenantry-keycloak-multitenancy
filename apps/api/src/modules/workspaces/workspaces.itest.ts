@@ -58,4 +58,24 @@ describe('GET /api/me/workspaces', () => {
   it('needs a signed-in member of this workspace', async () => {
     expect((await t.request({ host: a.host, path: '/api/me/workspaces' })).status).toBe(401);
   });
+
+  describe('workspaces on an enterprise tenant', () => {
+    it('lists only this workspace, without asking the platform realm', async () => {
+      const ent = await t.seedEnterpriseTenant();
+      t.directory.failOn('listUserOrganizations');
+      const token = await t.enterpriseToken(ent, t.newUser(), ['member']);
+      const res = await t.request<Workspace[]>({ host: ent.host, path: '/api/me/workspaces', token });
+      t.directory.clearFailures();
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([
+        {
+          slug: ent.slug,
+          name: `Enterprise ${ent.slug}`,
+          current: true,
+          webUrl: `http://${ent.slug}.tenantry.localhost/`,
+          portalUrl: `http://${ent.slug}.portal.tenantry.localhost/`,
+        },
+      ]);
+    });
+  });
 });

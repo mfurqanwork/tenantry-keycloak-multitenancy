@@ -98,7 +98,7 @@ export function AppShell({
                 aria-expanded={isSideNavExpanded}
                 onClick={onClickSideNavExpand}
               />
-              <HeaderName href="/" prefix="">
+              <HeaderName href="/" prefix="" {...(linkAs ? { as: linkAs } : {})}>
                 {logoUrl && <img className="tenantry-header__logo" src={logoUrl} alt="" />}
                 {productName}
               </HeaderName>
