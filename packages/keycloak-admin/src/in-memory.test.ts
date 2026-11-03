@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { DirectoryError } from './errors.js';
 import { InMemoryIdentityDirectory } from './testing/in-memory-identity-directory.js';
 import { runIdentityDirectoryContract } from './testing/contract.js';
+import { InMemoryRealmMembers } from './testing/in-memory-realm-members.js';
+import { runRealmMemberContract } from './testing/member-contract.js';
 
 runIdentityDirectoryContract('in-memory', () => {
   const dir = new InMemoryIdentityDirectory();
@@ -41,5 +43,18 @@ describe('InMemoryIdentityDirectory', () => {
     await expect(dir.createOrganization({ alias: 'acme', name: 'Again' })).rejects.toBeInstanceOf(
       DirectoryError,
     );
+  });
+});
+
+runRealmMemberContract('in-memory realm', () => {
+  const members = new InMemoryRealmMembers();
+  return Promise.resolve({
+    members,
+    completeSignUp: (kcUserId: string) => {
+      members.markSignedIn(kcUserId);
+      return Promise.resolve();
+    },
+    emailsTo: (address: string) => Promise.resolve(members.emailsSent.filter((e) => e === address).length),
+    cleanup: () => Promise.resolve(),
   });
 });

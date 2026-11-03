@@ -7,7 +7,8 @@ import { DB } from '../../infrastructure/tokens.js';
 export interface AuthConfig {
   issuer: string;
   clientId: string;
-  organization: string;
+  // The organization to sign in to; null for an enterprise tenant, whose realm is the tenant.
+  organization: string | null;
 }
 
 // Each app signs in through its own public client (ADR-0020).
@@ -22,6 +23,10 @@ export class TenantsService {
     if (tenant?.status !== 'active' || !tenant.issuer) {
       throw new NotFoundProblem('No workspace at this address.');
     }
-    return { issuer: tenant.issuer, clientId: CLIENT_IDS[app], organization: tenant.slug };
+    return {
+      issuer: tenant.issuer,
+      clientId: CLIENT_IDS[app],
+      organization: tenant.tier === 'enterprise' ? null : tenant.slug,
+    };
   }
 }

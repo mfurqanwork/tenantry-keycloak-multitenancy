@@ -1,0 +1,24 @@
+{
+  "clientId": "tenantry-api",
+  "name": "Tenantry API",
+  "enabled": true,
+  "bearerOnly": true,
+  "publicClient": false,
+  "standardFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "roles": [
+    {
+      "name": "owner",
+      "description": "Owns the workspace"
+    },
+    {
+      "name": "admin",
+      "description": "Manages members and apps"
+    },
+    {
+      "name": "member",
+      "description": "Uses the workspace"
+    }
+  ],
+  "implicitFlowEnabled": false
+}

@@ -53,4 +53,48 @@ describe('dev users (seed only)', () => {
     });
     expect(result.id).toMatch(/[0-9a-f-]{36}/);
   });
+
+  it('marks an existing, unverified user verified and named, with no pending actions', async () => {
+    const email = `seed-${randomUUID().slice(0, 8)}@example.test`;
+    const base = env('TENANTRY_AUTH_INTERNAL_URL');
+    const token = (await (
+      await fetch(`${base}/realms/master/protocol/openid-connect/token`, {
+        method: 'POST',
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: 'admin-cli',
+          username: env('KC_BOOTSTRAP_ADMIN_USERNAME'),
+          password: env('KC_BOOTSTRAP_ADMIN_PASSWORD'),
+        }),
+      })
+    ).json()) as { access_token: string };
+    const created = await fetch(`${base}/admin/realms/platform/users`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token.access_token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username: email,
+        email,
+        enabled: true,
+        emailVerified: false,
+        requiredActions: ['VERIFY_EMAIL'],
+      }),
+    });
+    const id = created.headers.get('location')?.split('/').pop() ?? '';
+    await users.ensureUser('platform', {
+      email,
+      firstName: 'A',
+      lastName: 'B',
+      password: `Pw-${randomUUID()}`,
+    });
+    const user = (await (
+      await fetch(`${base}/admin/realms/platform/users/${id}`, {
+        headers: { authorization: `Bearer ${token.access_token}` },
+      })
+    ).json()) as { emailVerified: boolean; requiredActions: string[]; firstName?: string; lastName?: string };
+    expect(user.emailVerified).toBe(true);
+    expect(user.requiredActions).toEqual([]);
+    // A complete profile, so the first sign-in is not stopped to ask for a name.
+    expect(user).toMatchObject({ firstName: 'A', lastName: 'B' });
+    await users.deleteUser('platform', id);
+  });
 });

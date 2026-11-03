@@ -1,6 +1,6 @@
 # ADR-0010: Versioned realm templates applied by our own code
 
-Status: Accepted · Date: 2026-11-02
+Status: Accepted · Date: 2026-11-02 · Updated: 2026-11-03 (Phase 3)
 
 ## Context
 
@@ -18,3 +18,14 @@ Realm configuration lives in versioned JSON templates (`infra/keycloak/templates
 
 - We write and test diffing and idempotency ourselves.
 - Provisioning is a product feature with audit entries, not an ops script.
+
+## Update (Phase 3)
+
+How the decision was built, where it differs from the text above:
+
+- **Where the templates live.** `packages/keycloak-admin/templates/` (`enterprise-realm.v1.json` and `product-clients/`), not `infra/keycloak/templates/`. The API's Docker image is pruned to the packages it uses, so templates outside `packages/` would not ship with it.
+- **Endpoints and a command, not scripts.** The API provisions and upgrades: `POST /api/platform/enterprise-tenants` and `POST /api/platform/enterprise-tenants/upgrade` (with `dryRun`), on the base domain only, for the `tenantry-ops` operator client only. `pnpm ops enterprise provision` and `pnpm ops enterprise upgrade [--tenant] [--dry-run]` call them. Each step can run again, so a failed run is finished by running it again; the audit log records `tenant.provisioning`, `tenant.created` and `tenant.upgraded`.
+- **The provisioner account.** `tenantry-provisioner` holds only `create-realm` in the master realm. Keycloak gives it admin rights in each realm it creates and none in others (checked against `platform`: 403).
+- **Two client policy profiles.** Public clients get PKCE and secure redirect URIs, `https` only. A stack running on `http` (local development) leaves the secure-redirect-URI check out: its `*.localhost` hosts are loopback names, and Keycloak refuses any loopback redirect but a literal `127.0.0.1` or `[::1]` once DNS answers for them, as it does on Linux hosts. Every client gets the implicit-grant and password-grant refusals. Every product client states `implicitFlowEnabled: false`, because Keycloak 26.8.1 answers 500 when that check meets an unset value.
+- **The backend credential.** Each realm's `tenantry-backend` secret is made at provisioning and kept in a secrets store, never in Postgres ([ADR-0023](0023-realm-secrets.md)).
+- **Upgrades compare only what the template sets.** A setting the template does not name is left alone, and a realm that cannot be read is reported and skipped; the others are still upgraded.

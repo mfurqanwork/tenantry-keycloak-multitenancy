@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ensureEnv, ROOT } from './lib/env.mjs';
+import { ensureProvisionerClient } from './lib/provisioner.mjs';
 import { busyPorts } from './lib/port.mjs';
 
 const infraOnly = process.argv.includes('--infra');
@@ -82,6 +83,14 @@ run([
   ...(infraOnly ? ['caddy', 'keycloak', 'postgres', 'mailpit', 'dns'] : []),
 ]);
 if (infraOnly) run(['run', '--rm', '--build', 'migrate']);
+// The master-realm account the API creates enterprise realms with (ADR-0010); dev only.
+await ensureProvisionerClient({
+  baseUrl: env.TENANTRY_AUTH_INTERNAL_URL ?? 'http://127.0.0.1:8180',
+  adminUser: env.KC_BOOTSTRAP_ADMIN_USERNAME,
+  adminPassword: env.KC_BOOTSTRAP_ADMIN_PASSWORD,
+  clientId: env.KEYCLOAK_PROVISIONER_CLIENT_ID ?? 'tenantry-provisioner',
+  secret: env.KEYCLOAK_PROVISIONER_CLIENT_SECRET ?? 'dev-provisioner-secret',
+});
 // Caddy reads its bind-mounted Caddyfile only at start; a restart picks up edits since the last run.
 run(['restart', 'caddy']);
 console.log(`\nTenantry is up: http://demo.tenantry.localhost${port === 80 ? '' : `:${port}`}`);

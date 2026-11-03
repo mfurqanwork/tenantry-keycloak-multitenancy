@@ -6,11 +6,14 @@ import type { AuthedRequest, SignedInUser } from './request-context.js';
 export const PUBLIC = 'tenantry:public';
 export const SIGNED_IN_ONLY = 'tenantry:signed-in-only';
 export const PERMISSION = 'tenantry:permission';
+export const OPERATOR_ONLY = 'tenantry:operator-only';
 
 // No token needed.
 export const Public = () => SetMetadata(PUBLIC, true);
 // A valid platform token on the apex host; no tenant (signup).
 export const SignedInOnly = () => SetMetadata(SIGNED_IN_ONLY, true);
+// The operator scripts only (pnpm ops): a platform-realm token issued to tenantry-ops, on the base domain.
+export const OperatorOnly = () => SetMetadata(OPERATOR_ONLY, true);
 // AGENTS.md rule 7: routes name a permission, never a role.
 export const RequirePermission = (permission: Permission) => SetMetadata(PERMISSION, permission);
 

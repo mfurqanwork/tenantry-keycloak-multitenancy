@@ -6,5 +6,5 @@ export { tenantIdentity } from './tenant-identity.js';
 export { tenantIdps } from './tenant-idps.js';
 export { tenantInvites } from './tenant-invites.js';
 export { tenantLogos } from './tenant-logos.js';
-export { tenants, type TenantBranding, type TenantStatus } from './tenants.js';
+export { tenants, type TenantBranding, type TenantStatus, type TenantTier } from './tenants.js';
 export { users } from './users.js';

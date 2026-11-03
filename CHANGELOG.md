@@ -2,6 +2,25 @@
 
 All notable changes to Tenantry. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Phase 3: Enterprise tenants.
+
+### Added
+
+- Enterprise tenants in a realm of their own (`ent-<slug>`), built from a versioned template (`enterprise-realm.v1.json`) with client policies: PKCE and secure redirect URIs for public clients, and no implicit or password grant for any client (ADR-0010).
+- Operator endpoints `POST /api/platform/enterprise-tenants` and `.../upgrade`, and the commands `pnpm ops enterprise provision` and `pnpm ops enterprise upgrade [--tenant] [--dry-run]`. Every step can run again; the first owner gets a set-password email.
+- A create-realm-only provisioner account, and a secrets store for each realm's backend credential, kept out of Postgres (ADR-0023).
+- The auth guard reads enterprise roles from `resource_access.tenantry-api` and accepts only the tenant's own realm.
+- Members, invites and roles for enterprise tenants, against their realm.
+- The seeded enterprise workspace `initech`.
+- Guarantee tests for tokens from another realm, the shared realm, the wrong audience, an enterprise token on a Standard workspace, the password grant, and a company login with an email outside the organization's domain.
+
+### Changed
+
+- Email and display name refresh on every sign-in, and a `users` row is made only for a member.
+- The header's product name navigates within the app.
+
 ## [0.1.0] - 2026-11-03
 
 The first public milestone: Standard tenants end to end.

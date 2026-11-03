@@ -7,7 +7,7 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** v0.1 (Phases 0–2). Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. The Phase 1 and 2 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
+> **Status:** v0.1 (Phases 0–2) plus Phase 3. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. The Phase 1 to 3 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
 
 ## Guarantees
 
@@ -24,9 +24,12 @@ These are the project's promises. Each one is an automated test that runs in CI 
 | Member tries to invite, remove or change roles              | 403                                                         | 1     | tested  |
 | Logout in one app                                           | Session ends in the other app                               | 2     | tested  |
 | Domain link without a verified DNS record                   | Refused                                                     | 2     | tested  |
-| Valid token from another enterprise realm                   | 401 (issuer rule)                                           | 3     | planned |
-| Valid token from the shared realm on an enterprise tenant   | 401                                                         | 3     | planned |
-| Token for the wrong audience                                | 401                                                         | 3     | planned |
+| Valid token from another enterprise realm                   | 401 (issuer rule)                                           | 3     | tested  |
+| Valid token from the shared realm on an enterprise tenant   | 401                                                         | 3     | tested  |
+| Token for the wrong audience                                | 401                                                         | 3     | tested  |
+| Enterprise realm token on a Standard workspace              | 401                                                         | 3     | tested  |
+| Password grant in an enterprise realm                       | Refused by the realm's client policy                        | 3     | tested  |
+| Company login brings an email outside the verified domain   | Refused by Keycloak                                         | 3     | tested  |
 | Customer registers a wildcard or non-HTTPS redirect URI     | Refused by our API and by Keycloak client policy            | 4     | planned |
 | Tenant A admin registers or edits an app in tenant B        | 403                                                         | 4     | planned |
 | User of another tenant signs in to a customer app           | Refused                                                     | 4     | planned |
@@ -62,7 +65,7 @@ The quickest way is the seeded demo, which follows [docs/demo-script.md](docs/de
 pnpm seed
 ```
 
-It creates the workspaces `acme` (blue) and `globex` (green) and their people, all with the password `SEED_PASSWORD` from `.env`. `pat@example.test` belongs to both. It also links `acme.test` to the stand-in company sign-in, so `alice@acme.test` signs in to `acme` through it.
+It creates the workspaces `acme` (blue) and `globex` (green) and their people, all with the password `SEED_PASSWORD` from `.env`. `pat@example.test` belongs to both. It also links `acme.test` to the stand-in company sign-in, so `alice@acme.test` signs in to `acme` through it. And it provisions the enterprise workspace `initech` in its own realm, `ent-initech`, whose owner `owner@initech.test` signs in at <http://initech.tenantry.localhost> with the same password.
 
 Or start from nothing, with the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
 
@@ -104,6 +107,8 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | Users in several tenants            | One account                                   | Separate account per realm     |
 | Scale                               | Thousands of tenants                          | Tens to low hundreds of realms |
 
+Phase 3 delivers the enterprise realm, its template and its sign-in. Connecting customer apps, SCIM and per-tenant policies follow in Phases 4 and 5.
+
 ## Repository
 
 | Path                      | What it holds                                             |
@@ -111,13 +116,13 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | `apps/api`                | NestJS API: the auth guard, tenants, members, apps, audit |
 | `apps/web`, `apps/portal` | The two React apps used to demonstrate SSO                |
 | `apps/login-theme`        | The Keycloak login theme (Keycloakify, Carbon)            |
-| `apps/ops`                | Operator commands: company login, origins, the demo seed  |
+| `apps/ops`                | Operator commands: enterprise realms, company login, seed |
 | `packages/app-kit`        | What both apps share: sign-in, API client, who is in      |
 | `packages/brand`          | Colour maths for tenant branding                          |
 | `packages/ui`             | Carbon setup, app shell and the five page patterns        |
 | `packages/db`             | Drizzle schema, migrations, row-level security            |
 | `packages/auth`           | Tenant context and the role-to-permission map             |
-| `packages/keycloak-admin` | The only code that calls Keycloak's admin APIs            |
+| `packages/keycloak-admin` | The only code that calls Keycloak's admin APIs; templates |
 | `infra/`                  | Docker Compose, Caddy, Keycloak realm and Postgres setup  |
 | `docs/decisions/`         | [Architecture decision records](docs/decisions/README.md) |
 

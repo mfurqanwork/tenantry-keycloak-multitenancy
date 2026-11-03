@@ -14,6 +14,10 @@ const config: AppConfig = {
   publicPort: null,
   backendClientId: 'tenantry-backend',
   backendClientSecret: 'secret',
+  provisionerClientId: 'p',
+  provisionerClientSecret: 'p',
+  secretsDir: '.secrets',
+  smtp: { host: 'mailpit', port: '1025', from: 'x@example.com' },
 };
 const indicator = () => new KeycloakHealthIndicator(config, new HealthIndicatorService());
 const respond = (status: number, body: unknown) => {

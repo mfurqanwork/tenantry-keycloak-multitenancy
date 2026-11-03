@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rolesFromClaims } from './role-claims.js';
+import { rolesFromClaims, rolesFromClientRoles } from './role-claims.js';
 
 describe('rolesFromClaims', () => {
   it("reads roles from this tenant's organization block", () => {
@@ -48,5 +48,29 @@ describe('rolesFromClaims', () => {
       roles: [],
     });
     expect(rolesFromClaims({ organization: ['acme'] }, 'acme')).toEqual({ member: false });
+  });
+});
+
+describe('rolesFromClientRoles', () => {
+  it("reads roles only from tenantry-api's client roles", () => {
+    expect(
+      rolesFromClientRoles({ resource_access: { 'tenantry-api': { roles: ['admin', 'member'] } } }),
+    ).toEqual({
+      member: true,
+      roles: ['admin', 'member'],
+    });
+  });
+
+  it('ignores realm_access, other clients and roles we do not know', () => {
+    expect(
+      rolesFromClientRoles({
+        realm_access: { roles: ['owner'] },
+        resource_access: { 'customer-app': { roles: ['owner'] }, 'tenantry-api': { roles: ['superuser'] } },
+      }),
+    ).toEqual({ member: false });
+  });
+
+  it('is no member without the claim', () => {
+    expect(rolesFromClientRoles({})).toEqual({ member: false });
   });
 });

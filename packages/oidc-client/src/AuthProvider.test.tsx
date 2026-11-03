@@ -23,6 +23,12 @@ function showTab() {
   document.dispatchEvent(new Event('visibilitychange'));
 }
 
+// The text appears when React commits; the session listeners attach in an effect that may run later.
+async function signedIn() {
+  await screen.findByText('Signed in as ada@example.com');
+  await act(async () => {});
+}
+
 function Who() {
   const { user } = useAuth();
   return <p>Signed in as {user.email}</p>;
@@ -96,7 +102,7 @@ describe('AuthProvider', () => {
         <Who />
       </AuthProvider>,
     );
-    await screen.findByText('Signed in as ada@example.com');
+    await signedIn();
     client.checkSession.mockResolvedValue(false);
     act(() => {
       showTab();
@@ -116,7 +122,7 @@ describe('AuthProvider', () => {
         <Who />
       </AuthProvider>,
     );
-    await screen.findByText('Signed in as ada@example.com');
+    await signedIn();
     act(() => {
       showTab();
     });
@@ -134,7 +140,7 @@ describe('AuthProvider', () => {
         <Who />
       </AuthProvider>,
     );
-    await screen.findByText('Signed in as ada@example.com');
+    await signedIn();
     client.checkSession.mockResolvedValue(false);
     act(() => {
       window.dispatchEvent(new Event('focus'));

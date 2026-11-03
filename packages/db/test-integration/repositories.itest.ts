@@ -37,6 +37,18 @@ describe('platformRepository: tenants', () => {
     expect(again.id).not.toBe(stuck.id);
   });
 
+  it('never lets a signup take the slug of an enterprise tenant still being provisioned', async () => {
+    const slug = newSlug();
+    const stuck = await platform.insertProvisioningTenant({ slug, name: 'Initech', tier: 'enterprise' });
+    await conn.owner.query(`update tenants set created_at = now() - interval '11 minutes' where id = $1`, [
+      stuck.id,
+    ]);
+    await expect(platform.insertProvisioningTenant({ slug, name: 'Squatter' })).rejects.toBeInstanceOf(
+      SlugTakenError,
+    );
+    expect((await platform.findTenantBySlug(slug))?.id).toBe(stuck.id);
+  });
+
   it('serialises membership changes per tenant', async () => {
     const order: string[] = [];
     const hold = (label: string, ms: number) =>
@@ -85,9 +97,11 @@ describe('platformRepository: tenants', () => {
       slug,
       name: 'Active',
       status: 'active',
+      tier: 'standard',
       realm: 'platform',
       issuer: 'http://issuer',
       kcOrgId: 'org-1',
+      templateVersion: null,
       branding: { primaryColor: null, logoVersion: null },
     });
     expect((await platform.findTenantById(id))?.slug).toBe(slug);

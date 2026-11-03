@@ -29,6 +29,10 @@ describe('loadConfig', () => {
       publicPort: null,
       backendClientId: 'tenantry-backend',
       backendClientSecret: 'secret',
+      provisionerClientId: 'tenantry-provisioner',
+      provisionerClientSecret: 'unset',
+      secretsDir: '.secrets',
+      smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
     });
   });
 

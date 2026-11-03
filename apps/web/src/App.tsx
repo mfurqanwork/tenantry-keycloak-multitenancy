@@ -18,7 +18,7 @@ const PAGES: (NavItem & { needs?: Permission })[] = [
 ];
 
 // The tenant app's shell and routes, once signed in. Root supplies the theme.
-export function App({ hostname, onSignOut }: { hostname: string; onSignOut?: () => void }) {
+export function App({ onSignOut }: { onSignOut?: () => void }) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
@@ -44,7 +44,7 @@ export function App({ hostname, onSignOut }: { hostname: string; onSignOut?: () 
       {...(onSignOut && me.user.email ? { user: { email: me.user.email, onSignOut } } : {})}
     >
       <Routes>
-        <Route path="/" element={<DashboardRoute hostname={hostname} />} />
+        <Route path="/" element={<DashboardRoute />} />
         <Route path="/projects" element={<ProjectsRoute />} />
         <Route path="/members" element={<MembersRoute />} />
         <Route path="/audit" element={<AuditRoute />} />

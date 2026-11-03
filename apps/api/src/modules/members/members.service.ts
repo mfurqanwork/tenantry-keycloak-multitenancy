@@ -1,9 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   canAssignRole,
-  groupForRole,
   permissionsFor,
-  roleForGroupPath,
   type Permission,
   type Role,
   type TenantContext,
@@ -21,10 +19,11 @@ import {
   type TenantRecord,
   type TenantTx,
 } from '@tenantry/db';
-import type { DirectoryMember, IdentityDirectory } from '@tenantry/keycloak-admin';
+import type { Member, MemberDirectory } from '@tenantry/keycloak-admin';
 import type { SignedInUser } from '../../auth/request-context.js';
 import { ConflictProblem, ForbiddenProblem, NotFoundProblem } from '../../common/http-errors.js';
-import { DB, IDENTITY_DIRECTORY } from '../../infrastructure/tokens.js';
+import type { MemberDirectories } from '../../infrastructure/member-directories.js';
+import { DB, MEMBER_DIRECTORIES } from '../../infrastructure/tokens.js';
 import { AuditService } from '../audit/audit.service.js';
 
 export interface MemberView {
@@ -35,14 +34,14 @@ export interface MemberView {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const roleOf = (m: DirectoryMember): Role | null => (m.group ? roleForGroupPath(m.group) : null);
 
-// Keycloak holds membership and roles (organization groups); our database holds invites and the audit log.
+// Keycloak holds membership and roles (Standard: organization groups; Enterprise: tenantry-api client
+// roles in the tenant's realm); our database holds invites and the audit log.
 @Injectable()
 export class MembersService {
   constructor(
     @Inject(DB) private readonly db: Db,
-    @Inject(IDENTITY_DIRECTORY) private readonly directory: IdentityDirectory,
+    @Inject(MEMBER_DIRECTORIES) private readonly directories: MemberDirectories,
     private readonly audit: AuditService,
   ) {}
 
@@ -50,9 +49,9 @@ export class MembersService {
     ctx: TenantContext,
     tenant: TenantRecord,
   ): Promise<{ members: MemberView[]; invites: InviteRecord[] }> {
-    const { orgId, issuer } = this.identity(tenant);
+    const issuer = this.issuer(tenant);
     const platform = platformRepository(this.db);
-    const listed = await this.directory.listMembers(orgId);
+    const listed = await (await this.directories.forTenant(tenant)).listMembers();
     // Every member gets our own user id, even one who has never signed in yet.
     const members = await Promise.all(
       listed.map(async (m) => ({
@@ -66,7 +65,7 @@ export class MembersService {
         ).userId,
         email: m.email,
         displayName: m.displayName,
-        role: roleOf(m),
+        role: m.role,
       })),
     );
     const invites = await tenantTx(this.db, ctx.tenantId, (tx) => listOpenInvites(tx));
@@ -79,10 +78,16 @@ export class MembersService {
     actor: SignedInUser,
     input: { email: string; role: Role },
   ): Promise<InviteRecord> {
-    const { orgId } = this.identity(tenant);
+    const members = await this.directories.forTenant(tenant);
     return this.underLock(ctx, async (tx) => {
-      const actorRole = this.liveRole(await this.directory.listMembers(orgId), actor, 'members:invite');
+      const listed = await members.listMembers();
+      const actorRole = this.liveRole(listed, actor, 'members:invite');
       this.mayAssign(actorRole, null, input.role);
+      // An invite only brings someone in; a member's role changes through the role rules, never here.
+      const address = input.email.toLowerCase();
+      if (listed.some((m) => m.role !== null && m.email?.toLowerCase() === address)) {
+        throw new ConflictProblem('This person is already a member.');
+      }
       let invite: InviteRecord;
       try {
         invite = await createInvite(tx, { email: input.email, role: input.role, invitedBy: ctx.userId });
@@ -92,8 +97,9 @@ export class MembersService {
         }
         throw err;
       }
-      // Inside the transaction: if Keycloak refuses, the invite row is rolled back too.
-      await this.directory.inviteUser(orgId, input.email);
+      // Inside the transaction: if Keycloak refuses, the invite row is rolled back too. Enterprise: the
+      // account exists at once with the role; the invite is accepted when the person first signs in.
+      await members.invite(input.email, input.role);
       await this.audit.record(tx, ctx, 'member.invited', invite.id, { email: input.email, role: input.role });
       return invite;
     });
@@ -105,13 +111,22 @@ export class MembersService {
     actor: SignedInUser,
     id: string,
   ): Promise<void> {
-    const { orgId } = this.identity(tenant);
+    const members = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
-      this.liveRole(await this.directory.listMembers(orgId), actor, 'members:invite');
-      if (!UUID.test(id) || !(await revokeInvite(tx, id))) {
+      const listed = await members.listMembers();
+      this.liveRole(listed, actor, 'members:invite');
+      const open = UUID.test(id) ? (await listOpenInvites(tx)).find((i) => i.id === id) : undefined;
+      if (!open || !(await revokeInvite(tx, id))) {
         throw new NotFoundProblem('No open invite with this id.');
       }
-      await this.audit.record(tx, ctx, 'invite.revoked', id);
+      // Enterprise: the account the invite created goes too, unless the person has already used it;
+      // then the account stays and the role the invite gave is taken back. (An invite never reaches an
+      // existing member, so that role came from this invite.)
+      const invitee = listed.find((m) => m.email?.toLowerCase() === open.email.toLowerCase());
+      const deleted = invitee ? await members.deleteUnusedUser(invitee.kcUserId) : false;
+      if (invitee && !deleted) await members.remove(invitee.kcUserId);
+      const outcome = deleted ? { accountDeleted: true } : invitee ? { accessRemoved: true } : undefined;
+      await this.audit.record(tx, ctx, 'invite.revoked', id, outcome);
     });
   }
 
@@ -123,52 +138,52 @@ export class MembersService {
     to: Role,
   ): Promise<void> {
     if (userId === ctx.userId) throw new ForbiddenProblem('You cannot change your own role.');
-    const { orgId } = this.identity(tenant);
+    const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
-      const { target, members } = await this.findMember(tenant, userId);
+      const { target, members } = await this.findMember(tenant, directory, userId);
       const actorRole = this.liveRole(members, actor, 'members:change-role');
-      const from = roleOf(target);
+      const from = target.role;
       this.mayAssign(actorRole, from, to);
       if (from === 'owner' && to !== 'owner') this.keepAnOwner(members);
-      await this.directory.setMemberGroup(orgId, target.kcUserId, groupForRole(to));
+      await directory.setRole(target.kcUserId, to);
       await this.audit.record(tx, ctx, 'member.role_changed', userId, { from, to });
     });
   }
 
   async remove(ctx: TenantContext, tenant: TenantRecord, actor: SignedInUser, userId: string): Promise<void> {
-    const { orgId } = this.identity(tenant);
+    const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
-      const { target, members } = await this.findMember(tenant, userId);
+      const { target, members } = await this.findMember(tenant, directory, userId);
       const actorRole = this.liveRole(members, actor, 'members:remove');
-      const role = roleOf(target);
+      const role = target.role;
       if (role === 'owner') {
         if (actorRole !== 'owner') throw new ForbiddenProblem('Only an owner can remove an owner.');
         this.keepAnOwner(members);
       }
-      await this.directory.removeMember(orgId, target.kcUserId);
+      await directory.remove(target.kcUserId);
       await this.audit.record(tx, ctx, 'member.removed', userId, { email: target.email, role });
     });
   }
 
   // Anyone may leave a workspace they belong to, except its last owner.
   async leave(ctx: TenantContext, tenant: TenantRecord, actor: SignedInUser): Promise<void> {
-    const { orgId } = this.identity(tenant);
+    const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
-      const members = await this.directory.listMembers(orgId);
+      const members = await directory.listMembers();
       const me = members.find((m) => m.kcUserId === actor.kcUserId);
       if (!me) throw new ForbiddenProblem();
-      const role = roleOf(me);
-      if (role === 'owner' && members.filter((m) => roleOf(m) === 'owner').length <= 1) {
+      const role = me.role;
+      if (role === 'owner' && members.filter((m) => m.role === 'owner').length <= 1) {
         throw new ConflictProblem('You are the last owner. Make someone else an owner first.');
       }
-      await this.directory.removeMember(orgId, actor.kcUserId);
+      await directory.remove(actor.kcUserId);
       await this.audit.record(tx, ctx, 'member.left', ctx.userId, { email: me.email, role });
     });
   }
 
-  private identity(tenant: TenantRecord): { orgId: string; issuer: string } {
-    if (!tenant.kcOrgId || !tenant.issuer) throw new Error(`tenant ${tenant.slug} has no organization`);
-    return { orgId: tenant.kcOrgId, issuer: tenant.issuer };
+  private issuer(tenant: TenantRecord): string {
+    if (!tenant.issuer) throw new Error(`tenant ${tenant.slug} has no issuer`);
+    return tenant.issuer;
   }
 
   // Membership changes in one tenant run one at a time: owner counts read inside stay true until
@@ -182,22 +197,22 @@ export class MembersService {
 
   // The token's role can be up to five minutes old. Identity changes use the role Keycloak holds now,
   // so someone removed or demoted cannot keep acting (or invite themselves back) in that window.
-  private liveRole(members: DirectoryMember[], actor: SignedInUser, permission: Permission): Role {
-    const current = members.find((m) => m.kcUserId === actor.kcUserId);
-    const role = current ? roleOf(current) : null;
+  private liveRole(members: Member[], actor: SignedInUser, permission: Permission): Role {
+    const role = members.find((m) => m.kcUserId === actor.kcUserId)?.role ?? null;
     if (!role || !permissionsFor([role]).has(permission)) throw new ForbiddenProblem();
     return role;
   }
 
   private async findMember(
     tenant: TenantRecord,
+    directory: MemberDirectory,
     userId: string,
-  ): Promise<{ target: DirectoryMember; members: DirectoryMember[] }> {
-    const { orgId, issuer } = this.identity(tenant);
+  ): Promise<{ target: Member; members: Member[] }> {
+    const issuer = this.issuer(tenant);
     const subject = UUID.test(userId)
       ? await platformRepository(this.db).subjectForUser(userId, issuer)
       : null;
-    const members = await this.directory.listMembers(orgId);
+    const members = await directory.listMembers();
     const target = members.find((m) => m.kcUserId === subject);
     if (!target) throw new NotFoundProblem('No such member in this workspace.');
     return { target, members };
@@ -209,8 +224,8 @@ export class MembersService {
     }
   }
 
-  private keepAnOwner(members: DirectoryMember[]): void {
-    if (members.filter((m) => roleOf(m) === 'owner').length <= 1) {
+  private keepAnOwner(members: Member[]): void {
+    if (members.filter((m) => m.role === 'owner').length <= 1) {
       throw new ConflictProblem('A workspace needs at least one owner. Make someone else an owner first.');
     }
   }

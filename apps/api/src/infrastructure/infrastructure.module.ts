@@ -1,8 +1,22 @@
 import { type DynamicModule, Global, Module, type OnApplicationShutdown, Inject } from '@nestjs/common';
 import { createAppPool, createDb, type Pool } from '@tenantry/db';
-import { createHttpIdentityDirectory } from '@tenantry/keycloak-admin';
+import {
+  createHttpIdentityDirectory,
+  createHttpRealmProvisioner,
+  createRealmMembers,
+  type IdentityDirectory,
+} from '@tenantry/keycloak-admin';
+import { createFileSecretStore, type SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { APP_CONFIG, type AppConfig } from '../config/config.js';
-import { DB, DB_POOL, IDENTITY_DIRECTORY } from './tokens.js';
+import { createMemberDirectories } from './member-directories.js';
+import {
+  DB,
+  DB_POOL,
+  IDENTITY_DIRECTORY,
+  MEMBER_DIRECTORIES,
+  REALM_PROVISIONER,
+  SECRET_STORE,
+} from './tokens.js';
 
 // The one place the API binds Postgres and Keycloak. Global, so feature modules just inject the tokens.
 @Global()
@@ -29,8 +43,37 @@ export class InfrastructureModule implements OnApplicationShutdown {
               portalClientId: 'tenantry-portal',
             }),
         },
+        { provide: SECRET_STORE, useFactory: () => createFileSecretStore(config.secretsDir) },
+        {
+          provide: MEMBER_DIRECTORIES,
+          useFactory: (directory: IdentityDirectory, secrets: SecretStore) =>
+            createMemberDirectories({
+              directory,
+              secrets,
+              realmMembers: (realm, clientSecret) =>
+                createRealmMembers({ baseUrl: config.authInternalUrl, realm, clientSecret }),
+            }),
+          inject: [IDENTITY_DIRECTORY, SECRET_STORE],
+        },
+        {
+          provide: REALM_PROVISIONER,
+          useFactory: () =>
+            createHttpRealmProvisioner({
+              baseUrl: config.authInternalUrl,
+              clientId: config.provisionerClientId,
+              clientSecret: config.provisionerClientSecret,
+            }),
+        },
       ],
-      exports: [APP_CONFIG, DB_POOL, DB, IDENTITY_DIRECTORY],
+      exports: [
+        APP_CONFIG,
+        DB_POOL,
+        DB,
+        IDENTITY_DIRECTORY,
+        SECRET_STORE,
+        MEMBER_DIRECTORIES,
+        REALM_PROVISIONER,
+      ],
     };
   }
 

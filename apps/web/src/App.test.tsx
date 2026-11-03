@@ -35,7 +35,7 @@ function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
           })}
         >
           <MeProvider value={me}>
-            <App hostname="demo.tenantry.localhost" />
+            <App />
           </MeProvider>
         </ApiProvider>
       </MemoryRouter>
@@ -48,11 +48,17 @@ const renderAs = (me: Me) => {
 };
 
 describe('web app', () => {
-  it('shows the dashboard with the tenant slug from the subdomain', () => {
+  it('shows the dashboard with the workspace and your role, as the portal does', () => {
     renderAt('/');
+    const main = within(screen.getByRole('main'));
     expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.getByText('demo')).toBeInTheDocument();
-    expect(screen.getByText('platform')).toBeInTheDocument();
+    expect(main.getByText('Workspace')).toBeInTheDocument();
+    expect(main.getByText('Acme')).toBeInTheDocument();
+    expect(main.getByText('Your role')).toBeInTheDocument();
+    expect(main.getByText('Owner')).toBeInTheDocument();
+    // No placeholders from before tenants had realms of their own.
+    expect(main.queryByText('platform')).not.toBeInTheDocument();
+    expect(main.queryByText('Phase 0')).not.toBeInTheDocument();
   });
 
   it('shows every page pattern on /patterns', () => {

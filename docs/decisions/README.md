@@ -26,3 +26,4 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0020](0020-single-logout-session-check.md) | Single logout through the Keycloak session, checked on focus |
 | [0021](0021-keycloakify-login-theme.md)     | Keycloakify login theme JAR in the Keycloak image            |
 | [0022](0022-company-idp-by-operator.md)     | Company login linked by an operator, after a DNS proof       |
+| [0023](0023-realm-secrets.md)               | Per-realm credentials in a secrets store, not the database   |

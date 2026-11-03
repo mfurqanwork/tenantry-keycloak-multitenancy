@@ -24,16 +24,20 @@ export class WorkspacesService {
   ) {}
 
   async list(tenant: TenantRecord, user: SignedInUser): Promise<WorkspaceView[]> {
+    // An enterprise account lives in one realm, so it belongs to this workspace only (README tier table).
+    if (tenant.tier === 'enterprise') return [this.view(tenant, true)];
     const orgs = await this.directory.listUserOrganizations(user.kcUserId);
     const tenants = await platformRepository(this.db).findActiveTenantsBySlugs(orgs.map((o) => o.alias));
-    return tenants
-      .map((t) => ({
-        slug: t.slug,
-        name: t.name,
-        current: t.id === tenant.id,
-        webUrl: `${tenantOrigin(t.slug, this.config, 'web')}/`,
-        portalUrl: `${tenantOrigin(t.slug, this.config, 'portal')}/`,
-      }))
-      .sort((x, y) => x.name.localeCompare(y.name));
+    return tenants.map((t) => this.view(t, t.id === tenant.id)).sort((x, y) => x.name.localeCompare(y.name));
+  }
+
+  private view(t: TenantRecord, current: boolean): WorkspaceView {
+    return {
+      slug: t.slug,
+      name: t.name,
+      current,
+      webUrl: `${tenantOrigin(t.slug, this.config, 'web')}/`,
+      portalUrl: `${tenantOrigin(t.slug, this.config, 'portal')}/`,
+    };
   }
 }

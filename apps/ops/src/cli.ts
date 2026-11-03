@@ -6,6 +6,7 @@ import { createHttpIdentityDirectory } from '@tenantry/keycloak-admin';
 import { createDevUsers } from '@tenantry/keycloak-admin/dev';
 import { setTxt } from './commands/dns.js';
 import { claimDomain, verifyDomain } from './commands/domain.js';
+import { provisionEnterprise, upgradeEnterprise, type EnterpriseDeps } from './commands/enterprise.js';
 import { linkIdp } from './commands/idp.js';
 import { syncOrigins } from './commands/tenants.js';
 import type { OpsDeps } from './deps.js';
@@ -23,6 +24,8 @@ const USAGE = `Usage: pnpm ops <command>
                 [--client-secret-env <NAME>]   (the secret is read from that variable or .env; default IDP_CLIENT_SECRET)
   tenants sync-origins
   dns set-txt <name> <value>     (dev only: writes the local DNS zone)
+  enterprise provision --slug <slug> --name <name> --admin-email <email>
+  enterprise upgrade [--tenant <slug>] [--dry-run]
   seed                           (dev only: the demo workspaces and accounts; also pnpm seed)`;
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -73,6 +76,36 @@ function realDeps(): { deps: OpsDeps; close: () => Promise<void> } {
 
 // The demo needs dev-only access: Keycloak's bootstrap admin for accounts and the password-grant test
 // client for tokens. Neither exists in a production realm.
+// The operator client's token: what the API's @OperatorOnly routes accept (ADR-0010).
+async function operatorToken(): Promise<string> {
+  const internal = stackEnv('TENANTRY_AUTH_INTERNAL_URL', stackEnv('TENANTRY_AUTH_URL'));
+  const realm = stackEnv('TENANTRY_PLATFORM_REALM', 'platform');
+  const res = await fetch(`${internal}/realms/${realm}/protocol/openid-connect/token`, {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: stackEnv('KEYCLOAK_OPS_CLIENT_ID'),
+      client_secret: stackEnv('KEYCLOAK_OPS_CLIENT_SECRET'),
+    }),
+  });
+  if (!res.ok) throw new Error(`operator token: ${String(res.status)}`);
+  return ((await res.json()) as { access_token: string }).access_token;
+}
+
+function enterpriseDeps(): EnterpriseDeps {
+  return {
+    api: apiClient(Number(stackEnv('TENANTRY_HTTP_PORT', '80'))),
+    operatorToken,
+    baseDomain: stackEnv('TENANTRY_BASE_DOMAIN', 'tenantry.localhost'),
+    out: (line) => {
+      console.log(line);
+    },
+    err: (line) => {
+      console.error(line);
+    },
+  };
+}
+
 async function seedWith(deps: OpsDeps): Promise<number> {
   const internal = stackEnv('TENANTRY_AUTH_INTERNAL_URL', stackEnv('TENANTRY_AUTH_URL'));
   const zoneOut = () => undefined;
@@ -84,6 +117,7 @@ async function seedWith(deps: OpsDeps): Promise<number> {
       adminPassword: stackEnv('KC_BOOTSTRAP_ADMIN_PASSWORD'),
     }),
     api: apiClient(Number(stackEnv('TENANTRY_HTTP_PORT', '80'))),
+    operatorToken,
     async tokenFor(email, slug) {
       const res = await fetch(`${internal}/realms/platform/protocol/openid-connect/token`, {
         method: 'POST',
@@ -123,6 +157,10 @@ async function main(argv: string[]): Promise<number> {
       'client-id': { type: 'string' },
       'client-secret': { type: 'string' },
       'client-secret-env': { type: 'string' },
+      slug: { type: 'string' },
+      name: { type: 'string' },
+      'admin-email': { type: 'string' },
+      'dry-run': { type: 'boolean' },
     },
   });
   if (values['client-secret']) {
@@ -133,7 +171,7 @@ async function main(argv: string[]): Promise<number> {
   const [group, command, ...rest] = positionals;
   const need = (name: keyof typeof values): string => {
     const value = values[name];
-    if (!value) throw new Error(`--${name} is required.\n\n${USAGE}`);
+    if (typeof value !== 'string' || !value) throw new Error(`--${name} is required.\n\n${USAGE}`);
     return value;
   };
 
@@ -173,6 +211,17 @@ async function main(argv: string[]): Promise<number> {
           clientSecret: secretFrom(values['client-secret-env'], (key) => stackEnv(key, '') || undefined),
         }),
       );
+    case 'enterprise provision':
+      return provisionEnterprise(enterpriseDeps(), {
+        slug: need('slug'),
+        name: need('name'),
+        adminEmail: need('admin-email'),
+      });
+    case 'enterprise upgrade':
+      return upgradeEnterprise(enterpriseDeps(), {
+        ...(values.tenant ? { tenant: values.tenant } : {}),
+        dryRun: values['dry-run'] === true,
+      });
     case 'tenants sync-origins':
       return run(syncOrigins);
     default:
