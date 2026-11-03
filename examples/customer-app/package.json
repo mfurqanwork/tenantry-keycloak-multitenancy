@@ -1,0 +1,24 @@
+{
+  "name": "@tenantry/customer-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An outside app that signs in through an enterprise tenant's realm (Phase 4, ADR-0011).",
+  "type": "module",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "openid-client": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
+  }
+}

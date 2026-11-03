@@ -21,7 +21,8 @@
     "stack:down": "docker compose -f infra/docker-compose.yml --env-file .env down",
     "test:isolation": "turbo run test:isolation --concurrency=1",
     "ops": "turbo run build --filter=@tenantry/ops^... --output-logs=errors-only && pnpm --filter @tenantry/ops --silent run ops",
-    "seed": "pnpm ops seed"
+    "seed": "pnpm ops seed",
+    "example:customer-app": "pnpm --filter @tenantry/customer-app --silent start"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
