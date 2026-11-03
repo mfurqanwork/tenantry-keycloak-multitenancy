@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Browser, signInWithBrowser } from './helpers/browser-flow.js';
@@ -89,21 +88,15 @@ describe('guarantee: an enterprise tenant accepts only its own realm’s tokens'
   });
 
   it('refuses an Initech token that was not issued for the Tenantry API', async () => {
-    // The backend service account's token: right issuer, wrong audience.
-    const secrets = JSON.parse(readFileSync(`${ROOT}.secrets/${INITECH.realm}.json`, 'utf8')) as Record<
-      string,
-      string
-    >;
-    const res = await fetch(`${KEYCLOAK_URL}/realms/${INITECH.realm}/protocol/openid-connect/token`, {
-      method: 'POST',
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: 'tenantry-backend',
-        client_secret: secrets['tenantry-backend'] ?? '',
-      }),
+    // The owner signed in to Keycloak's own account console: right issuer and person, wrong audience.
+    const accountToken = await signInWithBrowser({
+      realm: INITECH.realm,
+      clientId: 'account-console',
+      redirectUri: `${env('TENANTRY_AUTH_URL')}/realms/${INITECH.realm}/account/`,
+      username: INITECH.owner,
+      password: env('SEED_PASSWORD'),
     });
-    const { access_token } = (await res.json()) as { access_token: string };
-    expect((await me(tenantHost(INITECH.slug), access_token)).status).toBe(401);
+    expect((await me(tenantHost(INITECH.slug), accountToken)).status).toBe(401);
   });
 
   it("refuses the Initech owner's token on a Standard workspace", async () => {
