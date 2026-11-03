@@ -16,7 +16,12 @@ describe('page breadcrumbs', () => {
     render(
       <TenantryThemeProvider>
         <AppShell productName="Tenantry" navItems={[]} currentPath="/members" linkAs={FakeRouterLink}>
-          <ListPage breadcrumbs={[{ label: 'Acme', href: '/' }]} title="Members" isEmpty={false}>
+          <ListPage
+            breadcrumbs={[{ label: 'Acme', href: '/' }]}
+            title="Members"
+            isEmpty={false}
+            emptyState={null}
+          >
             <p>rows</p>
           </ListPage>
         </AppShell>
