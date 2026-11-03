@@ -11,6 +11,7 @@ import { syncOrigins } from './commands/tenants.js';
 import type { OpsDeps } from './deps.js';
 import { resolveTxt } from './dns/txt.js';
 import { stackEnv } from './env.js';
+import { secretFrom } from './secret.js';
 import { apiClient } from './seed/http.js';
 import { seed } from './seed/seed.js';
 
@@ -18,7 +19,8 @@ const USAGE = `Usage: pnpm ops <command>
 
   domain claim  --tenant <slug> --domain <domain>
   domain verify --tenant <slug> --domain <domain>
-  idp link      --tenant <slug> --domain <domain> --alias <alias> --issuer <url> --client-id <id> --client-secret <secret>
+  idp link      --tenant <slug> --domain <domain> --alias <alias> --issuer <url> --client-id <id>
+                [--client-secret-env <NAME>]   (the secret is read from that variable or .env; default IDP_CLIENT_SECRET)
   tenants sync-origins
   dns set-txt <name> <value>     (dev only: writes the local DNS zone)
   seed                           (dev only: the demo workspaces and accounts; also pnpm seed)`;
@@ -120,8 +122,14 @@ async function main(argv: string[]): Promise<number> {
       issuer: { type: 'string' },
       'client-id': { type: 'string' },
       'client-secret': { type: 'string' },
+      'client-secret-env': { type: 'string' },
     },
   });
+  if (values['client-secret']) {
+    throw new Error(
+      'Do not put the secret on the command line. Set it in an environment variable and pass --client-secret-env <NAME>.',
+    );
+  }
   const [group, command, ...rest] = positionals;
   const need = (name: keyof typeof values): string => {
     const value = values[name];
@@ -162,7 +170,7 @@ async function main(argv: string[]): Promise<number> {
           alias: need('alias'),
           issuer: need('issuer'),
           clientId: need('client-id'),
-          clientSecret: need('client-secret'),
+          clientSecret: secretFrom(values['client-secret-env'], (key) => stackEnv(key, '') || undefined),
         }),
       );
     case 'tenants sync-origins':

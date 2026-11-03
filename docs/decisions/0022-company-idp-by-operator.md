@@ -16,6 +16,7 @@ A company wants its people to sign in to its workspace with its own identity pro
 - Only one workspace can verify a domain: a unique index on verified domains sees every workspace's rows.
 - An identity provider alias belongs to one workspace (`tenant_idps.alias` is unique). The row is written in the same transaction as the Keycloak calls. If Keycloak fails, the row is rolled back and a provider created in that run is deleted.
 - The scripts use their own Keycloak service account, `tenantry-ops`, which may manage identity providers. The API's account, `tenantry-backend`, may not.
+- The provider's client secret never goes on the command line: `--client-secret-env` names the environment variable (or `.env` entry) that holds it.
 - Each step writes an audit entry (`domain.claimed`, `domain.verified`, `idp.linked`) with no user and `via: ops`.
 - Locally, the realm `corp-demo` plays the company's identity provider, and a CoreDNS container on `127.0.0.1:1053` answers for `.test`. `pnpm ops dns set-txt` writes the record and tells CoreDNS to reload. A Windows bind mount does not show it the file change otherwise.
 

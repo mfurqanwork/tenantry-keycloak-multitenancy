@@ -61,11 +61,11 @@ export class BrandingService {
       });
     }
     return tenantTx(this.db, ctx.tenantId, async (tx) => {
-      const branding = await platformRepository(tx).setBranding(tenant.id, { primaryColor });
-      await this.audit.record(tx, ctx, 'branding.updated', tenant.id, {
-        from: tenant.branding.primaryColor,
-        to: primaryColor,
-      });
+      const platform = platformRepository(tx);
+      // Read in the same transaction as the write, so the audit's "from" is the colour it replaced.
+      const before = (await platform.findTenantById(tenant.id))?.branding.primaryColor ?? null;
+      const branding = await platform.setBranding(tenant.id, { primaryColor });
+      await this.audit.record(tx, ctx, 'branding.updated', tenant.id, { from: before, to: primaryColor });
       return branding;
     });
   }

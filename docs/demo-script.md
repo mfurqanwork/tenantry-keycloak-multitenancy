@@ -49,7 +49,7 @@ Use a private window, so no earlier session is signed in.
 4. Explain the guard rail: an operator linked `acme.test` only after a DNS TXT record proved Acme owns it. Show the refusal:
 
 ```bash
-pnpm ops idp link --tenant globex --domain globex.test --alias globex-corp --issuer http://auth.tenantry.localhost/realms/corp-demo --client-id tenantry-platform --client-secret dev-corp-demo-secret
+pnpm ops idp link --tenant globex --domain globex.test --alias globex-corp --issuer http://auth.tenantry.localhost/realms/corp-demo --client-id tenantry-platform --client-secret-env CORP_DEMO_CLIENT_SECRET
 ```
 
 It answers `globex.test is not verified for globex` (claim it first with `pnpm ops domain claim`), and nothing is created in Keycloak.

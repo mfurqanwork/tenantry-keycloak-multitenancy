@@ -83,8 +83,8 @@ describe('guarantee: a domain link without a verified DNS record is refused', ()
         `${env('TENANTRY_AUTH_URL')}/realms/corp-demo`,
         '--client-id',
         'tenantry-platform',
-        '--client-secret',
-        env('CORP_DEMO_CLIENT_SECRET'),
+        '--client-secret-env',
+        'CORP_DEMO_CLIENT_SECRET',
       ),
     ).toBe(1);
     expect((await adminGet(`/identity-provider/instances/${alias}`)).status).toBe(404);
