@@ -1,0 +1,152 @@
+import { TextInput } from '@carbon/react';
+import { APP_LIMITS, normaliseUris, uriProblem } from '@tenantry/auth';
+import { FormDialog, useApi } from '@tenantry/app-kit';
+import { useState } from 'react';
+import type { AppView } from './api.js';
+import { UriListField } from './UriListField.js';
+
+type ListField = 'redirectUris' | 'postLogoutRedirectUris' | 'webOrigins';
+
+const LISTS: { field: ListField; label: string; kind: 'redirect' | 'origin' }[] = [
+  { field: 'redirectUris', label: 'Redirect URI', kind: 'redirect' },
+  { field: 'postLogoutRedirectUris', label: 'Post-logout redirect URI', kind: 'redirect' },
+  { field: 'webOrigins', label: 'Allowed origin', kind: 'origin' },
+];
+
+// Name and URIs; the type stays (delete and register again to change it). Sends the whole form.
+export function EditAppDialog({
+  app,
+  onDone,
+  onClose,
+}: {
+  app: AppView;
+  onDone: () => void;
+  onClose: () => void;
+}) {
+  const api = useApi();
+  const [name, setName] = useState(app.name);
+  const [lists, setLists] = useState<Record<ListField, string[]>>({
+    redirectUris: app.redirectUris,
+    postLogoutRedirectUris: app.postLogoutRedirectUris,
+    webOrigins: app.webOrigins,
+  });
+  const shown = LISTS.filter(
+    ({ field }) => app.type !== 'm2m' && (field !== 'webOrigins' || app.type === 'spa'),
+  );
+  const problems = (field: ListField, kind: 'redirect' | 'origin') =>
+    (lists[field].length === 0 ? [''] : lists[field]).map((uri) =>
+      uri.trim() === '' ? null : uriProblem(uri.trim(), kind, app.type),
+    );
+  const valid =
+    name.trim() !== '' &&
+    name.trim().length <= APP_LIMITS.nameMax &&
+    (app.type === 'm2m' || normaliseUris(lists.redirectUris).length > 0) &&
+    shown.every(({ field, kind }) => problems(field, kind).every((p) => p === null));
+  return (
+    <FormDialog
+      heading="Edit app"
+      submitLabel="Save"
+      canSubmit={valid}
+      onSubmit={async () => {
+        await api.patch(`/api/apps/${app.id}`, {
+          name: name.trim(),
+          redirectUris: normaliseUris(lists.redirectUris),
+          postLogoutRedirectUris: normaliseUris(lists.postLogoutRedirectUris),
+          webOrigins: normaliseUris(lists.webOrigins),
+        });
+        onDone();
+      }}
+      onClose={onClose}
+    >
+      <TextInput
+        id="edit-app-name"
+        labelText="Name"
+        value={name}
+        maxLength={APP_LIMITS.nameMax}
+        onChange={(event) => {
+          setName(event.target.value);
+        }}
+      />
+      {shown.map(({ field, label, kind }) => (
+        <UriListField
+          key={field}
+          id={`edit-app-${field}`}
+          label={label}
+          values={lists[field]}
+          problems={problems(field, kind)}
+          onChange={(values) => {
+            setLists({ ...lists, [field]: values });
+          }}
+        />
+      ))}
+    </FormDialog>
+  );
+}
+
+export function RotateSecretDialog({
+  app,
+  onRotated,
+  onClose,
+}: {
+  app: AppView;
+  onRotated: (secret: string) => void;
+  onClose: () => void;
+}) {
+  const api = useApi();
+  return (
+    <FormDialog
+      heading="Rotate secret"
+      submitLabel="Rotate secret"
+      danger
+      canSubmit
+      onSubmit={async () => {
+        const { clientSecret } = await api.post<{ clientSecret: string }>(`/api/apps/${app.id}/secret`, {});
+        onRotated(clientSecret);
+      }}
+      onClose={onClose}
+    >
+      <p>
+        {app.name} gets a new client secret, shown once. The current secret stops working at once, so update
+        the app straight after.
+      </p>
+    </FormDialog>
+  );
+}
+
+export function DeleteAppDialog({
+  app,
+  onDeleted,
+  onClose,
+}: {
+  app: AppView;
+  onDeleted: () => void;
+  onClose: () => void;
+}) {
+  const api = useApi();
+  const [typed, setTyped] = useState('');
+  return (
+    <FormDialog
+      heading="Delete app"
+      submitLabel="Delete app"
+      danger
+      canSubmit={typed === app.name}
+      onSubmit={async () => {
+        await api.del(`/api/apps/${app.id}`);
+        onDeleted();
+      }}
+      onClose={onClose}
+    >
+      <p>
+        {app.name} stops working at once: nobody can sign in to it, and its client is removed from your realm.
+      </p>
+      <TextInput
+        id="delete-app-confirm"
+        labelText={`Type ${app.name} to confirm`}
+        value={typed}
+        onChange={(event) => {
+          setTyped(event.target.value);
+        }}
+      />
+    </FormDialog>
+  );
+}

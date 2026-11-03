@@ -3,7 +3,7 @@ import { ROLE_LABELS, RouterLink, useMe, useWorkspaces } from '@tenantry/app-kit
 import { DashboardPage } from '@tenantry/ui';
 import type { ReactNode } from 'react';
 
-function StatTile({ label, value }: { label: string; value: string }) {
+export function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <Tile className="tenantry-stat">
       <p className="tenantry-stat__label">{label}</p>

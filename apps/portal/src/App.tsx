@@ -3,7 +3,9 @@ import { appLinks, RouterLink, useBranding, useMe, useWorkspaces } from '@tenant
 import { AppShell, type NavItem } from '@tenantry/ui';
 import { Route, Routes, useLocation } from 'react-router';
 import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
+import { AppDetailRoute } from './features/applications/AppDetailRoute.js';
 import { RegisterAppRoute } from './features/applications/RegisterAppRoute.js';
+import { TestCallbackRoute } from './features/applications/TestCallbackRoute.js';
 import { BrandingRoute } from './features/branding/BrandingRoute.js';
 import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
 
@@ -46,6 +48,10 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
         {me.can('apps:register') && me.tenant.tier === 'enterprise' && (
           <Route path="/applications/new" element={<RegisterAppRoute />} />
         )}
+        {me.can('apps:register') && (
+          <Route path="/applications/test-callback" element={<TestCallbackRoute />} />
+        )}
+        {me.can('apps:read') && <Route path="/applications/:id" element={<AppDetailRoute />} />}
         {me.can('tenant:settings') && (
           <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
         )}

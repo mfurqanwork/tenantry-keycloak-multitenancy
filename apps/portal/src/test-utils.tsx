@@ -53,11 +53,11 @@ export function fakeApi(routes: Record<string, unknown> = {}) {
 
 export function renderPortal(
   ui: ReactNode,
-  { api, me, path = '/' }: { api: ReturnType<typeof fakeApi>; me: Me; path?: string },
+  { api, me, path = '/', state }: { api: ReturnType<typeof fakeApi>; me: Me; path?: string; state?: unknown },
 ): RenderResult {
   return render(
     <TenantryThemeProvider>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={[state === undefined ? path : { pathname: path, state }]}>
         <ApiProvider api={api as unknown as Api}>
           <MeProvider value={me}>{ui}</MeProvider>
         </ApiProvider>
