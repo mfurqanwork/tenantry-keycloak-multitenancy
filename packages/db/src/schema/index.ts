@@ -1,6 +1,7 @@
 export { auditLog } from './audit-log.js';
 export { identities } from './identities.js';
 export { projects } from './projects.js';
+export { tenantApps } from './tenant-apps.js';
 export { tenantDomains } from './tenant-domains.js';
 export { tenantIdentity } from './tenant-identity.js';
 export { tenantIdps } from './tenant-idps.js';

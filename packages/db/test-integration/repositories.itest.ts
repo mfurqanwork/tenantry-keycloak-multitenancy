@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OpenInviteExistsError, SlugTakenError } from '../src/errors.js';
+import {
+  countApps,
+  createApp,
+  deleteApp,
+  getApp,
+  listApps,
+  lockTenantApps,
+  updateApp,
+} from '../src/repositories/apps.js';
 import { insertAudit, listAudit } from '../src/repositories/audit.js';
 import {
   createInvite,
@@ -161,6 +170,56 @@ describe('invites', () => {
         createInvite(tx, { email: 'carol@example.com', role: 'member', invitedBy: b.userId }),
       ).resolves.toMatchObject({ email: 'carol@example.com' });
     });
+  });
+});
+
+describe('apps', () => {
+  const input = (createdBy: string | null, clientId = `app-${randomUUID().slice(0, 8)}`) => ({
+    clientId,
+    kcClientUuid: randomUUID(),
+    name: 'HR portal',
+    type: 'spa' as const,
+    redirectUris: ['https://hr.example.test/cb'],
+    postLogoutRedirectUris: ['https://hr.example.test/'],
+    webOrigins: ['https://hr.example.test'],
+    createdBy,
+  });
+
+  it('creates, lists, counts, updates and deletes an app', async () => {
+    const t = await seedTenant(conn.owner);
+    await tenantTx(conn.db, t.tenantId, async (tx) => {
+      await lockTenantApps(tx);
+      const first = await createApp(tx, input(t.userId));
+      const second = await createApp(tx, input(null));
+      expect((await listApps(tx)).map((x) => x.id)).toEqual([second.id, first.id]);
+      expect(await countApps(tx)).toBe(2);
+      expect(await getApp(tx, first.id)).toMatchObject({ type: 'spa', createdBy: t.userId });
+      const updated = await updateApp(tx, first.id, {
+        name: 'HR',
+        redirectUris: ['https://hr2.example.test/cb'],
+        postLogoutRedirectUris: [],
+        webOrigins: [],
+      });
+      expect(updated).toMatchObject({ name: 'HR', redirectUris: ['https://hr2.example.test/cb'] });
+      expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(first.updatedAt.getTime());
+      expect(await deleteApp(tx, first.id)).toBe(true);
+      expect(await deleteApp(tx, first.id)).toBe(false);
+      expect(await getApp(tx, first.id)).toBeNull();
+    });
+  });
+
+  it('reads an id that is not a uuid as no app', async () => {
+    const t = await seedTenant(conn.owner);
+    expect(await tenantTx(conn.db, t.tenantId, (tx) => getApp(tx, 'nope'))).toBeNull();
+    expect(await tenantTx(conn.db, t.tenantId, (tx) => updateApp(tx, 'nope', input(null)))).toBeNull();
+  });
+
+  it('keeps client ids unique within a tenant', async () => {
+    const t = await seedTenant(conn.owner);
+    await tenantTx(conn.db, t.tenantId, (tx) => createApp(tx, input(t.userId, 'app-12345678')));
+    await expect(
+      tenantTx(conn.db, t.tenantId, (tx) => createApp(tx, input(t.userId, 'app-12345678'))),
+    ).rejects.toThrow();
   });
 });
 
