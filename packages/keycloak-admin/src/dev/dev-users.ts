@@ -75,7 +75,12 @@ export function createDevUsers(o: DevUsersOptions): DevUsers {
         if (!id) throw new DirectoryError('ensureUser', res.status, 'no Location header');
       } else {
         // An account made elsewhere (an invite, an enterprise first owner) is ready to use for the demo.
-        await call('ensureUser', 'PUT', `${users(realm)}/${id}`, { emailVerified: true, requiredActions: [] });
+        await call('ensureUser', 'PUT', `${users(realm)}/${id}`, {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          emailVerified: true,
+          requiredActions: [],
+        });
       }
       await call('ensureUser', 'PUT', `${users(realm)}/${id}/reset-password`, {
         type: 'password',
