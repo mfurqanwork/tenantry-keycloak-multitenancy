@@ -8,3 +8,4 @@ coverage/
 nul
 dist_keycloak/
 infra/dns/zones/*.db
+.secrets/

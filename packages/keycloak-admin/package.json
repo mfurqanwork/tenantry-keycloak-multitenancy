@@ -17,6 +17,10 @@
     "./dev": {
       "types": "./dist/dev/index.d.ts",
       "default": "./dist/dev/index.js"
+    },
+    "./secrets": {
+      "types": "./dist/secrets/index.d.ts",
+      "default": "./dist/secrets/index.js"
     }
   },
   "scripts": {
