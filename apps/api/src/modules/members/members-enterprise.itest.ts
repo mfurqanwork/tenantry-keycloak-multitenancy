@@ -98,6 +98,18 @@ describe('members on an enterprise tenant', () => {
     t.realmMembers(ent.realm).markSignedIn(usedId);
     await as(owner).del(`/api/members/invites/${used.body.id}`);
     expect(t.realmMembers(ent.realm).users.has(usedId)).toBe(true);
+    // The account stays, but the access the invite gave does not.
+    expect(t.realmMembers(ent.realm).users.get(usedId)?.role).toBeNull();
+  });
+
+  it('refuses to invite someone who is already a member, so an invite cannot change their role', async () => {
+    const admin = await realmMember(ent, 'admin');
+    const res = await as(admin).post('/api/members/invites', { email: owner.user.email, role: 'member' });
+    expect(res.status).toBe(409);
+    expect(t.realmMembers(ent.realm).users.get(owner.user.sub)?.role).toBe('owner');
+    const self = await as(owner).post('/api/members/invites', { email: owner.user.email, role: 'member' });
+    expect(self.status).toBe(409);
+    expect(t.realmMembers(ent.realm).users.get(owner.user.sub)?.role).toBe('owner');
   });
 
   it('changes a role and removes a member through the realm', async () => {

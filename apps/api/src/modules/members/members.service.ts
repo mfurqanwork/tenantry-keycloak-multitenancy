@@ -80,8 +80,14 @@ export class MembersService {
   ): Promise<InviteRecord> {
     const members = await this.directories.forTenant(tenant);
     return this.underLock(ctx, async (tx) => {
-      const actorRole = this.liveRole(await members.listMembers(), actor, 'members:invite');
+      const listed = await members.listMembers();
+      const actorRole = this.liveRole(listed, actor, 'members:invite');
       this.mayAssign(actorRole, null, input.role);
+      // An invite only brings someone in; a member's role changes through the role rules, never here.
+      const address = input.email.toLowerCase();
+      if (listed.some((m) => m.role !== null && m.email?.toLowerCase() === address)) {
+        throw new ConflictProblem('This person is already a member.');
+      }
       let invite: InviteRecord;
       try {
         invite = await createInvite(tx, { email: input.email, role: input.role, invitedBy: ctx.userId });
@@ -113,10 +119,14 @@ export class MembersService {
       if (!open || !(await revokeInvite(tx, id))) {
         throw new NotFoundProblem('No open invite with this id.');
       }
-      // Enterprise: the account the invite created goes too, unless the person has already used it.
+      // Enterprise: the account the invite created goes too, unless the person has already used it;
+      // then the account stays and the role the invite gave is taken back. (An invite never reaches an
+      // existing member, so that role came from this invite.)
       const invitee = listed.find((m) => m.email?.toLowerCase() === open.email.toLowerCase());
       const deleted = invitee ? await members.deleteUnusedUser(invitee.kcUserId) : false;
-      await this.audit.record(tx, ctx, 'invite.revoked', id, deleted ? { accountDeleted: true } : undefined);
+      if (invitee && !deleted) await members.remove(invitee.kcUserId);
+      const outcome = deleted ? { accountDeleted: true } : invitee ? { accessRemoved: true } : undefined;
+      await this.audit.record(tx, ctx, 'invite.revoked', id, outcome);
     });
   }
 
