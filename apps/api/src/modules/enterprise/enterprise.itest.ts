@@ -127,7 +127,20 @@ describe('POST /api/platform/enterprise-tenants', () => {
     const realm = t.provisioner.realms.get(`ent-${s}`);
     expect(realm?.admins.size).toBe(1);
     if (secretBefore) expect(await t.secrets.get(`ent-${s}/tenantry-backend`)).toBe(secretBefore);
-    expect(t.provisioner.emailsSent.filter((e) => e.realm === `ent-${s}`)).toHaveLength(1);
+    // Each run that reaches the first owner sends the email while they have no password yet.
+    const runsPastOwner = step === 'smokeTest' ? 2 : 1;
+    expect(t.provisioner.emailsSent.filter((e) => e.realm === `ent-${s}`)).toHaveLength(runsPastOwner);
+  });
+
+  it('refuses to resume with a different first owner, so a typo cannot add a second owner', async () => {
+    const s = slug();
+    t.provisioner.failOn('smokeTest');
+    expect((await provision({ slug: s, name: 'Typo', adminEmail: `owner@${s}.tset` })).status).toBe(502);
+    t.provisioner.clearFailures();
+    const other = await provision({ slug: s, name: 'Typo', adminEmail: `owner@${s}.test` });
+    expect(other.status).toBe(409);
+    expect(t.provisioner.realms.get(`ent-${s}`)?.admins.size).toBe(1);
+    expect((await provision({ slug: s, name: 'Typo', adminEmail: `owner@${s}.tset` })).status).toBe(201);
   });
 
   it("refuses a Standard tenant's slug, a bad slug, and a person's token", async () => {

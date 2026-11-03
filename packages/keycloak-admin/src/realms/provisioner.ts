@@ -10,7 +10,7 @@ export interface RealmProvisioner {
   applyTemplate(realm: string, template: RealmTemplate): Promise<void>;
   ensureClients(realm: string, clients: ClientTemplate[]): Promise<void>;
   setBackendSecret(realm: string, secret: string): Promise<void>;
-  // The first owner; the set-password email goes out only when the user is created.
+  // The first owner; the set-password email goes out on every run until they have a password.
   ensureFirstAdmin(
     realm: string,
     email: string,
@@ -167,7 +167,12 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
         await call('ensureFirstAdmin', 'GET', `${r(realm)}/clients/${api.id}/roles/owner`),
       );
       await call('ensureFirstAdmin', 'POST', `${users}/${kcUserId}/role-mappings/clients/${api.id}`, [owner]);
-      if (created) {
+      // Until the owner has a password, every run sends the email: an earlier run may have stopped
+      // between creating the account and sending it.
+      const credentials = await json<{ type: string }[]>(
+        await call('ensureFirstAdmin', 'GET', `${users}/${kcUserId}/credentials`),
+      );
+      if (!credentials.some((c) => c.type === 'password')) {
         const query = new URLSearchParams({ client_id: 'tenantry-web', redirect_uri: `${webOrigin}/` });
         await call(
           'ensureFirstAdmin',

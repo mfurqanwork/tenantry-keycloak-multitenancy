@@ -10,6 +10,8 @@ interface FakeRealm {
   clients: Map<string, Record<string, unknown>>;
   backendSecret: string | null;
   admins: Map<string, string>;
+  // First admins who have set a password.
+  activated: Set<string>;
 }
 
 // A Keycloak stand-in for the provisioning saga's tests. Counts what each step really did.
@@ -49,6 +51,7 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
         clients: new Map(),
         backendSecret: null,
         admins: new Map(),
+        activated: new Set(),
       });
       return { created: true };
     });
@@ -80,11 +83,11 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
     return this.run('ensureFirstAdmin', () => {
       const r = this.realm('ensureFirstAdmin', realm);
       const existing = r.admins.get(email);
-      if (existing) return { created: false, kcUserId: existing };
-      const kcUserId = `${realm}-user-${String(r.admins.size + 1)}`;
+      const kcUserId = existing ?? `${realm}-user-${String(r.admins.size + 1)}`;
       r.admins.set(email, kcUserId);
-      this.emailsSent.push({ realm, email });
-      return { created: true, kcUserId };
+      // Like Keycloak: the email goes out on every run until the owner has a password.
+      if (!r.activated.has(email)) this.emailsSent.push({ realm, email });
+      return { created: !existing, kcUserId };
     });
   }
 

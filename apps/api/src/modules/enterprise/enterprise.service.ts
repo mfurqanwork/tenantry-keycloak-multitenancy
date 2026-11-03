@@ -1,7 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { tenantOrigin } from '@tenantry/auth';
-import { insertAudit, platformRepository, tenantTx, type Db, type TenantRecord } from '@tenantry/db';
+import {
+  insertAudit,
+  listAudit,
+  platformRepository,
+  tenantTx,
+  type Db,
+  type TenantRecord,
+} from '@tenantry/db';
 import {
   loadProductClients,
   loadRealmTemplate,
@@ -81,12 +88,13 @@ export class EnterpriseService {
           ...OPS,
           action: 'tenant.provisioning',
           target: id,
-          metadata: { ...OPS.metadata, slug: input.slug, name: input.name },
+          metadata: { ...OPS.metadata, slug: input.slug, name: input.name, adminEmail: input.adminEmail },
         }),
       );
       tenant = await platform.findTenantById(id);
     }
     if (!tenant) throw new Error(`tenant ${input.slug} vanished`);
+    await this.sameFirstOwner(tenant.id, input.adminEmail);
     const realm = `ent-${input.slug}`;
     const vars = this.vars(tenant);
 
@@ -196,6 +204,17 @@ export class EnterpriseService {
       });
     }
     return results;
+  }
+
+  // A resumed run keeps the first owner the run began with; another address would make a second owner.
+  private async sameFirstOwner(tenantId: string, adminEmail: string): Promise<void> {
+    const entries = await tenantTx(this.db, tenantId, (tx) => listAudit(tx, { limit: 50 }));
+    const began = entries.find((e) => e.action === 'tenant.provisioning')?.metadata['adminEmail'];
+    if (typeof began === 'string' && began.toLowerCase() !== adminEmail.toLowerCase()) {
+      throw new ConflictProblem(
+        `This workspace is being set up for ${began}. Run it again with that address.`,
+      );
+    }
   }
 
   private vars(tenant: TenantRecord): TemplateVars {

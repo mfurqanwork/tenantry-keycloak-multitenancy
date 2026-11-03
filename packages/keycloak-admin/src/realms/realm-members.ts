@@ -87,6 +87,13 @@ export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
     if (want && !held.some((r) => r.name === role)) await call(operation, 'POST', mappings, [want]);
   }
 
+  async function hasPassword(operation: string, kcUserId: string): Promise<boolean> {
+    const credentials = await json<{ type: string }[]>(
+      await call(operation, 'GET', `/users/${encodeURIComponent(kcUserId)}/credentials`),
+    );
+    return credentials.some((c) => c.type === 'password');
+  }
+
   return {
     async listMembers() {
       const { id, roles } = await api();
@@ -124,14 +131,16 @@ export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
         });
         kcUserId = res.headers.get('location')?.split('/').pop();
         if (!kcUserId) throw new DirectoryError('invite', res.status, 'no Location header');
-        await moveRole('invite', kcUserId, role);
+      }
+      await moveRole('invite', kcUserId, role);
+      // Also for an account found without a password: an earlier attempt may have stopped before its
+      // email went out, and without one the person has no way in.
+      if (!(await hasPassword('invite', kcUserId))) {
         await call('invite', 'PUT', `/users/${kcUserId}/execute-actions-email`, [
           'UPDATE_PASSWORD',
           'VERIFY_EMAIL',
         ]);
-        return { kcUserId };
       }
-      await moveRole('invite', kcUserId, role);
       return { kcUserId };
     },
 
@@ -143,10 +152,7 @@ export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
       const user = `/users/${encodeURIComponent(kcUserId)}`;
       const found = await call('deleteUnusedUser', 'GET', user, undefined, [404]);
       if (found.status === 404) return false;
-      const credentials = await json<{ type: string }[]>(
-        await call('deleteUnusedUser', 'GET', `${user}/credentials`),
-      );
-      if (credentials.some((c) => c.type === 'password')) return false;
+      if (await hasPassword('deleteUnusedUser', kcUserId)) return false;
       await call('deleteUnusedUser', 'DELETE', user);
       return true;
     },

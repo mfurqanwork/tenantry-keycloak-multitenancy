@@ -6,6 +6,8 @@ export interface MemberContractSubject {
   members: MemberDirectory;
   // Marks a user as having signed in (set a password), as a real person would.
   completeSignUp(kcUserId: string): Promise<void>;
+  // How many set-password emails went to this address.
+  emailsTo(address: string): Promise<number>;
   cleanup(): Promise<void>;
 }
 
@@ -38,6 +40,18 @@ export function runRealmMemberContract(name: string, make: () => Promise<MemberC
       expect(again.kcUserId).toBe(first.kcUserId);
       const matches = (await s.members.listMembers()).filter((m) => m.email === address);
       expect(matches).toEqual([expect.objectContaining({ role: 'admin' })]);
+    });
+
+    it('sends the set-password email again while an invitee has no password, and not after', async () => {
+      const pending = email();
+      await s.members.invite(pending, 'member');
+      await s.members.invite(pending, 'admin');
+      expect(await s.emailsTo(pending)).toBe(2);
+      const active = email();
+      const { kcUserId } = await s.members.invite(active, 'member');
+      await s.completeSignUp(kcUserId ?? '');
+      await s.members.invite(active, 'admin');
+      expect(await s.emailsTo(active)).toBe(1);
     });
 
     it('keeps a member in exactly one role', async () => {

@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { request } from 'node:http';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createHttpRealmProvisioner } from '../src/realms/provisioner.js';
 import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from '../src/realms/templates.js';
+import { mailsTo } from './mailpit.js';
 
 function env(key: string): string {
   const file = new URL('../../../.env', import.meta.url);
@@ -54,30 +54,6 @@ async function bootstrap(method: string, path: string, body?: unknown): Promise<
   });
 }
 
-// Mailpit through Caddy, as the browser reaches it.
-function mailsTo(address: string): Promise<number> {
-  const port = Number(env('TENANTRY_HTTP_PORT'));
-  return new Promise((resolve, reject) => {
-    request(
-      {
-        host: '127.0.0.1',
-        port,
-        path: `/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`,
-        headers: { host: `mail.tenantry.localhost:${String(port)}` },
-      },
-      (res) => {
-        let raw = '';
-        res.on('data', (c: Buffer) => (raw += c.toString()));
-        res.on('end', () => {
-          resolve((JSON.parse(raw) as { messages_count: number }).messages_count);
-        });
-      },
-    )
-      .on('error', reject)
-      .end();
-  });
-}
-
 afterAll(async () => {
   await bootstrap('DELETE', `/${realm}`);
 });
@@ -100,7 +76,7 @@ describe('realm provisioner (Keycloak)', () => {
     expect(ours.sort()).toEqual(['tenantry-api', 'tenantry-backend', 'tenantry-portal', 'tenantry-web']);
   });
 
-  it('creates the first admin once, as owner, with a set-password email', async () => {
+  it('creates the first admin once, as owner, with a set-password email until they have a password', async () => {
     const first = await provisioner.ensureFirstAdmin(realm, adminEmail, vars.webOrigin);
     expect(first.created).toBe(true);
     const again = await provisioner.ensureFirstAdmin(realm, adminEmail, vars.webOrigin);
@@ -112,7 +88,16 @@ describe('realm provisioner (Keycloak)', () => {
       await bootstrap('GET', `/${realm}/users/${first.kcUserId}/role-mappings/clients/${api?.id ?? ''}`)
     ).json()) as { name: string }[];
     expect(roles.map((r) => r.name)).toEqual(['owner']);
-    expect(await mailsTo(adminEmail)).toBe(1);
+    // A rerun sends the email again while the owner has no password: an earlier run may have stopped
+    // before its email went out. Once they have one, nothing more is sent.
+    expect(await mailsTo(adminEmail)).toBe(2);
+    await bootstrap('PUT', `/${realm}/users/${first.kcUserId}/reset-password`, {
+      type: 'password',
+      value: `Pw-${randomBytes(12).toString('base64url')}`,
+      temporary: false,
+    });
+    await provisioner.ensureFirstAdmin(realm, adminEmail, vars.webOrigin);
+    expect(await mailsTo(adminEmail)).toBe(2);
   });
 
   it('passes its smoke test with the backend secret', async () => {

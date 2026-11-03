@@ -4,6 +4,7 @@ import { createHttpRealmProvisioner } from '../src/realms/provisioner.js';
 import { createRealmMembers } from '../src/realms/realm-members.js';
 import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from '../src/realms/templates.js';
 import { runRealmMemberContract } from '../src/testing/member-contract.js';
+import { mailsTo } from './mailpit.js';
 
 function env(key: string): string {
   const file = new URL('../../../.env', import.meta.url);
@@ -64,6 +65,7 @@ runRealmMemberContract('Keycloak realm', async () => {
         temporary: false,
       });
     },
+    emailsTo: mailsTo,
     async cleanup() {
       await bootstrap('DELETE', `/${realm}`);
     },

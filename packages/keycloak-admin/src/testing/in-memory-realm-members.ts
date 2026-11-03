@@ -51,6 +51,7 @@ export class InMemoryRealmMembers implements MemberDirectory {
       const existing = [...this.users].find(([, u]) => u.email === email.toLowerCase());
       if (existing) {
         existing[1].role = role;
+        if (!existing[1].signedIn) this.emailsSent.push(email.toLowerCase());
         return { kcUserId: existing[0] };
       }
       const kcUserId = randomUUID();

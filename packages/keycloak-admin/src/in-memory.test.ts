@@ -54,6 +54,7 @@ runRealmMemberContract('in-memory realm', () => {
       members.markSignedIn(kcUserId);
       return Promise.resolve();
     },
+    emailsTo: (address: string) => Promise.resolve(members.emailsSent.filter((e) => e === address).length),
     cleanup: () => Promise.resolve(),
   });
 });
