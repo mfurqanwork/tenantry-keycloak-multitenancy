@@ -45,4 +45,12 @@ describe('portal app', () => {
       }),
     ).toHaveAttribute('href', 'http://acme.tenantry.localhost/');
   });
+
+  it("links to this workspace's web app from the dashboard", async () => {
+    renderPortal(<App />, { api: api(), me: makeMe('admin', ADMIN) });
+    expect(await screen.findByRole('link', { name: 'Open Tenantry' })).toHaveAttribute(
+      'href',
+      'http://acme.tenantry.localhost/',
+    );
+  });
 });
