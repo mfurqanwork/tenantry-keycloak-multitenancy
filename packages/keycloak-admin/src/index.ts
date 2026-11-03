@@ -25,3 +25,15 @@ export {
 } from './realms/templates.js';
 export { organizationMembers, type Member, type MemberDirectory } from './member-directory.js';
 export { createRealmMembers, type RealmMembersOptions } from './realms/realm-members.js';
+export {
+  appClientRepresentation,
+  CUSTOMER_APP_ATTRIBUTE,
+  newAppClientId,
+  type AppClientSpec,
+} from './realms/app-clients.js';
+export {
+  AppClientMissingError,
+  createRealmApps,
+  type RealmApps,
+  type RealmAppsOptions,
+} from './realms/realm-apps.js';

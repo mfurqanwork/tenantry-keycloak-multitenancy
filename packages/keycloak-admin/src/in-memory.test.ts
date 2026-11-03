@@ -5,6 +5,8 @@ import { InMemoryIdentityDirectory } from './testing/in-memory-identity-director
 import { runIdentityDirectoryContract } from './testing/contract.js';
 import { InMemoryRealmMembers } from './testing/in-memory-realm-members.js';
 import { runRealmMemberContract } from './testing/member-contract.js';
+import { runRealmAppsContract } from './testing/apps-contract.js';
+import { InMemoryRealmApps } from './testing/in-memory-realm-apps.js';
 
 runIdentityDirectoryContract('in-memory', () => {
   const dir = new InMemoryIdentityDirectory();
@@ -56,5 +58,31 @@ runRealmMemberContract('in-memory realm', () => {
     },
     emailsTo: (address: string) => Promise.resolve(members.emailsSent.filter((e) => e === address).length),
     cleanup: () => Promise.resolve(),
+  });
+});
+
+runRealmAppsContract('in-memory', () => {
+  const apps = new InMemoryRealmApps();
+  return Promise.resolve({
+    apps,
+    productClientUuid: apps.productClientUuid,
+    redirectUrisOf: (uuid) => Promise.resolve(apps.clients.get(uuid)?.spec.redirectUris ?? []),
+    cleanup: () => Promise.resolve(),
+  });
+});
+
+describe('InMemoryRealmApps', () => {
+  it('fails the next call as told, with the detail Keycloak would give', async () => {
+    const apps = new InMemoryRealmApps();
+    apps.failNext(400, 'Invalid Redirect Uri');
+    const failed = apps.create('app-00000000', {
+      name: 'x',
+      type: 'spa',
+      redirectUris: ['https://x.test/cb'],
+      postLogoutRedirectUris: [],
+      webOrigins: [],
+    });
+    await expect(failed).rejects.toMatchObject({ status: 400, detail: 'Invalid Redirect Uri' });
+    expect(apps.clients.size).toBe(1);
   });
 });

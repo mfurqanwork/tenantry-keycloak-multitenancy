@@ -4,7 +4,7 @@ export class DirectoryError extends Error {
   constructor(
     readonly operation: string,
     readonly status: number,
-    detail?: string,
+    readonly detail?: string,
   ) {
     super(`Keycloak ${operation} failed (${status})${detail ? `: ${detail}` : ''}`);
   }
