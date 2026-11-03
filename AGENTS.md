@@ -12,24 +12,24 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `packages/ui`: Carbon setup, `AppShell`, and the five page patterns.
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.
-- `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`; `/testing` has the in-memory fake.
+- `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory` and `RealmProvisioner`; `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
 - `packages/oidc-client`: the only code that imports `oidc-client-ts`.
 - `tests/isolation`: the README guarantees, run against the whole stack.
-- `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`.
+- `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`, and builds enterprise tenants through the API's operator endpoints.
 - `infra/`: Compose, Caddy, the Keycloak realms (`platform`, and the dev-only `corp-demo`), CoreDNS (dev only) and the Postgres init script.
 - `docs/decisions/`: ADRs. A change to a recorded decision needs a new or updated ADR.
 
 ## Commands
 
-| Command                                                     | Does                                                                          |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `pnpm dev:stack`                                            | The whole stack in Docker                                                     |
-| `pnpm dev`                                                  | Infrastructure in Docker; the API, web and portal on the host with hot reload |
-| `pnpm smoke`                                                | Checks the running stack                                                      |
-| `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                  |
-| `pnpm ops <command>`                                        | Operator commands: company domains and identity providers, origins (ADR-0022) |
-| `pnpm stack:down`                                           | Stops the stack                                                               |
+| Command                                                     | Does                                                                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `pnpm dev:stack`                                            | The whole stack in Docker                                                                                   |
+| `pnpm dev`                                                  | Infrastructure in Docker; the API, web and portal on the host with hot reload                               |
+| `pnpm smoke`                                                | Checks the running stack                                                                                    |
+| `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                                              |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                                                |
+| `pnpm ops <command>`                                        | Operator commands: enterprise tenants, company domains and identity providers, origins (ADR-0010, ADR-0022) |
+| `pnpm stack:down`                                           | Stops the stack                                                                                             |
 
 ## Hard rules
 
