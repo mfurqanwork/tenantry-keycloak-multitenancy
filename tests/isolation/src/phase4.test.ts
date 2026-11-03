@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Browser, signInWithBrowser } from './helpers/browser-flow.js';
+import { authorizeUrl, Browser, signInWithBrowser } from './helpers/browser-flow.js';
 import { BASE_DOMAIN, env, HTTP_PORT, KEYCLOAK_URL } from './helpers/env.js';
 import { api, tenantHost } from './helpers/http.js';
 import { signupTenant, type TestTenant } from './helpers/tenants.js';
@@ -12,8 +12,6 @@ const EXAMPLE = { url: 'http://127.0.0.1:4000', redirect: 'http://127.0.0.1:4000
 const EXAMPLE_DIR = fileURLToPath(new URL('../../../examples/customer-app/', import.meta.url));
 const port = HTTP_PORT === 80 ? '' : `:${String(HTTP_PORT)}`;
 const webRedirect = `http://${INITECH.slug}.${BASE_DOMAIN}${port}/`;
-const PUBLIC_AUTH = new URL(env('TENANTRY_AUTH_URL')).origin;
-const oidc = `${PUBLIC_AUTH}/realms/${INITECH.realm}/protocol/openid-connect`;
 
 interface Registered {
   app: { id: string; clientId: string; connection: { issuer: string } };
@@ -78,14 +76,12 @@ describe('guarantee: customer apps (Phase 4)', () => {
     const hr = await register({ name: 'Iso HR', type: 'web', redirectUris: [EXAMPLE.redirect] });
     const browser = new Browser(EXAMPLE.redirect);
     const login = await browser.open(
-      `${oidc}/auth?${new URLSearchParams({
-        client_id: hr.app.clientId,
-        redirect_uri: EXAMPLE.redirect,
-        response_type: 'code',
-        scope: 'openid',
-        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-        code_challenge_method: 'S256',
-      }).toString()}`,
+      authorizeUrl({
+        realm: INITECH.realm,
+        clientId: hr.app.clientId,
+        redirectUri: EXAMPLE.redirect,
+        challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+      }),
     );
     const done = await browser.submit(login, {
       username: standard.owner.email,
@@ -170,14 +166,12 @@ describe('single sign-on with the example customer app', () => {
     await browser.open(`${EXAMPLE.url}/logout`);
     browser.stopAt = webRedirect;
     const again = await browser.open(
-      `${oidc}/auth?${new URLSearchParams({
-        client_id: 'tenantry-web',
-        redirect_uri: webRedirect,
-        response_type: 'code',
-        scope: 'openid',
-        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-        code_challenge_method: 'S256',
-      }).toString()}`,
+      authorizeUrl({
+        realm: INITECH.realm,
+        clientId: 'tenantry-web',
+        redirectUri: webRedirect,
+        challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+      }),
     );
     expect(again.url.startsWith(webRedirect)).toBe(false);
     expect(again.status).toBe(200);

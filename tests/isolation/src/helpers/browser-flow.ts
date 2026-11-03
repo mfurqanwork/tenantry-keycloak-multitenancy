@@ -96,6 +96,25 @@ export class Browser {
   }
 }
 
+// Keycloak's authorization request for a client, with PKCE (S256).
+export function authorizeUrl(o: {
+  realm: string;
+  clientId: string;
+  redirectUri: string;
+  challenge: string;
+  scope?: string;
+}): string {
+  return `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+    client_id: o.clientId,
+    redirect_uri: o.redirectUri,
+    response_type: 'code',
+    scope: o.scope ?? 'openid',
+    state: randomBytes(8).toString('hex'),
+    code_challenge: o.challenge,
+    code_challenge_method: 'S256',
+  }).toString()}`;
+}
+
 // Signs a person in through a realm's login page with the authorization code flow and PKCE,
 // the only way an enterprise realm hands out a token (it refuses the password grant).
 export async function signInWithBrowser(o: {
@@ -113,15 +132,7 @@ export async function signInWithBrowser(o: {
   const browser = o.browser ?? new Browser(o.redirectUri);
   browser.stopAt = o.redirectUri;
   const login = await browser.open(
-    `${oidc}/auth?${new URLSearchParams({
-      client_id: o.clientId,
-      redirect_uri: o.redirectUri,
-      response_type: 'code',
-      scope: 'openid',
-      state: randomBytes(8).toString('hex'),
-      code_challenge: challenge,
-      code_challenge_method: 'S256',
-    }).toString()}`,
+    authorizeUrl({ realm: o.realm, clientId: o.clientId, redirectUri: o.redirectUri, challenge }),
   );
   const done = await browser.submit(login, { username: o.username, password: o.password });
   const code = done.url.startsWith(o.redirectUri) ? new URL(done.url).searchParams.get('code') : null;
