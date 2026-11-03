@@ -12,7 +12,7 @@ const vars = {
 describe('realm templates', () => {
   it('fills in the realm settings and keeps the policies typed', () => {
     const t = loadRealmTemplate(TEMPLATE_VERSION, vars);
-    expect(t.version).toBe(1);
+    expect(t.version).toBe(2);
     expect(t.realm['displayName']).toBe('Initech');
     expect(t.realm['smtpServer']).toEqual({
       host: 'mailpit',
@@ -28,6 +28,23 @@ describe('realm templates', () => {
     const profiles = JSON.stringify(t.clientProfiles);
     expect(profiles).toContain('"executor":"secure-redirect-uris-enforcer"');
     expect(profiles).toContain('"allow-http-scheme":false');
+  });
+
+  it('v2 checks redirect URIs on every client, allowing custom schemes and loopback for native apps', () => {
+    const t = loadRealmTemplate(TEMPLATE_VERSION, { ...vars, allowHttpRedirects: false });
+    const profile = (name: string) =>
+      t.clientProfiles.profiles.find((p) => p['name'] === name) as {
+        executors: { executor: string; configuration: Record<string, unknown> }[];
+      };
+    expect(profile('tenantry-public-clients').executors.map((e) => e.executor)).toEqual(['pkce-enforcer']);
+    const enforcer = profile('tenantry-all-clients').executors.find(
+      (e) => e.executor === 'secure-redirect-uris-enforcer',
+    );
+    expect(enforcer?.configuration).toMatchObject({
+      'allow-http-scheme': false,
+      'allow-private-use-uri-scheme': true,
+      'allow-loopback-interface': true,
+    });
   });
 
   it('leaves the redirect URI enforcer out for local http, whose *.localhost hosts are loopback', () => {

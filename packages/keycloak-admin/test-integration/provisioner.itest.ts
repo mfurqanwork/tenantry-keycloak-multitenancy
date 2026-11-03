@@ -115,4 +115,31 @@ describe('realm provisioner (Keycloak)', () => {
     await provisioner.applyTemplate(realm, template);
     expect(await provisioner.diff(realm, template, clients)).toEqual([]);
   });
+
+  // Keycloak's secure-redirect-URI check refuses plain http and a bare "*" on every client. It lets
+  // "https://*.host/cb" through, but matches "*" only at the end of a path, so such a host never matches;
+  // our API refuses it before Keycloak sees it (ADR-0011).
+  it('a realm on the template over https refuses an http redirect on any client', async () => {
+    await provisioner.applyTemplate(
+      realm,
+      loadRealmTemplate(TEMPLATE_VERSION, { ...vars, allowHttpRedirects: false }),
+    );
+    for (const [publicClient, uri] of [
+      [false, 'http://hr.example.test/cb'],
+      [true, 'http://hr.example.test/cb'],
+      [false, '*'],
+    ] as const) {
+      const res = await bootstrap('POST', `/${realm}/clients`, {
+        clientId: `bad-${randomBytes(3).toString('hex')}`,
+        publicClient,
+        standardFlowEnabled: true,
+        implicitFlowEnabled: false,
+        directAccessGrantsEnabled: false,
+        redirectUris: [uri],
+        attributes: { 'pkce.code.challenge.method': 'S256' },
+      });
+      expect(res.status, `${uri} (public: ${String(publicClient)})`).toBe(400);
+    }
+    await provisioner.applyTemplate(realm, template);
+  });
 });
