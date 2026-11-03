@@ -119,7 +119,13 @@ export class EnterpriseService {
         ...OPS,
         action: 'tenant.created',
         target: tenant.id,
-        metadata: { ...OPS.metadata, slug: input.slug, realm, templateVersion: TEMPLATE_VERSION },
+        metadata: {
+          ...OPS.metadata,
+          slug: input.slug,
+          name: tenant.name,
+          realm,
+          templateVersion: TEMPLATE_VERSION,
+        },
       });
     });
     return { created: true, tenant: this.view({ ...tenant, realm }) };
@@ -172,6 +178,7 @@ export class EnterpriseService {
             target: tenant.id,
             metadata: {
               ...OPS.metadata,
+              name: tenant.name,
               fromVersion: tenant.templateVersion,
               toVersion: TEMPLATE_VERSION,
               changed: differences.map((d) => d.path),

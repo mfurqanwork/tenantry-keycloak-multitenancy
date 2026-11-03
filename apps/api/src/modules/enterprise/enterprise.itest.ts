@@ -81,8 +81,12 @@ describe('POST /api/platform/enterprise-tenants', () => {
       'tenantry-web',
     ]);
     expect(await t.secrets.get(`ent-${s}/tenantry-backend`)).toBe(realm?.backendSecret);
-    const actions = (await auditOf(tenant?.id ?? '')).map((e) => e.action);
-    expect(actions).toEqual(expect.arrayContaining(['tenant.provisioning', 'tenant.created']));
+    const audit = await auditOf(tenant?.id ?? '');
+    expect(audit.map((e) => e.action)).toEqual(
+      expect.arrayContaining(['tenant.provisioning', 'tenant.created']),
+    );
+    // Named, so the audit log shows the workspace rather than its id.
+    expect(audit.find((e) => e.action === 'tenant.created')?.metadata).toMatchObject({ name: 'Initech' });
   });
 
   it('never shows the backend secret in its answer or the audit log', async () => {
@@ -158,7 +162,8 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
     expect(real.body[0]?.applied).toBe(true);
     expect(realm?.settings['accessTokenLifespan']).toBe(300);
     const tenant = await platformRepository(t.db).findTenantBySlug(s);
-    expect((await auditOf(tenant?.id ?? '')).map((e) => e.action)).toContain('tenant.upgraded');
+    const upgraded = (await auditOf(tenant?.id ?? '')).find((e) => e.action === 'tenant.upgraded');
+    expect(upgraded?.metadata).toMatchObject({ name: 'Drifting' });
     expect((await upgrade({ slug: s, dryRun: true })).body[0]?.differences).toEqual([]);
   });
 
