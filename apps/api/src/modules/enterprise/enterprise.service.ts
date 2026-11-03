@@ -21,7 +21,7 @@ import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { ConflictProblem, NotFoundProblem, ValidationProblem } from '../../common/http-errors.js';
 import { validateSlug } from '../../common/slug.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
-import { backendSecretKey } from '../../infrastructure/member-directories.js';
+import { backendSecretKey } from '../../infrastructure/per-realm.js';
 import { DB, REALM_PROVISIONER, SECRET_STORE } from '../../infrastructure/tokens.js';
 
 export interface ProvisionedTenant {
