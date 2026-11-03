@@ -22,7 +22,7 @@ export function App({ hostname, onSignOut }: { hostname: string; onSignOut?: () 
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
-  const brand = useBranding(me.tenant.slug);
+  const { branding } = useBranding(me.tenant.slug);
   const nav = PAGES.filter((page) => !page.needs || me.can(page.needs)).map(({ label, href }) => ({
     label,
     href,
@@ -30,7 +30,7 @@ export function App({ hostname, onSignOut }: { hostname: string; onSignOut?: () 
   return (
     <AppShell
       productName={me.tenant.name}
-      logoUrl={brand?.logoUrl ?? null}
+      logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'web')}
       workspaces={workspaces.map(({ slug, name, current, webUrl }) => ({
         slug,

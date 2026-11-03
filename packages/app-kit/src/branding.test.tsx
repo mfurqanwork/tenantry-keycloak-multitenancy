@@ -19,7 +19,7 @@ function api(answer: unknown): Api {
 }
 
 function Show() {
-  const brand = useBranding('acme');
+  const { branding: brand } = useBranding('acme');
   return <p>{brand ? `brand ${brand.name}` : 'no brand'}</p>;
 }
 

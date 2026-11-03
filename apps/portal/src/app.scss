@@ -13,3 +13,23 @@
 
   margin-block-start: $spacing-03;
 }
+
+// The branding page: a live preview of the typed colour, and the current logo.
+.tenantry-brand-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-05;
+  align-items: center;
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle;
+}
+
+.tenantry-brand-logo {
+  display: flex;
+  gap: $spacing-05;
+  align-items: center;
+
+  img {
+    block-size: $spacing-09;
+  }
+}

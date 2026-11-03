@@ -163,6 +163,18 @@ importers:
       '@carbon/react':
         specifier: ^1.119.0
         version: 1.119.0(react-dom@19.3.1(react@19.3.1))(react-is@18.3.1)(react@19.3.1)(sass@1.107.1)
+      '@tenantry/app-kit':
+        specifier: workspace:*
+        version: link:../../packages/app-kit
+      '@tenantry/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@tenantry/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
+      '@tenantry/oidc-client':
+        specifier: workspace:*
+        version: link:../../packages/oidc-client
       '@tenantry/ui':
         specifier: workspace:*
         version: link:../../packages/ui

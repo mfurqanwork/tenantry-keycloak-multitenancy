@@ -10,8 +10,9 @@ export interface Branding {
 }
 
 // The workspace's public branding; while mounted, its colour drives Carbon's interactive tokens.
-export function useBranding(slug: string): Branding | null {
-  const { data } = useResource<Branding>(`/api/tenants/${encodeURIComponent(slug)}/branding`);
+// reload() fetches it again, after the branding page saved a change.
+export function useBranding(slug: string): { branding: Branding | null; reload: () => void } {
+  const { data, reload } = useResource<Branding>(`/api/tenants/${encodeURIComponent(slug)}/branding`);
   const color = data?.primaryColor ?? null;
   useEffect(() => {
     if (!color) return;
@@ -20,5 +21,5 @@ export function useBranding(slug: string): Branding | null {
       applyBrand(null);
     };
   }, [color]);
-  return data ?? null;
+  return { branding: data ?? null, reload };
 }
