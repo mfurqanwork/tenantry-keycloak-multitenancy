@@ -1,17 +1,10 @@
 import { TextInput } from '@carbon/react';
-import { APP_LIMITS, normaliseUris, uriProblem } from '@tenantry/auth';
+import { APP_LIMITS, normaliseUris } from '@tenantry/auth';
 import { FormDialog, useApi } from '@tenantry/app-kit';
 import { useState } from 'react';
 import type { AppView } from './api.js';
+import { LISTS, listsFor, listsReady, uriProblems, type UriLists } from './uri-lists.js';
 import { UriListField } from './UriListField.js';
-
-type ListField = 'redirectUris' | 'postLogoutRedirectUris' | 'webOrigins';
-
-const LISTS: { field: ListField; label: string; kind: 'redirect' | 'origin' }[] = [
-  { field: 'redirectUris', label: 'Redirect URI', kind: 'redirect' },
-  { field: 'postLogoutRedirectUris', label: 'Post-logout redirect URI', kind: 'redirect' },
-  { field: 'webOrigins', label: 'Allowed origin', kind: 'origin' },
-];
 
 // Name and URIs; the type stays (delete and register again to change it). Sends the whole form.
 export function EditAppDialog({
@@ -25,23 +18,12 @@ export function EditAppDialog({
 }) {
   const api = useApi();
   const [name, setName] = useState(app.name);
-  const [lists, setLists] = useState<Record<ListField, string[]>>({
+  const [lists, setLists] = useState<UriLists>({
     redirectUris: app.redirectUris,
     postLogoutRedirectUris: app.postLogoutRedirectUris,
     webOrigins: app.webOrigins,
   });
-  const shown = LISTS.filter(
-    ({ field }) => app.type !== 'm2m' && (field !== 'webOrigins' || app.type === 'spa'),
-  );
-  const problems = (field: ListField, kind: 'redirect' | 'origin') =>
-    (lists[field].length === 0 ? [''] : lists[field]).map((uri) =>
-      uri.trim() === '' ? null : uriProblem(uri.trim(), kind, app.type),
-    );
-  const valid =
-    name.trim() !== '' &&
-    name.trim().length <= APP_LIMITS.nameMax &&
-    (app.type === 'm2m' || normaliseUris(lists.redirectUris).length > 0) &&
-    shown.every(({ field, kind }) => problems(field, kind).every((p) => p === null));
+  const valid = name.trim() !== '' && name.trim().length <= APP_LIMITS.nameMax && listsReady(app.type, lists);
   return (
     <FormDialog
       heading="Edit app"
@@ -67,13 +49,14 @@ export function EditAppDialog({
           setName(event.target.value);
         }}
       />
-      {shown.map(({ field, label, kind }) => (
+      {listsFor(app.type).map((field) => (
         <UriListField
           key={field}
           id={`edit-app-${field}`}
-          label={label}
+          label={LISTS[field].label}
+          helperText={LISTS[field].helper}
           values={lists[field]}
-          problems={problems(field, kind)}
+          problems={uriProblems(lists[field], field, app.type)}
           onChange={(values) => {
             setLists({ ...lists, [field]: values });
           }}

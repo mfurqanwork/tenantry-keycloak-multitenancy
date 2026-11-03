@@ -9,43 +9,17 @@ import {
   StructuredListWrapper,
   TextInput,
 } from '@carbon/react';
-import { APP_LIMITS, APP_TYPES, normaliseUris, uriProblem, userSignIn, type AppType } from '@tenantry/auth';
+import { APP_LIMITS, APP_TYPES, normaliseUris, type AppType } from '@tenantry/auth';
 import { ApiErrorNotification, ApiProblem, useApi, useMe } from '@tenantry/app-kit';
 import { WizardPage } from '@tenantry/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { TYPE_HELP, TYPE_LABELS, type AppInput, type AppView, type SecretState } from './api.js';
+import { LISTS, listsFor, listsReady, uriProblems, type ListField, type UriLists } from './uri-lists.js';
 import { UriListField } from './UriListField.js';
 
 const STEPS = ['Type', 'Details', 'Review'];
-type ListField = 'redirectUris' | 'postLogoutRedirectUris' | 'webOrigins';
 const FIELD = /^(name|redirectUris|postLogoutRedirectUris|webOrigins)(\.\d+)?$/;
-
-// The lists each type is asked for; machine-to-machine apps have none.
-function listsFor(type: AppType): ListField[] {
-  if (type === 'm2m') return [];
-  return type === 'spa'
-    ? ['redirectUris', 'postLogoutRedirectUris', 'webOrigins']
-    : ['redirectUris', 'postLogoutRedirectUris'];
-}
-
-const LIST_LABELS: Record<ListField, { label: string; helper: string; kind: 'redirect' | 'origin' }> = {
-  redirectUris: {
-    label: 'Redirect URI',
-    helper: 'Where Keycloak sends people back after they sign in.',
-    kind: 'redirect',
-  },
-  postLogoutRedirectUris: {
-    label: 'Post-logout redirect URI',
-    helper: 'Optional. Where people land after signing out.',
-    kind: 'redirect',
-  },
-  webOrigins: {
-    label: 'Allowed origin',
-    helper: "Optional. Left empty, the redirect URIs' origins are allowed.",
-    kind: 'origin',
-  },
-};
 
 // The API answers "redirectUris.1: message; name: message"; each lands on its field.
 function fieldErrors(problem: ApiProblem): { fields: Record<string, string>; rest: string[] } {
@@ -67,7 +41,7 @@ export function RegisterAppRoute() {
   const [step, setStep] = useState(0);
   const [type, setType] = useState<AppType | null>(null);
   const [name, setName] = useState('');
-  const [lists, setLists] = useState<Record<ListField, string[]>>({
+  const [lists, setLists] = useState<UriLists>({
     redirectUris: [],
     postLogoutRedirectUris: [],
     webOrigins: [],
@@ -77,12 +51,9 @@ export function RegisterAppRoute() {
   const [error, setError] = useState<unknown>(null);
 
   const fields = type ? listsFor(type) : [];
+  // The API's word on a row wins until that row changes; otherwise the shared rules speak.
   const problems = (field: ListField): (string | null)[] =>
-    (lists[field].length === 0 ? [''] : lists[field]).map((uri, i) => {
-      const fromServer = server[`${field}.${String(i)}`];
-      if (fromServer) return fromServer;
-      return type && uri.trim() !== '' ? uriProblem(uri.trim(), LIST_LABELS[field].kind, type) : null;
-    });
+    uriProblems(lists[field], field, type ?? 'web').map((p, i) => server[`${field}.${String(i)}`] ?? p);
   const body = (): AppInput => ({
     name: name.trim(),
     type: type ?? 'web',
@@ -96,9 +67,8 @@ export function RegisterAppRoute() {
     type !== null &&
     name.trim() !== '' &&
     name.trim().length <= APP_LIMITS.nameMax &&
-    (!userSignIn(type) || body().redirectUris.length > 0) &&
-    fields.every((f) => problems(f).every((p) => p === null)) &&
-    !server['name'];
+    listsReady(type, lists) &&
+    Object.keys(server).length === 0;
 
   async function register() {
     setBusy(true);
@@ -185,8 +155,8 @@ export function RegisterAppRoute() {
               <UriListField
                 key={field}
                 id={`app-${field}`}
-                label={LIST_LABELS[field].label}
-                helperText={LIST_LABELS[field].helper}
+                label={LISTS[field].label}
+                helperText={LISTS[field].helper}
                 values={lists[field]}
                 problems={problems(field)}
                 onChange={(values) => {
@@ -212,7 +182,7 @@ export function RegisterAppRoute() {
               </StructuredListRow>
               {fields.map((field) => (
                 <StructuredListRow key={field}>
-                  <StructuredListCell>{`${LIST_LABELS[field].label}s`}</StructuredListCell>
+                  <StructuredListCell>{`${LISTS[field].label}s`}</StructuredListCell>
                   <StructuredListCell>{body()[field].join(', ') || 'None'}</StructuredListCell>
                 </StructuredListRow>
               ))}
