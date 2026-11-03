@@ -6,7 +6,7 @@ import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
 import { MembersRoute } from './features/members/MembersRoute.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
 import { ProjectsRoute } from './features/projects/ProjectsRoute.js';
-import { RouterLink, useMe } from '@tenantry/app-kit';
+import { appLinks, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
 
 // Each page and the permission that shows it; the API checks again on every call.
 const PAGES: (NavItem & { needs?: Permission })[] = [
@@ -21,13 +21,23 @@ const PAGES: (NavItem & { needs?: Permission })[] = [
 export function App({ hostname, onSignOut }: { hostname: string; onSignOut?: () => void }) {
   const { pathname } = useLocation();
   const me = useMe();
+  const workspaces = useWorkspaces();
+  const brand = useBranding(me.tenant.slug);
   const nav = PAGES.filter((page) => !page.needs || me.can(page.needs)).map(({ label, href }) => ({
     label,
     href,
   }));
   return (
     <AppShell
-      productName="Tenantry"
+      productName={me.tenant.name}
+      logoUrl={brand?.logoUrl ?? null}
+      apps={appLinks(workspaces, 'web')}
+      workspaces={workspaces.map(({ slug, name, current, webUrl }) => ({
+        slug,
+        name,
+        current,
+        href: webUrl,
+      }))}
       navItems={nav}
       currentPath={pathname}
       linkAs={RouterLink}

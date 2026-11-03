@@ -2,6 +2,7 @@ import {
   Button,
   DataTable,
   DataTableSkeleton,
+  InlineLoading,
   Stack,
   Table,
   TableBody,
@@ -20,6 +21,7 @@ interface AuditEntry {
   id: string;
   action: string;
   target: string;
+  targetLabel: string | null;
   createdAt: string;
   actor: { id: string | null; email: string | null };
 }
@@ -81,7 +83,7 @@ export function AuditRoute() {
               createdAt: new Date(e.createdAt).toLocaleString(),
               actor: e.actor.email ?? 'System',
               action: e.action,
-              target: e.target,
+              target: e.targetLabel ?? e.target,
             }))}
             headers={HEADERS}
           >
@@ -113,9 +115,13 @@ export function AuditRoute() {
         )}
         {next && (
           <div>
-            <Button kind="ghost" disabled={loading} onClick={() => void loadMore(next)}>
-              Load more
-            </Button>
+            {loading ? (
+              <InlineLoading description="Loading more" />
+            ) : (
+              <Button kind="ghost" onClick={() => void loadMore(next)}>
+                Load more
+              </Button>
+            )}
           </div>
         )}
       </Stack>

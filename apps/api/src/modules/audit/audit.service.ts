@@ -22,12 +22,21 @@ export interface AuditView {
   id: string;
   action: string;
   target: string;
+  // What a person reads for the target: an email or a name; null when there is nothing better than the id.
+  targetLabel: string | null;
   metadata: Record<string, unknown>;
   createdAt: string;
   actor: { id: string | null; email: string | null };
 }
 
 const PAGE = 50;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const labelFor = (metadata: Record<string, unknown>): string | null => {
+  const { email, name } = metadata;
+  if (typeof email === 'string') return email;
+  return typeof name === 'string' ? name : null;
+};
 
 // AGENTS.md rule 5: every identity change calls record(), inside the transaction that made it.
 @Injectable()
@@ -52,17 +61,20 @@ export class AuditService {
     const actorIds = [
       ...new Set(entries.map((e) => e.actorUserId).filter((id): id is string => id !== null)),
     ];
-    const actors = await platformRepository(this.db).usersByIds(actorIds);
+    // Targets that are users (role changes) are named by email; the rest carry a name in metadata.
+    const targetIds = [...new Set(entries.map((e) => e.target).filter((id) => UUID.test(id)))];
+    const people = await platformRepository(this.db).usersByIds([...new Set([...actorIds, ...targetIds])]);
     return {
       entries: entries.map((e) => ({
         id: e.id,
         action: e.action,
         target: e.target,
+        targetLabel: labelFor(e.metadata) ?? people.get(e.target)?.email ?? null,
         metadata: e.metadata,
         createdAt: e.createdAt.toISOString(),
         actor: {
           id: e.actorUserId,
-          email: e.actorUserId ? (actors.get(e.actorUserId)?.email ?? null) : null,
+          email: e.actorUserId ? (people.get(e.actorUserId)?.email ?? null) : null,
         },
       })),
       nextBefore: entries.length === PAGE ? (entries.at(-1)?.id ?? null) : null,

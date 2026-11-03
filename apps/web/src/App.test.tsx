@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { TenantryThemeProvider } from '@tenantry/ui';
@@ -6,11 +7,33 @@ import { App } from './App.js';
 import { ApiProvider, type Me, MeProvider } from '@tenantry/app-kit';
 import { ALL, fakeApi, makeMe, MEMBER } from './test-utils.js';
 
+const WORKSPACES = [
+  {
+    slug: 'acme',
+    name: 'Acme',
+    current: true,
+    webUrl: 'http://acme.tenantry.localhost/',
+    portalUrl: 'http://acme.portal.tenantry.localhost/',
+  },
+  {
+    slug: 'globex',
+    name: 'Globex',
+    current: false,
+    webUrl: 'http://globex.tenantry.localhost/',
+    portalUrl: 'http://globex.portal.tenantry.localhost/',
+  },
+];
+
 function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
   render(
     <TenantryThemeProvider>
       <MemoryRouter initialEntries={[path]}>
-        <ApiProvider api={fakeApi()}>
+        <ApiProvider
+          api={fakeApi({
+            '/api/me/workspaces': WORKSPACES,
+            '/api/tenants/acme/branding': { name: 'Acme', primaryColor: null, logoUrl: null },
+          })}
+        >
           <MeProvider value={me}>
             <App hostname="demo.tenantry.localhost" />
           </MeProvider>
@@ -55,5 +78,25 @@ describe('web app', () => {
   it('shows the audit log to an owner', () => {
     renderAs(makeMe('owner', ALL));
     expect(screen.getAllByRole('link', { name: 'Audit log' }).length).toBeGreaterThan(0);
+  });
+
+  it("lists the person's workspaces, each at its web address", async () => {
+    renderAt('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Switch workspace' }));
+    const panel = screen.getByRole('navigation', { name: 'Switch workspace' });
+    expect(within(panel).getByRole('link', { name: /Globex/ })).toHaveAttribute(
+      'href',
+      'http://globex.tenantry.localhost/',
+    );
+  });
+
+  it('switches to the portal of this workspace', async () => {
+    renderAt('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Switch app' }));
+    const panel = screen.getByRole('navigation', { name: 'Switch app' });
+    expect(within(panel).getByRole('link', { name: /Tenantry Portal/ })).toHaveAttribute(
+      'href',
+      'http://acme.portal.tenantry.localhost/',
+    );
   });
 });

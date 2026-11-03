@@ -37,7 +37,9 @@ export function fakeApi(
   return {
     get: vi.fn(answer),
     post: vi.fn((path: string) => answer(`POST ${path}`)),
+    put: vi.fn((path: string) => answer(`PUT ${path}`)),
     patch: vi.fn((path: string) => answer(`PATCH ${path}`)),
+    upload: vi.fn((path: string) => answer(`UPLOAD ${path}`)),
     del: vi.fn((path: string) => answer(`DELETE ${path}`)),
   } as never;
 }

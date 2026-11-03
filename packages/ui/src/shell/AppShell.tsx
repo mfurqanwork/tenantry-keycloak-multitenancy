@@ -27,6 +27,7 @@ import { useState, type ElementType, type ReactNode } from 'react';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
 import { HeaderSwitcherAction, HeaderSwitcherPanel, type SwitcherEntry } from './HeaderSwitcher.js';
+import { LinkContext } from './link-context.js';
 
 export interface NavItem {
   label: string;
@@ -188,7 +189,9 @@ export function AppShell({
               })}
             </SideNavItems>
           </SideNav>
-          <Content id="main-content">{children}</Content>
+          <Content id="main-content">
+            <LinkContext.Provider value={linkAs ?? null}>{children}</LinkContext.Provider>
+          </Content>
         </>
       )}
     />
