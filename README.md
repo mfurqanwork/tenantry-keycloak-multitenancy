@@ -7,7 +7,7 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** Phase 1 (Standard tenant core). Signup, the auth guard, row-level security, members with invites and roles, and the audit log work, and the Phase 1 guarantees are tested in CI. See the [roadmap](#roadmap).
+> **Status:** v0.1 (Phases 0–2). Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. The Phase 1 and 2 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
 
 ## Guarantees
 
@@ -22,8 +22,8 @@ These are the project's promises. Each one is an automated test that runs in CI 
 | User is admin in org A and member in org B, acts in B       | Treated as member                                           | 1     | tested  |
 | Client sends a tenant id header that differs from the token | Ignored; the token decides                                  | 1     | tested  |
 | Member tries to invite, remove or change roles              | 403                                                         | 1     | tested  |
-| Logout in one app                                           | Session ends in the other app                               | 2     | planned |
-| Domain link without a verified DNS record                   | Refused                                                     | 2     | planned |
+| Logout in one app                                           | Session ends in the other app                               | 2     | tested  |
+| Domain link without a verified DNS record                   | Refused                                                     | 2     | tested  |
 | Valid token from another enterprise realm                   | 401 (issuer rule)                                           | 3     | planned |
 | Valid token from the shared realm on an enterprise tenant   | 401                                                         | 3     | planned |
 | Token for the wrong audience                                | 401                                                         | 3     | planned |
@@ -56,7 +56,15 @@ Then open <http://demo.tenantry.localhost>. Any subdomain works as a tenant slug
 
 ## Try it
 
-With the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
+The quickest way is the seeded demo, which follows [docs/demo-script.md](docs/demo-script.md):
+
+```bash
+pnpm seed
+```
+
+It creates the workspaces `acme` (blue) and `globex` (green) and their people, all with the password `SEED_PASSWORD` from `.env`. `pat@example.test` belongs to both. It also links `acme.test` to the stand-in company sign-in, so `alice@acme.test` signs in to `acme` through it.
+
+Or start from nothing, with the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
 
 1. Open <http://tenantry.localhost>, choose **Register**, create an account, and confirm it with the link Keycloak emails to Mailpit (<http://mail.tenantry.localhost>).
 2. The **Create your workspace** wizard asks for a name and an address. Create `acme`.
@@ -64,6 +72,7 @@ With the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these ad
 4. Under **Members**, invite someone as Admin. The invite email arrives in Mailpit at <http://mail.tenantry.localhost>.
 5. Sign out, follow the email's link, register as that person, and confirm the address the same way. At `acme.tenantry.localhost` they are an Admin.
 6. **Audit log** lists `tenant.created`, `member.invited` and `member.joined`. **Projects** is the row-level security example.
+7. Open the portal at <http://acme.portal.tenantry.localhost>: you are signed in already. As the owner, set a colour and a logo under **Branding**. They show in both apps and on the login page.
 
 ## Architecture
 
@@ -101,6 +110,10 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | ------------------------- | --------------------------------------------------------- |
 | `apps/api`                | NestJS API: the auth guard, tenants, members, apps, audit |
 | `apps/web`, `apps/portal` | The two React apps used to demonstrate SSO                |
+| `apps/login-theme`        | The Keycloak login theme (Keycloakify, Carbon)            |
+| `apps/ops`                | Operator commands: company login, origins, the demo seed  |
+| `packages/app-kit`        | What both apps share: sign-in, API client, who is in      |
+| `packages/brand`          | Colour maths for tenant branding                          |
 | `packages/ui`             | Carbon setup, app shell and the five page patterns        |
 | `packages/db`             | Drizzle schema, migrations, row-level security            |
 | `packages/auth`           | Tenant context and the role-to-permission map             |
