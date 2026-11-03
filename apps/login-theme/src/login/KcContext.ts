@@ -1,9 +1,9 @@
 import type { ExtendKcContext } from 'keycloakify/login';
-import type { ThemeName } from '../kc.gen.js';
+import type { KcEnvName, ThemeName } from '../kc.gen.js';
 
 export interface KcContextExtension {
   themeName: ThemeName;
-  properties: Record<string, string | undefined>;
+  properties: Record<KcEnvName, string>;
 }
 
 // Keycloakify's extension points; this theme adds no per-page fields.

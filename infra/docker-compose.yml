@@ -59,6 +59,8 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      # The login theme shows a workspace's brand only for addresses under this domain.
+      TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN:-tenantry.localhost}
     volumes:
       - ./keycloak/platform-realm.json:/opt/keycloak/data/import/platform-realm.json:ro
       # The stand-in company identity provider for company login (ADR-0022). Dev only.

@@ -37,7 +37,11 @@ export default function Template(props: TemplateProps<KcContext, I18n>) {
   const [brand, setBrand] = useState<TenantBrand | null>(null);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
-    const tenant = tenantFromLocation(window.location.search, window.sessionStorage);
+    const tenant = tenantFromLocation(
+      window.location.search,
+      window.sessionStorage,
+      kcContext.properties.TENANTRY_BASE_DOMAIN,
+    );
     if (!tenant) return;
     let current = true;
     void loadTenantBrand(tenant).then((found) => {

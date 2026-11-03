@@ -9,6 +9,8 @@ export default defineConfig({
     keycloakify({
       themeName: 'tenantry',
       accountThemeImplementation: 'none',
+      // Read from Keycloak's environment at runtime: the theme trusts only workspace addresses under it.
+      environmentVariables: [{ name: 'TENANTRY_BASE_DOMAIN', default: 'tenantry.localhost' }],
       keycloakVersionTargets: { '22-to-25': false, 'all-other-versions': 'tenantry-login-theme.jar' },
     }),
   ],
