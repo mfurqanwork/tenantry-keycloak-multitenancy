@@ -26,32 +26,22 @@ describe('portal app', () => {
   });
 
   it('shows Applications to everyone who may read apps, and opens the list', async () => {
-    const routes = api();
-    routes.get.mockImplementation((path: string) =>
-      Promise.resolve(
-        path === '/api/apps'
-          ? { apps: [] }
-          : path === '/api/me/workspaces'
-            ? WORKSPACES
-            : { name: 'Acme', primaryColor: null, logoUrl: null },
-      ),
-    );
+    const routes = fakeApi({
+      '/api/apps': { apps: [] },
+      '/api/me/workspaces': WORKSPACES,
+      '/api/tenants/acme/branding': { name: 'Acme', primaryColor: null, logoUrl: null },
+    });
     renderPortal(<App />, { api: routes, me: makeMe('member', ['apps:read']), path: '/applications' });
     expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
     expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
   });
 
   it('sends a member who opens the register address to the list, never to an app called "new"', async () => {
-    const routes = api();
-    routes.get.mockImplementation((path: string) =>
-      Promise.resolve(
-        path === '/api/apps'
-          ? { apps: [] }
-          : path === '/api/me/workspaces'
-            ? WORKSPACES
-            : { name: 'Acme', primaryColor: null, logoUrl: null },
-      ),
-    );
+    const routes = fakeApi({
+      '/api/apps': { apps: [] },
+      '/api/me/workspaces': WORKSPACES,
+      '/api/tenants/acme/branding': { name: 'Acme', primaryColor: null, logoUrl: null },
+    });
     renderPortal(<App />, { api: routes, me: makeMe('member', ['apps:read']), path: '/applications/new' });
     expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
     expect(routes.get).not.toHaveBeenCalledWith('/api/apps/new');
