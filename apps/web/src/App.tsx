@@ -6,8 +6,7 @@ import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
 import { MembersRoute } from './features/members/MembersRoute.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
 import { ProjectsRoute } from './features/projects/ProjectsRoute.js';
-import { useMe } from './lib/me.js';
-import { RouterLink } from './lib/RouterLink.js';
+import { RouterLink, useMe } from '@tenantry/app-kit';
 
 // Each page and the permission that shows it; the API checks again on every call.
 const PAGES: (NavItem & { needs?: Permission })[] = [

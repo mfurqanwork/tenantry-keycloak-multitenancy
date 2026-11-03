@@ -18,11 +18,14 @@ import { Add } from '@carbon/icons-react';
 import type { Role } from '@tenantry/auth';
 import { ListPage } from '@tenantry/ui';
 import { useState } from 'react';
-import { useApi } from '../../lib/api.js';
-import { ApiErrorNotification } from '../../lib/ApiErrorNotification.js';
-import { useMe } from '../../lib/me.js';
-import { assignableRoles, ROLE_LABELS } from '../../lib/roles.js';
-import { useResource } from '../../lib/useResource.js';
+import {
+  ApiErrorNotification,
+  assignableRoles,
+  ROLE_LABELS,
+  useApi,
+  useMe,
+  useResource,
+} from '@tenantry/app-kit';
 import { ChangeRoleDialog, InviteDialog, RemoveMemberDialog } from './MemberDialogs.js';
 
 interface MemberRow {

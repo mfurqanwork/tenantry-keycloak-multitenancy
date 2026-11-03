@@ -16,11 +16,7 @@ import {
 import { Add } from '@carbon/icons-react';
 import { ListPage } from '@tenantry/ui';
 import { useState } from 'react';
-import { useApi } from '../../lib/api.js';
-import { ApiErrorNotification } from '../../lib/ApiErrorNotification.js';
-import { FormDialog } from '../../lib/FormDialog.js';
-import { useMe } from '../../lib/me.js';
-import { useResource } from '../../lib/useResource.js';
+import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
 
 interface Project {
   id: string;

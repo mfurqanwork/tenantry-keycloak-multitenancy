@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { ApiProblem } from '../../lib/api.js';
+import { ApiProblem } from '@tenantry/app-kit';
 import { ALL, fakeApi, makeMe, MEMBER, renderPage } from '../../test-utils.js';
 import { MembersRoute } from './MembersRoute.js';
 

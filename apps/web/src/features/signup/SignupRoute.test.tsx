@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiProblem, ApiProvider, type Api } from '../../lib/api.js';
+import { type Api, ApiProblem, ApiProvider } from '@tenantry/app-kit';
 import { SignupRoute } from './SignupRoute.js';
 
 function fakeApi(overrides: Partial<Api> = {}): Api {

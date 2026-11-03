@@ -5,7 +5,10 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 ## Layout
 
 - `apps/api`: the NestJS API. Every request passes `TenantAuthGuard` (`src/auth/`). Features live in `src/modules/<name>/` (module, controller, service, Zod schemas, tests); a module exports only its service (ADR-0017). `src/infrastructure/` is the only place that binds Postgres and Keycloak.
-- `apps/web`, `apps/portal`: the React + Vite SPAs, built on `@tenantry/ui`. Web pages live in `apps/web/src/features/<name>/`; shared pieces (API client, `ApiErrorNotification`, `FormDialog`, `useMe`) in `apps/web/src/lib/`.
+- `apps/web`, `apps/portal`: the React + Vite SPAs, built on `@tenantry/ui`. Pages live in `src/features/<name>/` of each app.
+- `apps/login-theme`: the Keycloakify login theme, built into the Keycloak image (ADR-0021).
+- `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`.
+- `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, Carbon tokens).
 - `packages/ui`: Carbon setup, `AppShell`, and the five page patterns.
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.

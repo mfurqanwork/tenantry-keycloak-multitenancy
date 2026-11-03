@@ -14,10 +14,7 @@ import {
 } from '@carbon/react';
 import { ListPage } from '@tenantry/ui';
 import { useEffect, useState } from 'react';
-import { useApi } from '../../lib/api.js';
-import { ApiErrorNotification } from '../../lib/ApiErrorNotification.js';
-import { useMe } from '../../lib/me.js';
-import { useResource } from '../../lib/useResource.js';
+import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
 
 interface AuditEntry {
   id: string;

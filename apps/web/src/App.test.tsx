@@ -3,8 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { TenantryThemeProvider } from '@tenantry/ui';
 import { App } from './App.js';
-import { ApiProvider } from './lib/api.js';
-import { MeProvider, type Me } from './lib/me.js';
+import { ApiProvider, type Me, MeProvider } from '@tenantry/app-kit';
 import { ALL, fakeApi, makeMe, MEMBER } from './test-utils.js';
 
 function renderAt(path: string, me: Me = makeMe('owner', ALL)) {

@@ -4,8 +4,7 @@ import { TenantryThemeProvider } from '@tenantry/ui';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { vi } from 'vitest';
-import { ApiProvider, type Api } from './lib/api.js';
-import { MeProvider, type Me } from './lib/me.js';
+import { type Api, ApiProvider, type Me, MeProvider } from '@tenantry/app-kit';
 
 export const ALL: Permission[] = [
   'members:read',
