@@ -1,7 +1,10 @@
 export { auditLog } from './audit-log.js';
 export { identities } from './identities.js';
 export { projects } from './projects.js';
+export { tenantDomains } from './tenant-domains.js';
 export { tenantIdentity } from './tenant-identity.js';
+export { tenantIdps } from './tenant-idps.js';
 export { tenantInvites } from './tenant-invites.js';
-export { tenants, type TenantStatus } from './tenants.js';
+export { tenantLogos } from './tenant-logos.js';
+export { tenants, type TenantBranding, type TenantStatus } from './tenants.js';
 export { users } from './users.js';
