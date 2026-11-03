@@ -4,7 +4,24 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-Phase 3: Enterprise tenants.
+Phase 3: Enterprise tenants. Phase 4: Customer applications.
+
+### Added (Phase 4)
+
+- Customer apps for enterprise workspaces: web, single-page, mobile or desktop, and machine to machine (ADR-0011). The portal's Applications list, a register wizard, and each app's page with connection details, a secret shown once, rotation, setup snippets, a test sign-in, edit and delete.
+- `GET/POST /api/apps`, `GET/PATCH/DELETE /api/apps/:id`, `POST /api/apps/:id/secret` and `POST /api/apps/:id/token-check`; operator routes and `pnpm ops apps list|register|rotate`.
+- `tenant_apps` with forced row-level security (migration 0003), and `RealmApps` in `packages/keycloak-admin`.
+- Realm template v2: the secure-redirect-URI check covers every client.
+- `examples/customer-app`, an Express app with `openid-client` that shares single sign-on with Tenantry; `pnpm seed` registers it as "Initech HR".
+- `docs/guides/connect-your-app.md`.
+- Guarantee tests: bad redirect URIs refused, apps of another workspace out of reach, another workspace's user refused by a customer app, a customer app's token refused by our API, and single sign-on and sign-out with the example app.
+
+### Changed (Phase 4)
+
+- Enterprise workspaces accept tokens only from `tenantry-web` and `tenantry-portal`.
+- `GET /api/me` includes the workspace's tier.
+
+### Added (Phase 3)
 
 ### Added
 
@@ -16,7 +33,7 @@ Phase 3: Enterprise tenants.
 - The seeded enterprise workspace `initech`.
 - Guarantee tests for tokens from another realm, the shared realm, the wrong audience, an enterprise token on a Standard workspace, the password grant, and a company login with an email outside the organization's domain.
 
-### Changed
+### Changed (Phase 3)
 
 - Email and display name refresh on every sign-in, and a `users` row is made only for a member.
 - The header's product name navigates within the app.

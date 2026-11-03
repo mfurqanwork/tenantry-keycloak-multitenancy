@@ -7,7 +7,7 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** v0.1 (Phases 0–2) plus Phase 3. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. The Phase 1 to 3 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
+> **Status:** v0.1 (Phases 0–2) plus Phases 3 and 4. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. Their owners and admins connect their own apps to that realm from the portal. The Phase 1 to 4 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
 
 ## Guarantees
 
@@ -108,7 +108,7 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | Users in several tenants            | One account                                   | Separate account per realm     |
 | Scale                               | Thousands of tenants                          | Tens to low hundreds of realms |
 
-Phase 3 delivers the enterprise realm, its template and its sign-in. Connecting customer apps, SCIM and per-tenant policies follow in Phases 4 and 5.
+Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 lets its customers connect their own apps ([guide](docs/guides/connect-your-app.md)). SCIM and per-tenant policies follow in Phase 5.
 
 ## Repository
 
