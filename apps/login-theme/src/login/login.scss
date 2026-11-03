@@ -17,6 +17,14 @@
 
 .tenantry-login__brand {
   @include type.type-style('heading-03');
+
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+}
+
+.tenantry-login__logo {
+  block-size: $spacing-08;
 }
 
 .tenantry-login__card {
