@@ -153,3 +153,117 @@ describe('registering a customer app', () => {
     expect(await tenantTx(t.db, ent.id, (tx) => listApps(tx))).toHaveLength(3);
   });
 });
+
+describe('changing a customer app', () => {
+  const call = <T = unknown>(method: string, path: string, body?: unknown, as = owner) =>
+    t.request<T>({ host: ent.host, method, path, token: as, ...(body === undefined ? {} : { body }) });
+  const actions = async () =>
+    (await tenantTx(t.db, ent.id, (tx) => listAudit(tx, { limit: 50 }))).map((e) => e.action);
+  const kcClient = (clientId: string) =>
+    [...t.realmApps(ent.realm).clients.entries()].find(([, c]) => c.clientId === clientId);
+
+  it('edits the name and URIs in our record and in Keycloak, keeping the test sign-in', async () => {
+    const { app } = (await post(web)).body;
+    const res = await call<AppView>('PATCH', `/api/apps/${app.id}`, {
+      name: 'HR',
+      redirectUris: ['https://hr2.initech.test/cb'],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      name: 'HR',
+      type: 'web',
+      redirectUris: ['https://hr2.initech.test/cb'],
+    });
+    expect(kcClient(app.clientId)?.[1].spec.redirectUris).toEqual([
+      'https://hr2.initech.test/cb',
+      app.connection['testRedirectUri'],
+    ]);
+    expect(await actions()).toContain('app.updated');
+    const bad = await call('PATCH', `/api/apps/${app.id}`, {
+      name: 'HR',
+      redirectUris: ['http://x.test/cb'],
+    });
+    expect(bad.status).toBe(422);
+  });
+
+  it('rotates a secret: the old one stops working', async () => {
+    const { app } = (await post({ name: 'Sync', type: 'm2m' })).body;
+    const first = (await post({ name: 'Sync 2', type: 'm2m' })).body;
+    const res = await call<{ clientSecret: string }>('POST', `/api/apps/${first.app.id}/secret`);
+    expect(res.status).toBe(200);
+    expect(res.body.clientSecret).not.toBe(first.clientSecret);
+    const apps = t.realmApps(ent.realm);
+    expect((await apps.checkClientCredentials(first.app.clientId, first.clientSecret ?? '')).ok).toBe(false);
+    expect((await apps.checkClientCredentials(first.app.clientId, res.body.clientSecret)).ok).toBe(true);
+    const audit = await tenantTx(t.db, ent.id, (tx) => listAudit(tx, { limit: 50 }));
+    expect(audit.map((e) => e.action)).toContain('app.secret_rotated');
+    expect(JSON.stringify(audit)).not.toContain(res.body.clientSecret);
+    expect(app.type).toBe('m2m');
+  });
+
+  it('has no secret to rotate for a public app', async () => {
+    const { app } = (await post({ ...web, type: 'spa' })).body;
+    const res = await call<{ detail: string }>('POST', `/api/apps/${app.id}/secret`);
+    expect(res.status).toBe(409);
+    expect(res.body.detail).toBe('This app has no secret (public client).');
+  });
+
+  it('checks a machine-to-machine token, without keeping the secret', async () => {
+    const { app, clientSecret } = (await post({ name: 'Sync', type: 'm2m' })).body;
+    const ok = await call<{ ok: boolean }>('POST', `/api/apps/${app.id}/token-check`, { clientSecret });
+    expect(ok.body).toEqual({ ok: true });
+    const wrong = await call<{ ok: boolean; error?: string }>('POST', `/api/apps/${app.id}/token-check`, {
+      clientSecret: 'wrong',
+    });
+    expect(wrong.body.ok).toBe(false);
+    expect(wrong.body.error).toEqual(expect.any(String));
+    const audit = await tenantTx(t.db, ent.id, (tx) => listAudit(tx, { limit: 50 }));
+    const checks = audit.filter((e) => e.action === 'app.token_checked').map((e) => e.metadata['ok']);
+    expect(checks.sort()).toEqual([false, true]);
+    expect(JSON.stringify(audit)).not.toContain(clientSecret ?? '-');
+    const webApp = (await post(web)).body.app;
+    const notM2m = await call<{ detail: string }>('POST', `/api/apps/${webApp.id}/token-check`, {
+      clientSecret: 'x',
+    });
+    expect(notM2m.status).toBe(409);
+    expect(notM2m.body.detail).toBe('Token checks are for machine-to-machine apps.');
+  });
+
+  it('deletes an app and its client, also when the client is already gone', async () => {
+    const { app } = (await post(web)).body;
+    expect((await call('DELETE', `/api/apps/${app.id}`)).status).toBe(204);
+    expect(kcClient(app.clientId)).toBeUndefined();
+    expect((await call('GET', `/api/apps/${app.id}`)).status).toBe(404);
+    expect(await actions()).toContain('app.deleted');
+    const gone = (await post(web)).body.app;
+    t.realmApps(ent.realm).forget(kcClient(gone.clientId)?.[0] ?? '');
+    expect((await call('DELETE', `/api/apps/${gone.id}`)).status).toBe(204);
+    expect((await call('DELETE', `/api/apps/${gone.id}`)).status).toBe(404);
+  });
+
+  it('missing client: edit and rotate say so', async () => {
+    const { app } = (await post(web)).body;
+    t.realmApps(ent.realm).forget(kcClient(app.clientId)?.[0] ?? '');
+    const message = "This app's client no longer exists in Keycloak. Delete the app.";
+    const edit = await call<{ detail: string }>('PATCH', `/api/apps/${app.id}`, {
+      name: 'HR',
+      redirectUris: ['https://hr.initech.test/cb'],
+    });
+    expect(edit.status).toBe(409);
+    expect(edit.body.detail).toBe(message);
+    const rotate = await call<{ detail: string }>('POST', `/api/apps/${app.id}/secret`);
+    expect(rotate.status).toBe(409);
+    expect(rotate.body.detail).toBe(message);
+  });
+
+  it('refuses members', async () => {
+    const { app } = (await post({ name: 'Sync', type: 'm2m' })).body;
+    const member = await token(ent, 'member');
+    expect((await call('PATCH', `/api/apps/${app.id}`, { name: 'x' }, member)).status).toBe(403);
+    expect((await call('POST', `/api/apps/${app.id}/secret`, undefined, member)).status).toBe(403);
+    expect(
+      (await call('POST', `/api/apps/${app.id}/token-check`, { clientSecret: 'x' }, member)).status,
+    ).toBe(403);
+    expect((await call('DELETE', `/api/apps/${app.id}`, undefined, member)).status).toBe(403);
+  });
+});

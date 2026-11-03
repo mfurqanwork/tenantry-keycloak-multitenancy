@@ -50,3 +50,15 @@ export const appBody = z
     checkUris(body, body.type, ctx);
   });
 export type AppBody = z.infer<typeof appBody>;
+
+// Editing keeps the type; the URI rules are those of the app's type, known only once it is found.
+export const appPatchShape = z.object(fields);
+export function appPatchBody(type: AppType) {
+  return appPatchShape.superRefine((body, ctx) => {
+    checkUris(body, type, ctx);
+  });
+}
+export type AppPatchBody = z.infer<typeof appPatchShape>;
+
+export const tokenCheckBody = z.object({ clientSecret: z.string().min(1).max(512) });
+export type TokenCheckBody = z.infer<typeof tokenCheckBody>;

@@ -1,12 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { tenantOrigin, userSignIn } from '@tenantry/auth';
+import { confidential, tenantOrigin, userSignIn } from '@tenantry/auth';
 import {
   countApps,
   createApp,
+  deleteApp,
   getApp,
   listApps,
   lockTenantApps,
   tenantTx,
+  updateApp,
   type AppRecord,
   type Db,
   type TenantRecord,
@@ -19,11 +21,12 @@ import {
   type AppClientSpec,
 } from '@tenantry/keycloak-admin';
 import { ConflictProblem, NotFoundProblem, ValidationProblem } from '../../common/http-errors.js';
+import { ZodPipe } from '../../common/zod.pipe.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import type { RealmAppsFactory } from '../../infrastructure/realm-apps.js';
 import { DB, REALM_APPS } from '../../infrastructure/tokens.js';
 import { AuditService, type AuditAction } from '../audit/audit.service.js';
-import type { AppBody } from './apps.schemas.js';
+import { appPatchBody, type AppBody } from './apps.schemas.js';
 
 export interface AppConnection {
   issuer: string;
@@ -110,6 +113,69 @@ export class AppsService {
       if (made.client) await apps.remove(made.client.kcClientUuid).catch(() => undefined);
       throw this.problem(err);
     }
+  }
+
+  // Keycloak first, then our record and the audit entry; the type never changes.
+  async update(tenant: TenantRecord, id: string, raw: unknown, actor: AppActor): Promise<AppView> {
+    const app = await this.find(tenant, id);
+    const patch = new ZodPipe(appPatchBody(app.type)).transform(raw);
+    const apps = await this.realms.forTenant(tenant);
+    try {
+      const updated = await tenantTx(this.db, tenant.id, async (tx) => {
+        await apps.update(app.kcClientUuid, this.keycloakSpec(tenant, { ...patch, type: app.type }));
+        const row = await updateApp(tx, app.id, patch);
+        if (!row) throw new NotFoundProblem('No app with this id.');
+        await this.record(tx, actor, 'app.updated', row);
+        return row;
+      });
+      return this.view(tenant, updated);
+    } catch (err) {
+      throw this.problem(err);
+    }
+  }
+
+  // A new secret, shown once; the old one stops working at once.
+  async rotateSecret(tenant: TenantRecord, id: string, actor: AppActor): Promise<{ clientSecret: string }> {
+    const app = await this.find(tenant, id);
+    if (!confidential(app.type)) throw new ConflictProblem('This app has no secret (public client).');
+    const apps = await this.realms.forTenant(tenant);
+    try {
+      return await tenantTx(this.db, tenant.id, async (tx) => {
+        const clientSecret = await apps.rotateSecret(app.kcClientUuid);
+        await this.record(tx, actor, 'app.secret_rotated', app);
+        return { clientSecret };
+      });
+    } catch (err) {
+      throw this.problem(err);
+    }
+  }
+
+  // Asks Keycloak for one client-credentials token with the secret the person pasted; keeps nothing.
+  async checkToken(
+    tenant: TenantRecord,
+    id: string,
+    clientSecret: string,
+    actor: AppActor,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const app = await this.find(tenant, id);
+    if (app.type !== 'm2m') throw new ConflictProblem('Token checks are for machine-to-machine apps.');
+    const result = await (
+      await this.realms.forTenant(tenant)
+    ).checkClientCredentials(app.clientId, clientSecret);
+    await tenantTx(this.db, tenant.id, (tx) =>
+      this.record(tx, actor, 'app.token_checked', app, { ok: result.ok }),
+    );
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }
+
+  // The Keycloak client goes first (already gone counts as done), then our record.
+  async remove(tenant: TenantRecord, id: string, actor: AppActor): Promise<void> {
+    const app = await this.find(tenant, id);
+    await (await this.realms.forTenant(tenant)).remove(app.kcClientUuid);
+    await tenantTx(this.db, tenant.id, async (tx) => {
+      await deleteApp(tx, app.id);
+      await this.record(tx, actor, 'app.deleted', app);
+    });
   }
 
   protected enterpriseOnly(tenant: TenantRecord): void {
