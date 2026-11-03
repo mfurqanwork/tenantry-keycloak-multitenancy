@@ -29,8 +29,13 @@ export function ApplicationsRoute() {
   const me = useMe();
   if (me.tenant.tier !== 'enterprise') {
     return (
-      <ListPage breadcrumbs={[{ label: me.tenant.name, href: '/' }]} title="Applications">
-        <Tile>Applications are available on Enterprise workspaces.</Tile>
+      <ListPage
+        breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
+        title="Applications"
+        isEmpty
+        emptyState={<Tile>Applications are available on Enterprise workspaces.</Tile>}
+      >
+        {null}
       </ListPage>
     );
   }
