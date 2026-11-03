@@ -18,6 +18,27 @@ describe('GET /api/tenants/:slug/auth-config', () => {
     expect(res.body).toEqual({ issuer: t.issuer.issuer, clientId: 'tenantry-web', organization: acme.slug });
   });
 
+  it('names the portal client on the portal host', async () => {
+    const res = await t.request({
+      host: `${acme.slug}.portal.tenantry.localhost`,
+      path: `/api/tenants/${acme.slug}/auth-config`,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      issuer: t.issuer.issuer,
+      clientId: 'tenantry-portal',
+      organization: acme.slug,
+    });
+  });
+
+  it('answers 404 on the portal host of an unknown tenant', async () => {
+    const res = await t.request({
+      host: 'ghost.portal.tenantry.localhost',
+      path: '/api/tenants/ghost/auth-config',
+    });
+    expect(res.status).toBe(404);
+  });
+
   it('answers 404 for an unknown or failed tenant', async () => {
     expect((await t.request({ host: t.apexHost, path: '/api/tenants/nobody/auth-config' })).status).toBe(404);
     const failed = await t.seedTenant();

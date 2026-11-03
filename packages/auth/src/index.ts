@@ -8,4 +8,4 @@ export {
   roleForGroupPath,
 } from './roles.js';
 export type { GroupName, Permission, Role } from './roles.js';
-export type { TenantContext } from './context.js';
+export type { TenantApp, TenantContext } from './context.js';

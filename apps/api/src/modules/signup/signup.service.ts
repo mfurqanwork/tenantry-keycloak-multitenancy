@@ -7,7 +7,8 @@ import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import { DB, IDENTITY_DIRECTORY } from '../../infrastructure/tokens.js';
 import { AuditService } from '../audit/audit.service.js';
 import { runSaga, SagaFailedError } from './signup.saga.js';
-import { tenantOrigin, validateSlug } from './slug.js';
+import { tenantOrigin } from '../../common/tenant-origin.js';
+import { validateSlug } from './slug.js';
 
 export type Availability =
   { available: true } | { available: false; reason: 'format' | 'reserved' | 'taken' };
@@ -47,6 +48,7 @@ export class SignupService {
     }
 
     const origin = tenantOrigin(input.slug, this.config);
+    const portalOrigin = tenantOrigin(input.slug, this.config, 'portal');
     const issuer = `${this.config.authUrl}/realms/${this.config.platformRealm}`;
     let orgId = '';
     try {
@@ -68,9 +70,14 @@ export class SignupService {
           { name: 'add owner', run: () => this.directory.addMember(orgId, user.kcUserId) },
           { name: 'make owner', run: () => this.directory.setMemberGroup(orgId, user.kcUserId, 'owners') },
           {
-            name: 'register origin',
-            run: () => this.directory.addTenantOrigin(origin),
-            undo: () => this.directory.removeTenantOrigin(origin),
+            name: 'register web origin',
+            run: () => this.directory.addTenantOrigin(origin, 'web'),
+            undo: () => this.directory.removeTenantOrigin(origin, 'web'),
+          },
+          {
+            name: 'register portal origin',
+            run: () => this.directory.addTenantOrigin(portalOrigin, 'portal'),
+            undo: () => this.directory.removeTenantOrigin(portalOrigin, 'portal'),
           },
           {
             name: 'activate',

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { IdentityDirectory } from '../identity-directory.js';
+import type { IdentityDirectory, TenantApp } from '../identity-directory.js';
 
 export interface ContractSubject {
   dir: IdentityDirectory;
   newUser(): Promise<string>;
+  // The redirect URIs the app's client holds now.
+  redirectUris(app: TenantApp): Promise<string[]>;
   cleanup(): Promise<void>;
 }
 
@@ -59,10 +61,21 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
 
     it('registers and removes a tenant origin, idempotently', async () => {
       const origin = `http://x${randomUUID().slice(0, 8)}.tenantry.localhost:8080`;
-      await s.dir.addTenantOrigin(origin);
-      await s.dir.addTenantOrigin(origin);
-      await s.dir.removeTenantOrigin(origin);
-      await expect(s.dir.removeTenantOrigin(origin)).resolves.toBeUndefined();
+      await s.dir.addTenantOrigin(origin, 'web');
+      await s.dir.addTenantOrigin(origin, 'web');
+      expect((await s.redirectUris('web')).filter((u) => u === `${origin}/*`)).toHaveLength(1);
+      await s.dir.removeTenantOrigin(origin, 'web');
+      await expect(s.dir.removeTenantOrigin(origin, 'web')).resolves.toBeUndefined();
+      expect(await s.redirectUris('web')).not.toContain(`${origin}/*`);
+    });
+
+    it("adds a portal origin to the portal's client only", async () => {
+      const origin = `http://p${randomUUID().slice(0, 8)}.portal.tenantry.localhost:8080`;
+      await s.dir.addTenantOrigin(origin, 'portal');
+      expect(await s.redirectUris('portal')).toContain(`${origin}/*`);
+      expect(await s.redirectUris('web')).not.toContain(`${origin}/*`);
+      await s.dir.removeTenantOrigin(origin, 'portal');
+      expect(await s.redirectUris('portal')).not.toContain(`${origin}/*`);
     });
 
     it('refuses a second organization with the same name, as Keycloak does', async () => {

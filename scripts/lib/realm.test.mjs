@@ -78,3 +78,14 @@ test('tenantry-isolation-tests gets tokens by password, like tenantry-web otherw
 test('the platform realm uses the tenantry login theme', () => {
   assert.equal(realm.loginTheme, 'tenantry');
 });
+
+test('tenantry-portal is a public PKCE client like tenantry-web, with tenant origins added at signup', () => {
+  const portal = client('tenantry-portal');
+  assert.equal(portal.publicClient, true);
+  assert.equal(portal.standardFlowEnabled, true);
+  assert.equal(portal.directAccessGrantsEnabled, false);
+  assert.equal(portal.attributes?.['pkce.code.challenge.method'], 'S256');
+  assert.deepEqual(portal.redirectUris, []);
+  assert.equal(audience(portal)?.config['included.custom.audience'], 'tenantry-api');
+  assert.equal(groupMapper(portal)?.config['access.token.claim'], 'true');
+});

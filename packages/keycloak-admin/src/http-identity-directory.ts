@@ -1,4 +1,4 @@
-import { roleForGroupPath, ROLES, groupForRole, type GroupName } from '@tenantry/auth';
+import { roleForGroupPath, ROLES, groupForRole, type GroupName, type TenantApp } from '@tenantry/auth';
 import { createAdminTokenSource } from './admin-token.js';
 import { DirectoryError } from './errors.js';
 import type { DirectoryMember, IdentityDirectory } from './identity-directory.js';
@@ -9,8 +9,9 @@ export interface HttpIdentityDirectoryOptions {
   realm: string;
   clientId: string;
   clientSecret: string;
-  // The SPA client whose redirect URIs list each tenant's origin.
+  // The SPA clients whose redirect URIs list each tenant's origins.
   webClientId: string;
+  portalClientId: string;
   fetch?: typeof fetch;
 }
 
@@ -73,14 +74,15 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
     return ids;
   }
 
-  // Concurrent signups would otherwise read-modify-write tenantry-web and lose each other's origins.
+  // Concurrent signups would otherwise read-modify-write a client and lose each other's origins.
   let clientQueue: Promise<unknown> = Promise.resolve();
-  function editWebClient(operation: string, edit: (c: KcClient) => KcClient): Promise<void> {
+  function editAppClient(operation: string, app: TenantApp, edit: (c: KcClient) => KcClient): Promise<void> {
+    const clientId = app === 'portal' ? o.portalClientId : o.webClientId;
     const run = clientQueue.then(async () => {
       const [client] = await json<KcClient[]>(
-        await call(operation, 'GET', `/clients?clientId=${encodeURIComponent(o.webClientId)}`),
+        await call(operation, 'GET', `/clients?clientId=${encodeURIComponent(clientId)}`),
       );
-      if (!client) throw new DirectoryError(operation, 404, `client ${o.webClientId} not found`);
+      if (!client) throw new DirectoryError(operation, 404, `client ${clientId} not found`);
       await call(operation, 'PUT', `/clients/${client.id}`, edit(client));
     });
     clientQueue = run.catch(() => undefined);
@@ -174,18 +176,18 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       await call('inviteUser', 'POST', `${org(orgId)}/members/invite-user`, new URLSearchParams({ email }));
     },
 
-    addTenantOrigin(origin) {
+    addTenantOrigin(origin, app) {
       const uri = `${origin}/*`;
-      return editWebClient('addTenantOrigin', (c) => ({
+      return editAppClient('addTenantOrigin', app, (c) => ({
         ...c,
         redirectUris: [...new Set([...(c.redirectUris ?? []), uri])],
         webOrigins: [...new Set([...(c.webOrigins ?? []), origin])],
       }));
     },
 
-    removeTenantOrigin(origin) {
+    removeTenantOrigin(origin, app) {
       const uri = `${origin}/*`;
-      return editWebClient('removeTenantOrigin', (c) => ({
+      return editAppClient('removeTenantOrigin', app, (c) => ({
         ...c,
         redirectUris: (c.redirectUris ?? []).filter((u) => u !== uri),
         webOrigins: (c.webOrigins ?? []).filter((w) => w !== origin),

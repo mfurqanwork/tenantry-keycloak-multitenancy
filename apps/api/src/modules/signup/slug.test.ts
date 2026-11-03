@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { tenantOrigin, validateSlug } from './slug.js';
+import { tenantOrigin } from '../../common/tenant-origin.js';
+import { validateSlug } from './slug.js';
 
 describe('validateSlug', () => {
   it('accepts a plain slug', () => {
@@ -35,5 +36,21 @@ describe('tenantOrigin', () => {
         publicPort: null,
       }),
     ).toBe('https://acme.example.com');
+  });
+});
+
+describe('tenantOrigin for the portal', () => {
+  it('puts the portal under the tenant label', () => {
+    expect(
+      tenantOrigin(
+        'acme',
+        {
+          authUrl: 'http://auth.tenantry.localhost:8080',
+          baseDomain: 'tenantry.localhost',
+          publicPort: 8080,
+        },
+        'portal',
+      ),
+    ).toBe('http://acme.portal.tenantry.localhost:8080');
   });
 });

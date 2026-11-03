@@ -1,6 +1,6 @@
-import type { GroupName } from '@tenantry/auth';
+import type { GroupName, TenantApp } from '@tenantry/auth';
 
-export type { GroupName } from '@tenantry/auth';
+export type { GroupName, TenantApp } from '@tenantry/auth';
 
 export interface DirectoryMember {
   kcUserId: string;
@@ -23,7 +23,8 @@ export interface IdentityDirectory {
   setMemberGroup(orgId: string, kcUserId: string, group: GroupName): Promise<void>;
   listMembers(orgId: string): Promise<DirectoryMember[]>;
   inviteUser(orgId: string, email: string): Promise<void>;
-  // Adds `${origin}/*` to tenantry-web's redirect URIs and the origin to its web origins. Idempotent.
-  addTenantOrigin(origin: string): Promise<void>;
-  removeTenantOrigin(origin: string): Promise<void>;
+  // Adds `${origin}/*` to the app's client (tenantry-web or tenantry-portal): redirect URIs and web
+  // origins. Idempotent.
+  addTenantOrigin(origin: string, app: TenantApp): Promise<void>;
+  removeTenantOrigin(origin: string, app: TenantApp): Promise<void>;
 }

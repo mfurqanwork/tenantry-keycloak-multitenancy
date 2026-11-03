@@ -26,6 +26,7 @@ export class InfrastructureModule implements OnApplicationShutdown {
               clientId: config.backendClientId,
               clientSecret: config.backendClientSecret,
               webClientId: 'tenantry-web',
+              portalClientId: 'tenantry-portal',
             }),
         },
       ],

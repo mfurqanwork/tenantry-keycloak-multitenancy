@@ -4,13 +4,15 @@ import { DirectoryError } from './errors.js';
 import { InMemoryIdentityDirectory } from './testing/in-memory-identity-directory.js';
 import { runIdentityDirectoryContract } from './testing/contract.js';
 
-runIdentityDirectoryContract('in-memory', () =>
-  Promise.resolve({
-    dir: new InMemoryIdentityDirectory(),
+runIdentityDirectoryContract('in-memory', () => {
+  const dir = new InMemoryIdentityDirectory();
+  return Promise.resolve({
+    dir,
     newUser: () => Promise.resolve(randomUUID()),
+    redirectUris: (app) => Promise.resolve([...dir.origins[app]].map((o) => `${o}/*`)),
     cleanup: () => Promise.resolve(),
-  }),
-);
+  });
+});
 
 describe('InMemoryIdentityDirectory', () => {
   it('fails the operation it is told to fail', async () => {
@@ -26,9 +28,9 @@ describe('InMemoryIdentityDirectory', () => {
     const dir = new InMemoryIdentityDirectory();
     const { id } = await dir.createOrganization({ alias: 'acme', name: 'Acme' });
     await dir.inviteUser(id, 'bob@example.com');
-    await dir.addTenantOrigin('http://acme.tenantry.localhost');
+    await dir.addTenantOrigin('http://acme.tenantry.localhost', 'web');
     expect(dir.invites).toEqual([{ orgId: id, email: 'bob@example.com' }]);
-    expect(dir.origins.has('http://acme.tenantry.localhost')).toBe(true);
+    expect(dir.origins.web.has('http://acme.tenantry.localhost')).toBe(true);
   });
 
   it('refuses a second organization with the same alias', async () => {

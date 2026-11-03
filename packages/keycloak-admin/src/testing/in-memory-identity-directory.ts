@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { GroupName } from '@tenantry/auth';
+import type { GroupName, TenantApp } from '@tenantry/auth';
 import { DirectoryError } from '../errors.js';
 import type { DirectoryMember, IdentityDirectory } from '../identity-directory.js';
 
@@ -13,7 +13,7 @@ interface Org {
 // A Keycloak stand-in for unit tests. The contract test keeps it honest against the real server.
 export class InMemoryIdentityDirectory implements IdentityDirectory {
   readonly orgs = new Map<string, Org>();
-  readonly origins = new Set<string>();
+  readonly origins: Record<TenantApp, Set<string>> = { web: new Set(), portal: new Set() };
   readonly invites: { orgId: string; email: string }[] = [];
   // Profiles for listMembers; tests register users they create.
   readonly users = new Map<string, { email: string | null; displayName: string | null }>();
@@ -126,16 +126,16 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     });
   }
 
-  addTenantOrigin(origin: string): Promise<void> {
+  addTenantOrigin(origin: string, app: TenantApp): Promise<void> {
     return this.run('addTenantOrigin', () => {
-      this.origins.add(origin);
+      this.origins[app].add(origin);
       return undefined;
     });
   }
 
-  removeTenantOrigin(origin: string): Promise<void> {
+  removeTenantOrigin(origin: string, app: TenantApp): Promise<void> {
     return this.run('removeTenantOrigin', () => {
-      this.origins.delete(origin);
+      this.origins[app].delete(origin);
       return undefined;
     });
   }

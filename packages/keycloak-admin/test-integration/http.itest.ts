@@ -42,6 +42,7 @@ runIdentityDirectoryContract('Keycloak over HTTP', async () => {
       clientId: env('KEYCLOAK_BACKEND_CLIENT_ID'),
       clientSecret: env('KEYCLOAK_BACKEND_CLIENT_SECRET'),
       webClientId: 'tenantry-web',
+      portalClientId: 'tenantry-portal',
     }),
     async newUser() {
       const name = `contract-${randomUUID().slice(0, 8)}`;
@@ -54,6 +55,14 @@ runIdentityDirectoryContract('Keycloak over HTTP', async () => {
       if (res.status !== 201 || !id) throw new Error(`create user: ${res.status}`);
       created.push(id);
       return id;
+    },
+    async redirectUris(app) {
+      const clientId = app === 'web' ? 'tenantry-web' : 'tenantry-portal';
+      const res = await fetch(`${baseUrl}/admin/realms/platform/clients?clientId=${clientId}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const [found] = (await res.json()) as { redirectUris?: string[] }[];
+      return found?.redirectUris ?? [];
     },
     async cleanup() {
       for (const id of created) {
