@@ -126,6 +126,11 @@ describe('single sign-on with the example customer app', () => {
       redirectUris: [EXAMPLE.redirect],
       postLogoutRedirectUris: [`${EXAMPLE.url}/`],
     });
+    const answering = await fetch(EXAMPLE.url).then(
+      () => true,
+      () => false,
+    );
+    if (answering) throw new Error(`Something already answers on ${EXAMPLE.url}; stop it and run again.`);
     child = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], {
       cwd: EXAMPLE_DIR,
       env: {
