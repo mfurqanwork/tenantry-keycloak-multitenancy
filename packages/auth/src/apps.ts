@@ -40,6 +40,10 @@ export function uriProblem(uri: string, kind: 'redirect' | 'origin', type: AppTy
     return 'Enter a full URI.';
   }
   const web = url.protocol === 'https:' || url.protocol === 'http:';
+  // The parser also reads "https:*.host" and "https:/host" as hosts: check what it read, and ask for
+  // the written-out form so the stored URI is the one Keycloak will compare.
+  if (web && url.hostname.includes('*')) return 'No wildcards in the host.';
+  if (web && !/^https?:\/\/[^/\\]/i.test(uri)) return 'Enter a full URI.';
   if (kind === 'origin') {
     if (!web) return 'Enter a full URI.';
     const problem = webProblem(url);

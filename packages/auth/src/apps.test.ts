@@ -28,6 +28,10 @@ describe('redirect URIs', () => {
     ['com.initech.hr:/cb', 'spa', 'Custom schemes are for mobile and desktop apps.'],
     ['myapp:/cb', 'native', 'A custom scheme needs a dot, like com.example.app.'],
     ['not a uri', 'web', 'Enter a full URI.'],
+    ['https:*.evil.test/cb', 'web', 'No wildcards in the host.'],
+    ['https:/*.evil.test/cb', 'web', 'No wildcards in the host.'],
+    ['https:\\\\*.evil.test/cb', 'web', 'No wildcards in the host.'],
+    ['http:127.0.0.1:4000/cb', 'web', 'Enter a full URI.'],
   ])('refuses %s for %s', (uri, type, message) => {
     expect(uriProblem(uri, 'redirect', type)).toBe(message);
   });
