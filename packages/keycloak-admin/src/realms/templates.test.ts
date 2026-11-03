@@ -20,14 +20,20 @@ describe('realm templates', () => {
       from: 'no-reply@tenantry.localhost',
       fromDisplayName: 'Initech',
     });
-    const profiles = JSON.stringify(t.clientProfiles);
-    expect(profiles).toContain('"allow-http-scheme":true');
     expect(JSON.stringify(t)).not.toContain('${');
   });
 
-  it('refuses http redirects unless allowed', () => {
+  it('enforces secure redirect URIs, https only, wherever http is not allowed', () => {
     const t = loadRealmTemplate(TEMPLATE_VERSION, { ...vars, allowHttpRedirects: false });
-    expect(JSON.stringify(t.clientProfiles)).toContain('"allow-http-scheme":false');
+    const profiles = JSON.stringify(t.clientProfiles);
+    expect(profiles).toContain('"executor":"secure-redirect-uris-enforcer"');
+    expect(profiles).toContain('"allow-http-scheme":false');
+  });
+
+  it('leaves the redirect URI enforcer out for local http, whose *.localhost hosts are loopback', () => {
+    const profiles = JSON.stringify(loadRealmTemplate(TEMPLATE_VERSION, vars).clientProfiles);
+    expect(profiles).not.toContain('secure-redirect-uris-enforcer');
+    expect(profiles).toContain('"executor":"pkce-enforcer"');
   });
 
   it("puts the tenant's two origins on its app clients", () => {

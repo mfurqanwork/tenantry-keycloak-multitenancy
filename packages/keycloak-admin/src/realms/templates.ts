@@ -53,8 +53,21 @@ const placeholders = (v: TemplateVars): Record<string, string | boolean> => ({
   SMTP_HOST: v.smtp.host,
   SMTP_PORT: v.smtp.port,
   SMTP_FROM: v.smtp.from,
-  ALLOW_HTTP_REDIRECTS: v.allowHttpRedirects,
 });
+
+const REDIRECT_ENFORCER = 'secure-redirect-uris-enforcer';
+
+// Local http development: its *.localhost hosts are loopback names (RFC 6761), and Keycloak refuses any
+// loopback redirect other than a literal 127.0.0.1 or [::1] whenever DNS answers for them (Linux hosts do).
+// The enforcer applies everywhere auth runs over https.
+function withoutRedirectEnforcer(profiles: RealmTemplate['clientProfiles']): RealmTemplate['clientProfiles'] {
+  return {
+    profiles: profiles.profiles.map((p) => ({
+      ...p,
+      executors: (p['executors'] as { executor: string }[]).filter((e) => e.executor !== REDIRECT_ENFORCER),
+    })),
+  };
+}
 
 export function loadRealmTemplate(version: number, vars: TemplateVars): RealmTemplate {
   if (version !== TEMPLATE_VERSION)
@@ -68,7 +81,7 @@ export function loadRealmTemplate(version: number, vars: TemplateVars): RealmTem
   return {
     version: t.templateVersion,
     realm: { ...t.realm, displayName: vars.displayName },
-    clientProfiles: t.clientProfiles,
+    clientProfiles: vars.allowHttpRedirects ? withoutRedirectEnforcer(t.clientProfiles) : t.clientProfiles,
     clientPolicies: t.clientPolicies,
   };
 }
