@@ -15,7 +15,13 @@ export class ProblemFilter implements ExceptionFilter {
       .getResponse<Response>()
       .status(problem.status)
       .type('application/problem+json')
-      .json({ type: problem.type, title: problem.title, status: problem.status, detail: problem.detail });
+      .json({
+        ...problem.extras,
+        type: problem.type,
+        title: problem.title,
+        status: problem.status,
+        detail: problem.detail,
+      });
   }
 
   private toProblem(err: unknown): Problem {

@@ -43,6 +43,8 @@ export interface TestApp {
     path: string;
     token?: string;
     body?: unknown;
+    // Sent as it is (multipart uploads); set content-type in headers.
+    raw?: Buffer;
     headers?: Record<string, string>;
   }): Promise<TestResponse<T>>;
   seedTenant(): Promise<TestTenant>;
@@ -100,9 +102,9 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     issuer,
     directory,
     apexHost: 'tenantry.localhost',
-    request: ({ host, method = 'GET', path, token, body, headers = {} }) =>
+    request: ({ host, method = 'GET', path, token, body, raw, headers = {} }) =>
       new Promise((resolve, reject) => {
-        const payload = body === undefined ? undefined : JSON.stringify(body);
+        const payload = raw ?? (body === undefined ? undefined : JSON.stringify(body));
         const req = httpRequest(
           {
             host: '127.0.0.1',
@@ -112,20 +114,26 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
             headers: {
               host,
               ...(token ? { authorization: `Bearer ${token}` } : {}),
-              ...(payload ? { 'content-type': 'application/json' } : {}),
+              ...(payload && !raw ? { 'content-type': 'application/json' } : {}),
               ...headers,
             },
           },
           (res) => {
-            let raw = '';
-            res.setEncoding('utf8');
-            res.on('data', (chunk: string) => {
-              raw += chunk;
+            const chunks: Buffer[] = [];
+            res.on('data', (chunk: Buffer) => {
+              chunks.push(chunk);
             });
             res.on('end', () => {
+              // JSON bodies are parsed; anything else (a logo) stays bytes.
+              const bytes = Buffer.concat(chunks);
+              const json = /json/.test(res.headers['content-type'] ?? '');
               resolve({
                 status: res.statusCode ?? 0,
-                body: (raw ? JSON.parse(raw) : undefined) as never,
+                body: (bytes.length === 0
+                  ? undefined
+                  : json
+                    ? JSON.parse(bytes.toString('utf8'))
+                    : bytes) as never,
                 headers: res.headers,
               });
             });

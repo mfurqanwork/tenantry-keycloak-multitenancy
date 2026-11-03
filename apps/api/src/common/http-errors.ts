@@ -1,9 +1,11 @@
-// RFC 9457 problems. Throw these from anywhere; ProblemFilter writes them out.
+// RFC 9457 problems. Throw these from anywhere; ProblemFilter writes them out. `extras` are the
+// problem type's own members (RFC 9457 section 3.2), such as a suggested value.
 export class Problem extends Error {
   constructor(
     readonly status: number,
     readonly title: string,
     readonly detail: string,
+    readonly extras: Record<string, unknown> = {},
   ) {
     super(detail);
     this.name = new.target.name;
@@ -15,8 +17,8 @@ export class Problem extends Error {
 }
 
 export class ValidationProblem extends Problem {
-  constructor(detail: string) {
-    super(422, 'Invalid request', detail);
+  constructor(detail: string, extras?: Record<string, unknown>) {
+    super(422, 'Invalid request', detail, extras);
   }
 }
 
