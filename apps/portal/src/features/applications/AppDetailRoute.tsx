@@ -191,6 +191,12 @@ function ConnectionDetails({ app }: { app: AppView }) {
             <StructuredListCell>{app.redirectUris.join(', ')}</StructuredListCell>
           </StructuredListRow>
         )}
+        {c.testRedirectUri && (
+          <StructuredListRow>
+            <StructuredListCell>Tenantry test sign-in (kept by Tenantry)</StructuredListCell>
+            <StructuredListCell>{c.testRedirectUri}</StructuredListCell>
+          </StructuredListRow>
+        )}
       </StructuredListBody>
     </StructuredListWrapper>
   );

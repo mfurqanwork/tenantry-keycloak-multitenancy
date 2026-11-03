@@ -58,6 +58,20 @@ describe('AppDetailRoute', () => {
     expect(within(details).getByText('Shown once, when registered or rotated')).toBeInTheDocument();
   });
 
+  it('shows the portal test sign-in address it added, and none for machine to machine', async () => {
+    const app = sampleApp();
+    setup(app);
+    const details = await screen.findByRole('table', { name: 'Connection details' });
+    expect(within(details).getByText('Tenantry test sign-in (kept by Tenantry)')).toBeInTheDocument();
+    expect(within(details).getByText(app.connection.testRedirectUri ?? '-')).toBeInTheDocument();
+  });
+
+  it('lists no test sign-in address for a machine-to-machine app', async () => {
+    setup(sampleApp({ type: 'm2m', redirectUris: [] }));
+    const details = await screen.findByRole('table', { name: 'Connection details' });
+    expect(within(details).queryByText('Tenantry test sign-in (kept by Tenantry)')).not.toBeInTheDocument();
+  });
+
   it('shows the secret it was handed once', async () => {
     setup(sampleApp(), { state: { clientSecret: 's3cret' } });
     expect(await screen.findByText('Copy the client secret now')).toBeInTheDocument();
