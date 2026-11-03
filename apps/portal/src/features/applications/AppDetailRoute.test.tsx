@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { ApiProblem } from '@tenantry/app-kit';
 import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeApi, makeMe, renderPortal } from '../../test-utils.js';
@@ -70,6 +71,41 @@ describe('AppDetailRoute', () => {
     setup(sampleApp({ type: 'm2m', redirectUris: [] }));
     const details = await screen.findByRole('table', { name: 'Connection details' });
     expect(within(details).queryByText('Tenantry test sign-in (kept by Tenantry)')).not.toBeInTheDocument();
+  });
+
+  it('keeps its header and the way back when the app cannot be loaded', async () => {
+    const api = fakeApi({ '/api/apps/a9': new ApiProblem(404, 'Not Found', 'No app with this id.') });
+    renderPortal(
+      <Routes>
+        <Route path="/applications/:id" element={<AppDetailRoute />} />
+      </Routes>,
+      { api, me: ADMIN, path: '/applications/a9' },
+    );
+    expect(await screen.findByText('No app with this id.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Application' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Applications' })).toHaveAttribute('href', '/applications');
+  });
+
+  it('names each value it offers to copy', async () => {
+    const app = sampleApp();
+    setup(app);
+    expect(await screen.findByLabelText('Issuer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Token endpoint')).toBeInTheDocument();
+  });
+
+  it('clears the last token check and says it is asking while a new one runs', async () => {
+    const m2m = sampleApp({ type: 'm2m', redirectUris: [] });
+    const { api, user } = setup(m2m, {
+      routes: { 'POST /api/apps/a1/token-check': { ok: false, error: 'Invalid client credentials' } },
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Request a token' }));
+    await user.type(screen.getByLabelText('Client secret'), 'wrong');
+    await user.click(screen.getByRole('button', { name: 'Request a token' }));
+    expect(await screen.findByText('Invalid client credentials')).toBeInTheDocument();
+    api.post.mockReturnValueOnce(new Promise(() => undefined));
+    await user.click(screen.getByRole('button', { name: 'Request a token' }));
+    expect(screen.queryByText('Invalid client credentials')).not.toBeInTheDocument();
+    expect(screen.getByText('Asking Keycloak for a token')).toBeInTheDocument();
   });
 
   it('shows the secret it was handed once', async () => {

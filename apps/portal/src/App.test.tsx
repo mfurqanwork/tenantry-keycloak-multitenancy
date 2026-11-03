@@ -41,6 +41,32 @@ describe('portal app', () => {
     expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
   });
 
+  it('sends a member who opens the register address to the list, never to an app called "new"', async () => {
+    const routes = api();
+    routes.get.mockImplementation((path: string) =>
+      Promise.resolve(
+        path === '/api/apps'
+          ? { apps: [] }
+          : path === '/api/me/workspaces'
+            ? WORKSPACES
+            : { name: 'Acme', primaryColor: null, logoUrl: null },
+      ),
+    );
+    renderPortal(<App />, { api: routes, me: makeMe('member', ['apps:read']), path: '/applications/new' });
+    expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
+    expect(routes.get).not.toHaveBeenCalledWith('/api/apps/new');
+  });
+
+  it('shows a Standard workspace the Enterprise sentence on any applications address', () => {
+    const me = makeMe('owner', ['apps:read', 'apps:register']);
+    renderPortal(<App />, {
+      api: api(),
+      me: { ...me, tenant: { ...me.tenant, tier: 'standard' } },
+      path: '/applications/a1',
+    });
+    expect(screen.getByText('Applications are available on Enterprise workspaces.')).toBeInTheDocument();
+  });
+
   it('hides Branding from admins', () => {
     renderPortal(<App />, { api: api(), me: makeMe('admin', ADMIN) });
     expect(screen.queryByRole('link', { name: 'Branding' })).not.toBeInTheDocument();

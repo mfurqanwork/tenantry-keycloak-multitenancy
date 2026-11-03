@@ -22,6 +22,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
   const me = useMe();
   const workspaces = useWorkspaces();
   const { branding, reload } = useBranding(me.tenant.slug);
+  const enterprise = me.tenant.tier === 'enterprise';
   const nav = PAGES.filter((page) => !page.needs || me.can(page.needs)).map(({ label, href }) => ({
     label,
     href,
@@ -44,14 +45,25 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
     >
       <Routes>
         <Route path="/" element={<DashboardRoute />} />
-        {me.can('apps:read') && <Route path="/applications" element={<ApplicationsRoute />} />}
-        {me.can('apps:register') && me.tenant.tier === 'enterprise' && (
-          <Route path="/applications/new" element={<RegisterAppRoute />} />
+        {/* Every applications address answers: a Standard workspace, or someone who may not register,
+            sees the list (or its Enterprise sentence) instead of an app called "new". */}
+        {me.can('apps:read') && (
+          <>
+            <Route path="/applications" element={<ApplicationsRoute />} />
+            <Route
+              path="/applications/new"
+              element={enterprise && me.can('apps:register') ? <RegisterAppRoute /> : <ApplicationsRoute />}
+            />
+            <Route
+              path="/applications/test-callback"
+              element={enterprise && me.can('apps:register') ? <TestCallbackRoute /> : <ApplicationsRoute />}
+            />
+            <Route
+              path="/applications/:id"
+              element={enterprise ? <AppDetailRoute /> : <ApplicationsRoute />}
+            />
+          </>
         )}
-        {me.can('apps:register') && (
-          <Route path="/applications/test-callback" element={<TestCallbackRoute />} />
-        )}
-        {me.can('apps:read') && <Route path="/applications/:id" element={<AppDetailRoute />} />}
         {me.can('tenant:settings') && (
           <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
         )}

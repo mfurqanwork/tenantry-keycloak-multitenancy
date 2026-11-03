@@ -15,7 +15,7 @@ import {
 import { confidential } from '@tenantry/auth';
 import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
 import { startTestLogin } from '@tenantry/oidc-client';
-import { DetailPage } from '@tenantry/ui';
+import { DetailPage, PageHeader } from '@tenantry/ui';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { StatTile } from '../dashboard/DashboardRoute.js';
@@ -50,6 +50,7 @@ export function AppDetailRoute() {
   if (!app.data) {
     return (
       <div className="tenantry-page">
+        <PageHeader breadcrumbs={crumbs} title="Application" />
         <div className="tenantry-page__body">
           <ApiErrorNotification error={app.error} />
           {!app.error && <InlineLoading description="Loading the app" />}
@@ -173,7 +174,7 @@ function ConnectionDetails({ app }: { app: AppView }) {
           <StructuredListRow key={label}>
             <StructuredListCell>{label}</StructuredListCell>
             <StructuredListCell>
-              <CodeSnippet type="single" feedback="Copied">
+              <CodeSnippet type="single" feedback="Copied" aria-label={label}>
                 {value}
               </CodeSnippet>
             </StructuredListCell>
@@ -217,7 +218,7 @@ function SetUp({ app }: { app: AppView }) {
       {snippets.map((s) => (
         <section key={s.label} aria-label={s.label}>
           <h2 className="tenantry-section__title">{s.label}</h2>
-          <CodeSnippet type="multi" feedback="Copied">
+          <CodeSnippet type="multi" feedback="Copied" aria-label={s.label}>
             {s.code}
           </CodeSnippet>
         </section>
@@ -287,6 +288,7 @@ function TokenCheck({ app, enabled }: { app: AppView; enabled: boolean }) {
           onClick={() => {
             setBusy(true);
             setError(null);
+            setResult(null);
             api
               .post<{ ok: boolean; error?: string }>(`/api/apps/${app.id}/token-check`, {
                 clientSecret: secret,
@@ -300,6 +302,7 @@ function TokenCheck({ app, enabled }: { app: AppView; enabled: boolean }) {
           Request a token
         </Button>
       </div>
+      {busy && <InlineLoading description="Asking Keycloak for a token" />}
       {result && (
         <InlineNotification
           kind={result.ok ? 'success' : 'error'}
