@@ -218,7 +218,7 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
           fromUrl: `${input.issuer}/.well-known/openid-configuration`,
         }),
       );
-      await call(
+      const res = await call(
         'createOidcIdentityProvider',
         'POST',
         '/identity-provider/instances',
@@ -238,6 +238,7 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
         },
         [409],
       );
+      return { created: res.status !== 409 };
     },
 
     // Keycloak 26.8 keeps the provider for a domain on the organization's domain entry.

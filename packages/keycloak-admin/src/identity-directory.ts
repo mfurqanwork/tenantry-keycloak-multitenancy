@@ -33,8 +33,10 @@ export interface IdentityDirectory {
   // Company login (ADR-0022), used by the operator scripts only.
   // Adds a verified email domain to the organization. Idempotent.
   addOrganizationDomain(orgId: string, domain: string): Promise<void>;
-  // An OIDC identity provider in the realm, configured from the issuer's discovery document. Idempotent.
-  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<void>;
+  // An OIDC identity provider in the realm, configured from the issuer's discovery document. When the
+  // alias exists already, nothing changes and `created` is false, so callers never undo what they did
+  // not make.
+  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<{ created: boolean }>;
   // Links the provider to the organization and makes it sign in that domain's people (Keycloak sends
   // them there by the email domain). The organization must already have the domain. Idempotent.
   linkIdentityProvider(orgId: string, alias: string, domain: string): Promise<void>;

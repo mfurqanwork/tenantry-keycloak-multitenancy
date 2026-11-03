@@ -161,12 +161,11 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     });
   }
 
-  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<void> {
+  createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<{ created: boolean }> {
     return this.run('createOidcIdentityProvider', () => {
-      if (!this.identityProviders.has(input.alias)) {
-        this.identityProviders.set(input.alias, { issuer: input.issuer, clientId: input.clientId });
-      }
-      return undefined;
+      if (this.identityProviders.has(input.alias)) return { created: false };
+      this.identityProviders.set(input.alias, { issuer: input.issuer, clientId: input.clientId });
+      return { created: true };
     });
   }
 

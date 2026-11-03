@@ -4,7 +4,7 @@ export { createDb, type Db } from './db.js';
 export { runMigrations } from './migrate.js';
 export * from './schema/index.js';
 export { tenantTx, type TenantTx } from './tenant-tx.js';
-export { DomainTakenError, OpenInviteExistsError, SlugTakenError } from './errors.js';
+export { DomainTakenError, isUniqueViolation, OpenInviteExistsError, SlugTakenError } from './errors.js';
 export { deleteLogo, getLogo, putLogo, type LogoRecord } from './repositories/branding.js';
 export {
   claimDomain,

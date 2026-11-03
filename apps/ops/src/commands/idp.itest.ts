@@ -66,6 +66,49 @@ describe('ops idp link', () => {
     expect(t.directory.domainsOf(globex.kcOrgId)).toEqual([]);
   });
 
+  it('refuses an alias that already exists in Keycloak for no workspace, and leaves that provider alone', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `manual-${acme.slug}`;
+    await t.directory.createOidcIdentityProvider({
+      alias,
+      issuer: 'http://elsewhere/realms/x',
+      clientId: 'someone-else',
+      clientSecret: 'theirs',
+    });
+    await verified(acme.slug, domain);
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(1);
+    expect(t.err.join(' ')).toMatch(/already exists in Keycloak/);
+    expect(t.directory.identityProviders.get(alias)).toEqual({
+      issuer: 'http://elsewhere/realms/x',
+      clientId: 'someone-else',
+    });
+    expect(t.directory.domainsOf(acme.kcOrgId)).toEqual([]);
+    expect(await tenantTx(t.db, acme.id, (tx) => listIdps(tx))).toEqual([]);
+  });
+
+  it('says so when the link is already in place', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `corp-${acme.slug}`;
+    await verified(acme.slug, domain);
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+    t.out.length = 0;
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+    expect(t.out.join(' ')).toMatch(/already linked/);
+  });
+
+  it('keeps a provider it did not create when a later step fails on a re-run', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `corp-${acme.slug}`;
+    await verified(acme.slug, domain);
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+    t.directory.failOn('linkIdentityProvider');
+    await expect(linkIdp(t.deps, company(alias, domain, acme.slug))).rejects.toThrow();
+    expect(t.directory.identityProviders.has(alias)).toBe(true);
+  });
+
   it('removes the identity provider again when linking fails', async () => {
     const acme = await t.seedTenant();
     const domain = `${acme.slug}.test`;

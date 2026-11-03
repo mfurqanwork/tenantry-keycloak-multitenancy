@@ -104,12 +104,15 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
       await s.dir.addOrganizationDomain(id, domain);
       await s.dir.addOrganizationDomain(id, domain);
       expect(await s.orgDomains(id)).toEqual([{ name: domain, identityProviderAlias: null }]);
-      await s.dir.createOidcIdentityProvider({
+      const provider = {
         alias,
         issuer: s.companyIssuer,
         clientId: 'tenantry-platform',
         clientSecret: 'contract-secret',
-      });
+      };
+      // The caller learns whether this call made the provider, so it never undoes one it did not make.
+      expect(await s.dir.createOidcIdentityProvider(provider)).toEqual({ created: true });
+      expect(await s.dir.createOidcIdentityProvider(provider)).toEqual({ created: false });
       await s.dir.linkIdentityProvider(id, alias, domain);
       await s.dir.linkIdentityProvider(id, alias, domain);
       expect(await s.orgDomains(id)).toEqual([{ name: domain, identityProviderAlias: alias }]);

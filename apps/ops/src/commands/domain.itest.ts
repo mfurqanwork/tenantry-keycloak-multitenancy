@@ -66,3 +66,22 @@ describe('ops domain verify', () => {
     expect(t.err.join('\n')).toMatch(/domain claim/);
   });
 });
+
+describe('domain names', () => {
+  it('treats a trailing dot and capitals as the same domain', async () => {
+    const acme = await t.seedTenant();
+    t.out.length = 0;
+    await claimDomain(t.deps, { tenant: acme.slug, domain: `${acme.slug}.test.` });
+    const first = token();
+    t.out.length = 0;
+    await claimDomain(t.deps, { tenant: acme.slug, domain: `${acme.slug.toUpperCase()}.TEST` });
+    expect(token()).toBe(first);
+  });
+
+  it('refuses something that is not a domain name', async () => {
+    const acme = await t.seedTenant();
+    t.err.length = 0;
+    expect(await claimDomain(t.deps, { tenant: acme.slug, domain: 'http://acme.test' })).toBe(1);
+    expect(t.err.join(' ')).toMatch(/not a domain name/);
+  });
+});
