@@ -1,0 +1,71 @@
+import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { createHttpRealmProvisioner } from '../src/realms/provisioner.js';
+import { createRealmMembers } from '../src/realms/realm-members.js';
+import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from '../src/realms/templates.js';
+import { runRealmMemberContract } from '../src/testing/member-contract.js';
+
+function env(key: string): string {
+  const file = new URL('../../../.env', import.meta.url);
+  let value = process.env[key];
+  if (!value && existsSync(file)) {
+    value = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'))?.[1]?.trim();
+  }
+  if (!value) throw new Error(`${key} is not set: copy .env.example to .env`);
+  return value;
+}
+
+const baseUrl = env('TENANTRY_AUTH_INTERNAL_URL');
+
+async function bootstrap(method: string, path: string, body?: unknown): Promise<Response> {
+  const { access_token } = (await (
+    await fetch(`${baseUrl}/realms/master/protocol/openid-connect/token`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'password',
+        client_id: 'admin-cli',
+        username: env('KC_BOOTSTRAP_ADMIN_USERNAME'),
+        password: env('KC_BOOTSTRAP_ADMIN_PASSWORD'),
+      }),
+    })
+  ).json()) as { access_token: string };
+  return fetch(`${baseUrl}/admin/realms${path}`, {
+    method,
+    headers: { authorization: `Bearer ${access_token}`, 'content-type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+runRealmMemberContract('Keycloak realm', async () => {
+  const realm = `ent-mc${randomBytes(3).toString('hex')}`;
+  const secret = randomBytes(32).toString('base64url');
+  const vars = {
+    displayName: 'Contract Co',
+    webOrigin: `http://${realm}.tenantry.localhost:8080`,
+    portalOrigin: `http://${realm}.portal.tenantry.localhost:8080`,
+    smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
+    allowHttpRedirects: true,
+  };
+  const provisioner = createHttpRealmProvisioner({
+    baseUrl,
+    clientId: env('KEYCLOAK_PROVISIONER_CLIENT_ID'),
+    clientSecret: env('KEYCLOAK_PROVISIONER_CLIENT_SECRET'),
+  });
+  await provisioner.ensureRealm(realm);
+  await provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
+  await provisioner.ensureClients(realm, loadProductClients(vars));
+  await provisioner.setBackendSecret(realm, secret);
+  return {
+    members: createRealmMembers({ baseUrl, realm, clientSecret: secret }),
+    async completeSignUp(kcUserId) {
+      await bootstrap('PUT', `/${realm}/users/${kcUserId}/reset-password`, {
+        type: 'password',
+        value: `Pw-${randomBytes(12).toString('base64url')}`,
+        temporary: false,
+      });
+    },
+    async cleanup() {
+      await bootstrap('DELETE', `/${realm}`);
+    },
+  };
+});

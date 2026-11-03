@@ -23,3 +23,5 @@ export {
   type RealmTemplate,
   type TemplateVars,
 } from './realms/templates.js';
+export { organizationMembers, type Member, type MemberDirectory } from './member-directory.js';
+export { createRealmMembers, type RealmMembersOptions } from './realms/realm-members.js';
