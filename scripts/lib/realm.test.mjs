@@ -151,8 +151,8 @@ test('the enterprise template enforces PKCE and safe redirect URIs on public cli
   const redirects = profile('tenantry-public-clients').executors.find(
     (e) => e.executor === 'secure-redirect-uris-enforcer',
   );
-  // http only where the environment allows it (local development); never a wildcard host.
-  assert.equal(redirects.configuration['allow-http-scheme'], '${ALLOW_HTTP_REDIRECTS}');
+  // https only; local http development leaves this executor out (ADR-0010). Never a wildcard host.
+  assert.equal(redirects.configuration['allow-http-scheme'], false);
   assert.equal(redirects.configuration['allow-wildcard-context-path'], true);
   assert.deepEqual(
     profile('tenantry-all-clients')
