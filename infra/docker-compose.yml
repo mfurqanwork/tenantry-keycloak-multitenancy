@@ -41,7 +41,9 @@ services:
       retries: 20
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1
+    build:
+      context: ..
+      dockerfile: infra/keycloak/Dockerfile
     command: ['start-dev', '--import-realm']
     ports:
       # For processes on the host (pnpm dev): Node cannot resolve *.localhost names.

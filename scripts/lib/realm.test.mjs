@@ -74,3 +74,7 @@ test('tenantry-isolation-tests gets tokens by password, like tenantry-web otherw
   assert.equal(audience(tests)?.config['included.custom.audience'], 'tenantry-api');
   assert.equal(groupMapper(tests)?.config['access.token.claim'], 'true');
 });
+
+test('the platform realm uses the tenantry login theme', () => {
+  assert.equal(realm.loginTheme, 'tenantry');
+});

@@ -1,6 +1,7 @@
 {
   "realm": "platform",
   "displayName": "Tenantry",
+  "loginTheme": "tenantry",
   "enabled": true,
   "organizationsEnabled": true,
   "accessTokenLifespan": 300,

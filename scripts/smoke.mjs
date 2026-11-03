@@ -21,6 +21,23 @@ const checks = [
     },
   ],
   [
+    'the login page comes from the tenantry theme',
+    async () => {
+      const port = process.env.TENANTRY_HTTP_PORT === '80' ? '' : `:${process.env.TENANTRY_HTTP_PORT}`;
+      const query = new URLSearchParams({
+        client_id: 'tenantry-web',
+        response_type: 'code',
+        scope: 'openid',
+        redirect_uri: `http://tenantry.localhost${port}/auth/callback`,
+        code_challenge: 'smoke-check-code-challenge-0123456789abcdefghij',
+        code_challenge_method: 'S256',
+      });
+      const res = await getVia(authHost, `/realms/platform/protocol/openid-connect/auth?${query}`);
+      // Keycloakify pages render in the browser; the HTML loads the theme's own bundle.
+      return (res.status === 200 && res.body.includes('/login/tenantry/')) || `status ${res.status}`;
+    },
+  ],
+  [
     'mailpit answers',
     async () => {
       const res = await getVia('mail.tenantry.localhost', '/');
