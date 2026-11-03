@@ -27,7 +27,8 @@ const originOf = (uri: string): string | null => {
 };
 
 function webOrigins(spec: AppClientSpec): string[] {
-  if (spec.type !== 'spa') return spec.type === 'web' ? spec.webOrigins : [];
+  if (spec.type === 'm2m') return [];
+  if (spec.type !== 'spa') return spec.webOrigins;
   if (spec.webOrigins.length > 0) return spec.webOrigins;
   return [...new Set(spec.redirectUris.map(originOf).filter((o): o is string => o !== null))];
 }

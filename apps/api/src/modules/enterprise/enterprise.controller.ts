@@ -3,8 +3,7 @@ import type { Response } from 'express';
 import { OperatorOnly } from '../../auth/decorators.js';
 import { ZodPipe } from '../../common/zod.pipe.js';
 import { provisionBody, upgradeBody, type ProvisionBody, type UpgradeBody } from './enterprise.schemas.js';
-import { appBody, type AppBody } from '../apps/apps.schemas.js';
-import { AppsService } from '../apps/apps.service.js';
+import { appBody, AppsService, type AppBody } from '../apps/apps.service.js';
 import { EnterpriseService } from './enterprise.service.js';
 
 const OPS = { userId: null, via: 'ops' } as const;

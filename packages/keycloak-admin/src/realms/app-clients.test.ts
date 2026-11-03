@@ -54,6 +54,14 @@ describe('customer app clients', () => {
     expect(given['webOrigins']).toEqual(['https://x.test']);
   });
 
+  it('native: keeps only the web origins it is given (the portal, for its test sign-in)', () => {
+    const c = appClientRepresentation(
+      'app-1',
+      spec({ type: 'native', redirectUris: ['com.initech.hr:/cb'], webOrigins: ['http://acme.portal.test'] }),
+    );
+    expect(c['webOrigins']).toEqual(['http://acme.portal.test']);
+  });
+
   it('native: public with PKCE and no web origins', () => {
     const c = appClientRepresentation(
       'app-1',

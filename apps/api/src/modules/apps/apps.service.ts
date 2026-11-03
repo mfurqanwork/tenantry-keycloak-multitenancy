@@ -28,6 +28,9 @@ import { DB, REALM_APPS } from '../../infrastructure/tokens.js';
 import { AuditService, type AuditAction } from '../audit/audit.service.js';
 import { appPatchBody, type AppBody } from './apps.schemas.js';
 
+// The register body, for the operator routes in the enterprise module (ADR-0017: through the service).
+export { appBody, type AppBody } from './apps.schemas.js';
+
 export interface AppConnection {
   issuer: string;
   discoveryUrl: string;
@@ -211,15 +214,19 @@ export class AppsService {
     return `${tenantOrigin(tenant.slug, this.config, 'portal')}/applications/test-callback`;
   }
 
-  // What Keycloak gets: the customer's URIs plus, for apps people sign in to, our test sign-in.
+  // What Keycloak gets: the customer's URIs plus, for apps people sign in to, our test sign-in. A public
+  // client's test trades its code in the browser, so the portal's origin must be allowed too (CORS); a
+  // single-page app with no origins of its own gets its redirect URIs' origins, the portal's among them.
   protected keycloakSpec(tenant: TenantRecord, app: AppClientSpec): AppClientSpec {
     const { name, type, redirectUris, postLogoutRedirectUris, webOrigins } = app;
+    const portal = tenantOrigin(tenant.slug, this.config, 'portal');
+    const browserTest = type === 'native' || (type === 'spa' && webOrigins.length > 0);
     return {
       name,
       type,
       redirectUris: userSignIn(type) ? [...redirectUris, this.testRedirectUri(tenant)] : redirectUris,
       postLogoutRedirectUris,
-      webOrigins,
+      webOrigins: browserTest ? [...webOrigins, portal] : webOrigins,
     };
   }
 

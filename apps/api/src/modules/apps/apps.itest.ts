@@ -8,6 +8,7 @@ interface AppView {
   name: string;
   type: string;
   redirectUris: string[];
+  webOrigins: string[];
   connection: Record<string, string | null>;
 }
 interface Registered {
@@ -68,6 +69,19 @@ describe('registering a customer app', () => {
       (c) => c.clientId === res.body.app.clientId,
     );
     expect(client?.spec.redirectUris).toEqual(['https://hr.initech.test/callback', testRedirect]);
+  });
+
+  it("lets the portal's test sign-in call Keycloak from the browser (web origins)", async () => {
+    const portal = `http://${ent.slug}.portal.tenantry.localhost`;
+    const specOf = (clientId: string) =>
+      [...t.realmApps(ent.realm).clients.values()].find((c) => c.clientId === clientId)?.spec;
+    const spa = await post({ ...web, type: 'spa', webOrigins: ['https://hr.initech.test'] });
+    expect(specOf(spa.body.app.clientId)?.webOrigins).toEqual(['https://hr.initech.test', portal]);
+    expect(spa.body.app.webOrigins).toEqual(['https://hr.initech.test']);
+    const native = await post({ name: 'Mobile', type: 'native', redirectUris: ['com.initech.hr:/cb'] });
+    expect(specOf(native.body.app.clientId)?.webOrigins).toEqual([portal]);
+    const plainSpa = await post({ ...web, type: 'spa' });
+    expect(specOf(plainSpa.body.app.clientId)?.webOrigins).toEqual([]);
   });
 
   it('gives a public app no secret, and shows the connection details', async () => {
