@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from './templates.js';
+import { loadProductClients, loadRealmTemplate, MAPPED_GROUPS, TEMPLATE_VERSION } from './templates.js';
 
 const vars = {
   displayName: 'Initech',
@@ -12,7 +12,7 @@ const vars = {
 describe('realm templates', () => {
   it('fills in the realm settings and keeps the policies typed', () => {
     const t = loadRealmTemplate(TEMPLATE_VERSION, vars);
-    expect(t.version).toBe(2);
+    expect(t.version).toBe(3);
     expect(t.realm['displayName']).toBe('Initech');
     expect(t.realm['smtpServer']).toEqual({
       host: 'mailpit',
@@ -51,6 +51,22 @@ describe('realm templates', () => {
     const profiles = JSON.stringify(loadRealmTemplate(TEMPLATE_VERSION, vars).clientProfiles);
     expect(profiles).not.toContain('secure-redirect-uris-enforcer');
     expect(profiles).toContain('"executor":"pkce-enforcer"');
+  });
+
+  it('v3 describes the second sign-in step on the built-in browser flow, optional by default', () => {
+    const t = loadRealmTemplate(TEMPLATE_VERSION, vars);
+    expect(t.twoStep).toBe('optional');
+    expect(t.secondStep).toEqual({
+      flow: 'browser',
+      subflow: 'Browser - Conditional 2FA',
+      conditions: ['Condition - user configured', 'Condition - credential'],
+      otp: 'OTP Form',
+      others: ['WebAuthn Authenticator', 'Recovery Authentication Code Form'],
+    });
+  });
+
+  it('maps the two directory groups to roles, never to owner', () => {
+    expect(MAPPED_GROUPS).toEqual({ 'tenantry-members': 'member', 'tenantry-admins': 'admin' });
   });
 
   it("puts the tenant's two origins on its app clients", () => {

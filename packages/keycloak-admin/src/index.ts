@@ -18,9 +18,11 @@ export { diffTemplate, type TemplateDiff } from './realms/template-diff.js';
 export {
   loadProductClients,
   loadRealmTemplate,
+  MAPPED_GROUPS,
   TEMPLATE_VERSION,
   type ClientTemplate,
   type RealmTemplate,
+  type SecondStep,
   type TemplateVars,
 } from './realms/templates.js';
 export { organizationMembers, type Member, type MemberDirectory } from './member-directory.js';

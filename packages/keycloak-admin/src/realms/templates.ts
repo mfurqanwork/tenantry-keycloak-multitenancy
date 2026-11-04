@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
+import type { TwoStep } from '@tenantry/auth';
 
 // The realm template version this code ships and provisions (ADR-0010). Upgrades move realms to it.
-export const TEMPLATE_VERSION = 2;
+export const TEMPLATE_VERSION = 3;
 
 export interface TemplateVars {
   displayName: string;
@@ -18,7 +19,22 @@ export interface RealmTemplate {
   realm: Record<string, unknown>;
   clientProfiles: { profiles: Record<string, unknown>[] };
   clientPolicies: { policies: Record<string, unknown>[] };
+  // The second sign-in step on Keycloak's built-in browser flow (template v3), and its state.
+  secondStep: SecondStep;
+  twoStep: TwoStep;
 }
+
+// Display names of the executions in the built-in browser flow, as Keycloak 26.8 calls them.
+export interface SecondStep {
+  flow: string;
+  subflow: string;
+  conditions: string[];
+  otp: string;
+  others: string[];
+}
+
+// Directory groups (SCIM) and the tenantry-api role each gives. Owners are never managed by SCIM.
+export const MAPPED_GROUPS = { 'tenantry-members': 'member', 'tenantry-admins': 'admin' } as const;
 
 export interface ClientTemplate {
   representation: Record<string, unknown>;
@@ -77,12 +93,16 @@ export function loadRealmTemplate(version: number, vars: TemplateVars): RealmTem
     realm: Record<string, unknown>;
     clientProfiles: RealmTemplate['clientProfiles'];
     clientPolicies: RealmTemplate['clientPolicies'];
+    secondStep: SecondStep;
+    twoStep: TwoStep;
   };
   return {
     version: t.templateVersion,
     realm: { ...t.realm, displayName: vars.displayName },
     clientProfiles: vars.allowHttpRedirects ? withoutRedirectEnforcer(t.clientProfiles) : t.clientProfiles,
     clientPolicies: t.clientPolicies,
+    secondStep: t.secondStep,
+    twoStep: t.twoStep,
   };
 }
 
