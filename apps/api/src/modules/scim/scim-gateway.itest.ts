@@ -18,9 +18,14 @@ const appPromise = createTestApp();
 afterAll(async () => (await appPromise).close());
 
 const ERROR = 'urn:ietf:params:scim:api:messages:2.0:Error';
-const scim = <T = unknown>(
-  o: { method?: string; path: string; body?: unknown; as?: string | null; host?: string; raw?: Buffer },
-) =>
+const scim = <T = unknown>(o: {
+  method?: string;
+  path: string;
+  body?: unknown;
+  as?: string | null;
+  host?: string;
+  raw?: Buffer;
+}) =>
   t.request<T>({
     host: o.host ?? ent.host,
     method: o.method ?? 'GET',

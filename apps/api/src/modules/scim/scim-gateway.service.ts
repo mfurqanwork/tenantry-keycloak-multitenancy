@@ -24,7 +24,9 @@ export function isDeactivation(body: unknown): boolean {
   if (!Array.isArray(b.Operations)) return false;
   return (b.Operations as { path?: unknown; value?: unknown }[]).some((op) => {
     if (typeof op.path === 'string') return op.path.toLowerCase() === 'active' && isFalse(op.value);
-    return typeof op.value === 'object' && op.value !== null && isFalse((op.value as { active?: unknown }).active);
+    return (
+      typeof op.value === 'object' && op.value !== null && isFalse((op.value as { active?: unknown }).active)
+    );
   });
 }
 

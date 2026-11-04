@@ -25,7 +25,8 @@ const generate = (expiresInDays: number, as = owner) =>
     token: as,
     body: { expiresInDays },
   });
-const stored = (token: string) => tenantTx(t.db, ent.id, (tx) => findScimTokenByHash(tx, hashScimToken(token)));
+const stored = (token: string) =>
+  tenantTx(t.db, ent.id, (tx) => findScimTokenByHash(tx, hashScimToken(token)));
 const view = (as = owner) => t.request<ScimView>({ host: ent.host, path: '/api/scim', token: as });
 
 beforeEach(async () => {

@@ -13,7 +13,13 @@ const appPromise = createTestApp();
 afterAll(async () => (await appPromise).close());
 
 const put = (body: unknown, as = owner, host = ent.host) =>
-  t.request<SecuritySettings & { detail?: string }>({ host, method: 'PUT', path: '/api/security', token: as, body });
+  t.request<SecuritySettings & { detail?: string }>({
+    host,
+    method: 'PUT',
+    path: '/api/security',
+    token: as,
+    body,
+  });
 const custom: SecuritySettings = {
   ...SECURITY_DEFAULTS,
   twoStep: 'required',
@@ -66,7 +72,9 @@ describe('security settings', () => {
   it('refuses an idle time longer than the session may last, applying nothing', async () => {
     const res = await put({ ...SECURITY_DEFAULTS, sessionIdleMinutes: 720, sessionMaxHours: 1 });
     expect(res.status).toBe(422);
-    expect(res.body.detail).toContain('sessionIdleMinutes: A session cannot sit idle longer than it may last.');
+    expect(res.body.detail).toContain(
+      'sessionIdleMinutes: A session cannot sit idle longer than it may last.',
+    );
     expect(t.provisioner.realms.get(ent.realm)?.twoStep ?? null).toBeNull();
   });
 

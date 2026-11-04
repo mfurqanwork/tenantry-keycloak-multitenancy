@@ -7,12 +7,7 @@ import {
   Stack,
   Tile,
 } from '@carbon/react';
-import {
-  SECURITY_BOUNDS,
-  securityProblems,
-  type SecuritySettings,
-  type TwoStep,
-} from '@tenantry/auth';
+import { SECURITY_BOUNDS, securityProblems, type SecuritySettings, type TwoStep } from '@tenantry/auth';
 import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
 import { SettingsPage } from '@tenantry/ui';
 import { useState } from 'react';
@@ -27,36 +22,38 @@ const TWO_STEP: { value: TwoStep; label: string }[] = [
   { value: 'required', label: 'Required: everyone sets up an authenticator app' },
 ];
 
-const GROUPS: { legend: string; fields: { key: NumberField; label: string; unit: string; help?: string }[] }[] =
-  [
-    {
-      legend: 'Passwords',
-      fields: [
-        { key: 'passwordMinLength', label: 'Minimum length', unit: 'characters' },
-        {
-          key: 'passwordHistory',
-          label: 'Passwords remembered',
-          unit: 'earlier passwords',
-          help: '0 lets people reuse any.',
-        },
-        { key: 'passwordExpiryDays', label: 'Expiry (days)', unit: 'days', help: '0 means never.' },
-      ],
-    },
-    {
-      legend: 'Sessions',
-      fields: [
-        { key: 'sessionIdleMinutes', label: 'Idle timeout (minutes)', unit: 'minutes' },
-        { key: 'sessionMaxHours', label: 'Longest session (hours)', unit: 'hours' },
-      ],
-    },
-    {
-      legend: 'Lockout',
-      fields: [
-        { key: 'lockoutFailures', label: 'Failed attempts before lockout', unit: 'attempts' },
-        { key: 'lockoutWaitMinutes', label: 'Wait after a lockout (minutes)', unit: 'minutes' },
-      ],
-    },
-  ];
+const GROUPS: {
+  legend: string;
+  fields: { key: NumberField; label: string; unit: string; help?: string }[];
+}[] = [
+  {
+    legend: 'Passwords',
+    fields: [
+      { key: 'passwordMinLength', label: 'Minimum length', unit: 'characters' },
+      {
+        key: 'passwordHistory',
+        label: 'Passwords remembered',
+        unit: 'earlier passwords',
+        help: '0 lets people reuse any.',
+      },
+      { key: 'passwordExpiryDays', label: 'Expiry (days)', unit: 'days', help: '0 means never.' },
+    ],
+  },
+  {
+    legend: 'Sessions',
+    fields: [
+      { key: 'sessionIdleMinutes', label: 'Idle timeout (minutes)', unit: 'minutes' },
+      { key: 'sessionMaxHours', label: 'Longest session (hours)', unit: 'hours' },
+    ],
+  },
+  {
+    legend: 'Lockout',
+    fields: [
+      { key: 'lockoutFailures', label: 'Failed attempts before lockout', unit: 'attempts' },
+      { key: 'lockoutWaitMinutes', label: 'Wait after a lockout (minutes)', unit: 'minutes' },
+    ],
+  },
+];
 
 const helper = (key: NumberField, unit: string, help?: string) => {
   const { min, max } = SECURITY_BOUNDS[key];
