@@ -1,5 +1,6 @@
 import {
   FormGroup,
+  InlineLoading,
   InlineNotification,
   NumberInput,
   RadioButton,
@@ -14,7 +15,7 @@ import { useState } from 'react';
 
 type NumberField = keyof typeof SECURITY_BOUNDS;
 
-export const ENTERPRISE_ONLY = 'Security settings and SCIM are available on Enterprise workspaces.';
+import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
 
 const TWO_STEP: { value: TwoStep; label: string }[] = [
   { value: 'off', label: 'Off: a password is enough' },
@@ -140,6 +141,7 @@ function EnterpriseSecurity() {
             subtitle="They apply to the next sign-in."
           />
         )}
+        {!value && !saved.error && <InlineLoading description="Loading security settings" />}
         {value && (
           <>
             <RadioButtonGroup

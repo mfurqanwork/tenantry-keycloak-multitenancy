@@ -1,7 +1,7 @@
 import {
   Button,
   CodeSnippet,
-  FormGroup,
+  InlineLoading,
   InlineNotification,
   Select,
   SelectItem,
@@ -12,7 +12,7 @@ import type { ScimDefaultRole } from '@tenantry/auth';
 import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
 import { SettingsPage, StatTile, TileGrid } from '@tenantry/ui';
 import { useState } from 'react';
-import { ENTERPRISE_ONLY } from '../security/SecurityRoute.js';
+import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
 
 interface ScimView {
   url: string;
@@ -81,6 +81,7 @@ function EnterpriseScim() {
   const [secret, setSecret] = useState<string | null>(null);
   const [dialog, setDialog] = useState<'replace' | 'revoke' | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const view = saved.data;
@@ -109,12 +110,17 @@ function EnterpriseScim() {
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Directory sync (SCIM)"
       dirty={view !== undefined && roleValue !== view.defaultRole}
-      saving={busy && role !== null}
+      saving={saving}
       onSave={() =>
         void run(async () => {
-          await api.put('/api/scim/default-role', { role: roleValue });
-          saved.reload();
-          setRole(null);
+          setSaving(true);
+          try {
+            await api.put('/api/scim/default-role', { role: roleValue });
+            saved.reload();
+            setRole(null);
+          } finally {
+            setSaving(false);
+          }
         })
       }
       onDiscard={() => {
@@ -137,14 +143,17 @@ function EnterpriseScim() {
             </CodeSnippet>
           </Stack>
         )}
+        {!view && !saved.error && <InlineLoading description="Loading directory sync" />}
         {view && (
           <>
-            <FormGroup legendText="SCIM address">
+            <section aria-label="SCIM address">
+              <h2 className="tenantry-section__title">SCIM address</h2>
               <CodeSnippet type="single" feedback="Copied" aria-label="SCIM address">
                 {view.url}
               </CodeSnippet>
-            </FormGroup>
-            <FormGroup legendText="Token">
+            </section>
+            <section aria-label="Token">
+              <h2 className="tenantry-section__title">Token</h2>
               {view.token ? (
                 <Stack gap={5}>
                   <TileGrid>
@@ -158,7 +167,7 @@ function EnterpriseScim() {
                       <StatTile key="created" label="Created" value={date(view.token.createdAt)} />,
                     ]}
                   </TileGrid>
-                  <div>
+                  <Stack orientation="horizontal" gap={3}>
                     <Button
                       kind="tertiary"
                       onClick={() => {
@@ -175,7 +184,7 @@ function EnterpriseScim() {
                     >
                       Revoke
                     </Button>
-                  </div>
+                  </Stack>
                 </Stack>
               ) : (
                 <Stack gap={5}>
@@ -188,7 +197,7 @@ function EnterpriseScim() {
                   </div>
                 </Stack>
               )}
-            </FormGroup>
+            </section>
             <Select
               id="scim-default-role"
               labelText="Role for people the directory creates"
