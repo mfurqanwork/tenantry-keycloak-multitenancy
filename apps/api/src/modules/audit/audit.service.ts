@@ -24,7 +24,14 @@ export type AuditAction =
   | 'app.secret_rotated'
   | 'app.deleted'
   | 'app.token_checked'
-  | 'security.updated';
+  | 'security.updated'
+  | 'scim.token_created'
+  | 'scim.token_revoked'
+  | 'scim.user_created'
+  | 'scim.user_updated'
+  | 'scim.user_deactivated'
+  | 'scim.group_changed'
+  | 'scim.role_grant_failed';
 
 export interface AuditView {
   id: string;

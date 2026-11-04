@@ -10,6 +10,7 @@ import {
   InMemoryRealmApps,
   InMemoryRealmMembers,
   InMemoryRealmProvisioner,
+  InMemoryRealmScim,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { organizationMembers, TEMPLATE_VERSION } from '@tenantry/keycloak-admin';
@@ -22,6 +23,7 @@ import {
   MEMBER_DIRECTORIES,
   REALM_APPS,
   REALM_PROVISIONER,
+  REALM_SCIM,
   SECRET_STORE,
 } from '../infrastructure/tokens.js';
 import { stackEnv } from './env.js';
@@ -78,6 +80,8 @@ export interface TestApp {
   realmMembers(realm: string): InMemoryRealmMembers;
   // The in-memory clients of an enterprise realm (customer apps).
   realmApps(realm: string): InMemoryRealmApps;
+  // The in-memory native SCIM of an enterprise realm, behind the gateway.
+  realmScim(realm: string): InMemoryRealmScim;
   // Enterprise provisioning against an in-memory Keycloak and secrets store.
   provisioner: InMemoryRealmProvisioner;
   secrets: SecretStore;
@@ -131,6 +135,15 @@ export async function createTestApp(
     }
     return found;
   };
+  const realmScims = new Map<string, InMemoryRealmScim>();
+  const scimOf = (realm: string) => {
+    let found = realmScims.get(realm);
+    if (!found) {
+      found = new InMemoryRealmScim(`http://auth.test/realms/${realm}`);
+      realmScims.set(realm, found);
+    }
+    return found;
+  };
   const memberDirectories: MemberDirectories = {
     forTenant: (tenant) =>
       Promise.resolve(
@@ -171,6 +184,8 @@ export async function createTestApp(
     .useValue(secrets)
     .overrideProvider(REALM_APPS)
     .useValue({ forTenant: (tenant: TenantRecord) => Promise.resolve(appsOf(tenant.realm ?? '')) })
+    .overrideProvider(REALM_SCIM)
+    .useValue({ forTenant: (tenant: TenantRecord) => scimOf(tenant.realm ?? '') })
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix('api');
@@ -268,6 +283,7 @@ export async function createTestApp(
       issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
     realmMembers: realmOf,
     realmApps: appsOf,
+    realmScim: scimOf,
     provisioner,
     secrets,
     newUser() {

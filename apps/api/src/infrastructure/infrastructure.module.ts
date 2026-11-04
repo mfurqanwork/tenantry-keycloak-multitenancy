@@ -4,6 +4,7 @@ import {
   createHttpIdentityDirectory,
   createHttpRealmProvisioner,
   createRealmApps,
+  createRealmScim,
   createRealmMembers,
   type IdentityDirectory,
 } from '@tenantry/keycloak-admin';
@@ -11,12 +12,14 @@ import { createFileSecretStore, type SecretStore } from '@tenantry/keycloak-admi
 import { APP_CONFIG, type AppConfig } from '../config/config.js';
 import { createMemberDirectories } from './member-directories.js';
 import { createRealmAppsFactory } from './realm-apps.js';
+import { createRealmScimFactory } from './realm-scim.js';
 import {
   DB,
   DB_POOL,
   IDENTITY_DIRECTORY,
   MEMBER_DIRECTORIES,
   REALM_APPS,
+  REALM_SCIM,
   REALM_PROVISIONER,
   SECRET_STORE,
 } from './tokens.js';
@@ -69,6 +72,21 @@ export class InfrastructureModule implements OnApplicationShutdown {
           inject: [SECRET_STORE],
         },
         {
+          provide: REALM_SCIM,
+          useFactory: (secrets: SecretStore) =>
+            createRealmScimFactory((realm, publicIssuer) =>
+              createRealmScim({
+                baseUrl: config.authInternalUrl,
+                publicIssuer,
+                realm,
+                provisionerClientId: config.provisionerClientId,
+                provisionerClientSecret: config.provisionerClientSecret,
+                secrets,
+              }),
+            ),
+          inject: [SECRET_STORE],
+        },
+        {
           provide: REALM_PROVISIONER,
           useFactory: () =>
             createHttpRealmProvisioner({
@@ -87,6 +105,7 @@ export class InfrastructureModule implements OnApplicationShutdown {
         MEMBER_DIRECTORIES,
         REALM_PROVISIONER,
         REALM_APPS,
+        REALM_SCIM,
       ],
     };
   }
