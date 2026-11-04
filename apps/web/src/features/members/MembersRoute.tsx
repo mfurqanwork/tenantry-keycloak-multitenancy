@@ -63,6 +63,7 @@ export function MembersRoute() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [actionError, setActionError] = useState<unknown>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [consoleBusy, setConsoleBusy] = useState<string | null>(null);
   const roles = assignableRoles(me.role);
   const manages = me.can('members:change-role') || me.can('members:remove');
   // Owners of an enterprise workspace let owners and admins into the realm's console.
@@ -70,8 +71,11 @@ export function MembersRoute() {
   const mayHaveConsole = (m: MemberRow | undefined) => m?.role === 'owner' || m?.role === 'admin';
   const setConsole = (member: MemberRow, on: boolean) => {
     setActionError(null);
+    setConsoleBusy(member.userId);
     const path = `/api/members/${encodeURIComponent(member.userId)}/console`;
-    void (on ? api.post(path, {}) : api.del(path)).then(list.reload, setActionError);
+    void (on ? api.post(path, {}) : api.del(path)).then(list.reload, setActionError).finally(() => {
+      setConsoleBusy(null);
+    });
   };
   const close = () => {
     setDialog(null);
@@ -151,6 +155,7 @@ export function MembersRoute() {
                                         itemText={
                                           member.console ? 'Take console access away' : 'Give console access'
                                         }
+                                        disabled={consoleBusy === member.userId}
                                         onClick={() => {
                                           setConsole(member, !member.console);
                                         }}

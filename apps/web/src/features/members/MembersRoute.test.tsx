@@ -131,6 +131,18 @@ describe('MembersRoute: console access (enterprise)', () => {
     });
   });
 
+  it('turns the item off while its change is on its way', async () => {
+    const never = new Promise<undefined>(() => undefined);
+    const api = fakeApi({ '/api/members': ENT, 'POST /api/members/u-me/console': never });
+    renderPage(<MembersRoute />, { api, me: enterpriseOwner() });
+    let user = await menu('me@example.com');
+    await user.click(await screen.findByText('Give console access'));
+    user = await menu('me@example.com');
+    const item = (await screen.findByText('Give console access')).closest('button');
+    expect(item).toBeDisabled();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
   it("offers nothing for a member's row", async () => {
     renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
     await menu('bob@example.com');
