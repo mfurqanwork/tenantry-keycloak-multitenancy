@@ -190,7 +190,9 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
     expect((await upgrade({ slug: s, dryRun: true })).body[0]?.differences).toEqual([]);
   });
 
-  it('reports a realm it cannot reach and still upgrades the others', async () => {
+  // It upgrades every enterprise tenant in the database, and a local test database keeps those of every
+  // earlier run: allow it the time that takes.
+  it('reports a realm it cannot reach and still upgrades the others', { timeout: 120_000 }, async () => {
     const broken = await t.seedEnterpriseTenant();
     const s = slug();
     await provision({ slug: s, name: 'Healthy', adminEmail: `owner@${s}.test` });

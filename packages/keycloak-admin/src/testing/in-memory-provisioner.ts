@@ -53,6 +53,12 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
     return found;
   }
 
+  deleteRealm(realm: string) {
+    return this.run('deleteRealm', () => {
+      this.realms.delete(realm);
+    });
+  }
+
   ensureRealm(realm: string) {
     return this.run('ensureRealm', () => {
       if (this.realms.has(realm)) return { created: false };

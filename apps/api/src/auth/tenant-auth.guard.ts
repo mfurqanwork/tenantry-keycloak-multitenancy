@@ -5,6 +5,7 @@ import { platformRepository, type Db } from '@tenantry/db';
 import type { JWTPayload } from 'jose';
 import { ForbiddenProblem, NotFoundProblem, UnauthorizedProblem } from '../common/http-errors.js';
 import { APP_CONFIG, type AppConfig } from '../config/config.js';
+import { isOpen } from '../common/migrating.js';
 import { DB } from '../infrastructure/tokens.js';
 import { OPERATOR_ONLY, PERMISSION, PUBLIC, SIGNED_IN_ONLY } from './decorators.js';
 import { slugFromHost } from './host.js';
@@ -58,7 +59,7 @@ export class TenantAuthGuard implements CanActivate {
     if (slug === null) throw new NotFoundProblem();
     const platform = platformRepository(this.db);
     const tenant = await platform.findTenantBySlug(slug);
-    if (!tenant || tenant.status !== 'active' || !tenant.issuer || !tenant.realm) {
+    if (!tenant || !isOpen(tenant.status) || !tenant.issuer || !tenant.realm) {
       throw new NotFoundProblem('No workspace at this address.');
     }
 

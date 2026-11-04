@@ -216,3 +216,14 @@ describe('realm provisioner (Keycloak)', () => {
     await expect(provisioner.ensureGroups(realm)).resolves.toBeUndefined();
   });
 });
+
+describe('deleteRealm', () => {
+  it('removes a realm it made, and treats a missing one as done', async () => {
+    const provisioner = testProvisioner();
+    const realm = `ent-del${String(Date.now()).slice(-6)}`;
+    await provisioner.ensureRealm(realm);
+    await provisioner.deleteRealm(realm);
+    await provisioner.deleteRealm(realm);
+    expect((await bootstrap('GET', `/${realm}`)).status).toBe(404);
+  });
+});

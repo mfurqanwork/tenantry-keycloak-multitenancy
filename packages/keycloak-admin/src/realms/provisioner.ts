@@ -17,6 +17,8 @@ import {
 // realms; Keycloak makes it admin of the realms it creates. Every step can run again without effect.
 export interface RealmProvisioner {
   ensureRealm(realm: string): Promise<{ created: boolean }>;
+  // An aborted move's half-built realm (ADR-0025); a missing realm counts as deleted.
+  deleteRealm(realm: string): Promise<void>;
   applyTemplate(realm: string, template: RealmTemplate): Promise<void>;
   ensureClients(realm: string, clients: ClientTemplate[]): Promise<void>;
   setBackendSecret(realm: string, secret: string): Promise<void>;
@@ -154,6 +156,10 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
   }
 
   return {
+    async deleteRealm(realm) {
+      await call('deleteRealm', 'DELETE', r(realm), undefined, [404]);
+    },
+
     async ensureRealm(realm) {
       const found = await call('ensureRealm', 'GET', r(realm), undefined, [404]);
       if (found.status !== 404) return { created: false };

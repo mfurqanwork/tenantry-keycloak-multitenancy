@@ -124,3 +124,17 @@ describe('tenant status and the cut-over', () => {
     expect(row?.tier).toBe('enterprise');
   });
 });
+
+describe('a second identity for the same person', () => {
+  it('points the new issuer at the same user, once, and refuses someone else', async () => {
+    const t = await seedTenant(conn.owner);
+    const platform = platformRepository(conn.db);
+    const subject = randomUUID();
+    const input = { userId: t.userId, issuer: 'http://auth.test/realms/ent-moved', subject };
+    expect(await platform.addIdentity(input)).toBe(true);
+    expect(await platform.addIdentity(input)).toBe(true);
+    expect((await platform.userIdsForSubjects(input.issuer, [subject])).get(subject)).toBe(t.userId);
+    const other = await seedTenant(conn.owner);
+    expect(await platform.addIdentity({ ...input, userId: other.userId })).toBe(false);
+  });
+});

@@ -4,7 +4,9 @@ import {
   createHttpIdentityDirectory,
   createHttpRealmProvisioner,
   createRealmApps,
+  createRealmBridge,
   createRealmConsole,
+  createRealmIdps,
   createRealmScim,
   createRealmMembers,
   type IdentityDirectory,
@@ -13,6 +15,8 @@ import { createFileSecretStore, type SecretStore } from '@tenantry/keycloak-admi
 import { APP_CONFIG, type AppConfig } from '../config/config.js';
 import { createMemberDirectories } from './member-directories.js';
 import { createRealmAppsFactory } from './realm-apps.js';
+import { byRealm } from './by-realm.js';
+import { backendSecretKey } from './per-realm.js';
 import { createRealmConsoleFactory } from './realm-console.js';
 import { createRealmScimFactory } from './realm-scim.js';
 import {
@@ -21,7 +25,10 @@ import {
   IDENTITY_DIRECTORY,
   MEMBER_DIRECTORIES,
   REALM_APPS,
+  REALM_BRIDGE,
   REALM_CONSOLE,
+  REALM_IDPS,
+  REALM_MEMBERS,
   REALM_SCIM,
   REALM_PROVISIONER,
   SECRET_STORE,
@@ -103,6 +110,42 @@ export class InfrastructureModule implements OnApplicationShutdown {
             ),
         },
         {
+          provide: REALM_MEMBERS,
+          useFactory: (secrets: SecretStore) =>
+            byRealm(async (realm) => {
+              const clientSecret = await secrets.get(backendSecretKey(realm));
+              if (!clientSecret) throw new Error(`no stored backend secret for ${realm}`);
+              return createRealmMembers({ baseUrl: config.authInternalUrl, realm, clientSecret });
+            }),
+          inject: [SECRET_STORE],
+        },
+        {
+          provide: REALM_BRIDGE,
+          useFactory: () =>
+            byRealm((realm) =>
+              createRealmBridge({
+                baseUrl: config.authInternalUrl,
+                publicAuthUrl: config.authUrl,
+                realm,
+                platformRealm: config.platformRealm,
+                provisionerClientId: config.provisionerClientId,
+                provisionerClientSecret: config.provisionerClientSecret,
+              }),
+            ),
+        },
+        {
+          provide: REALM_IDPS,
+          useFactory: () =>
+            byRealm((realm) =>
+              createRealmIdps({
+                baseUrl: config.authInternalUrl,
+                realm,
+                provisionerClientId: config.provisionerClientId,
+                provisionerClientSecret: config.provisionerClientSecret,
+              }),
+            ),
+        },
+        {
           provide: REALM_PROVISIONER,
           useFactory: () =>
             createHttpRealmProvisioner({
@@ -123,6 +166,9 @@ export class InfrastructureModule implements OnApplicationShutdown {
         REALM_APPS,
         REALM_SCIM,
         REALM_CONSOLE,
+        REALM_MEMBERS,
+        REALM_BRIDGE,
+        REALM_IDPS,
       ],
     };
   }

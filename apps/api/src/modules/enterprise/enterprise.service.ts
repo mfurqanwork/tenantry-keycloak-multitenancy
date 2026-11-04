@@ -113,19 +113,8 @@ export class EnterpriseService {
     const realm = `ent-${input.slug}`;
     const vars = this.vars(tenant);
 
-    // 2–4. The realm, its template, our product clients and the directory groups (Phase 5a).
-    await this.provisioner.ensureRealm(realm);
-    await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
-    await this.provisioner.ensureClients(realm, loadProductClients(vars));
-    await this.provisioner.ensureGroups(realm);
-    // 5. The backend secret: made once, kept in the secrets store, never in Postgres (ADR-0023).
-    const key = backendSecretKey(realm);
-    let secret = await this.secrets.get(key);
-    if (!secret) {
-      secret = randomBytes(32).toString('base64url');
-      await this.secrets.put(key, secret);
-    }
-    await this.provisioner.setBackendSecret(realm, secret);
+    // 2–5. The realm, its template, our product clients, the directory groups and the backend secret.
+    const secret = await this.buildRealm(tenant, realm);
     // 6. The first owner, with a set-password email.
     await this.provisioner.ensureFirstAdmin(realm, input.adminEmail, vars.webOrigin);
     const issuer = `${this.config.authUrl}/realms/${realm}`;
@@ -237,6 +226,25 @@ export class EnterpriseService {
       throw new NotFoundProblem('No enterprise workspace at this address.');
     }
     return tenant;
+  }
+
+  // A realm built like every enterprise realm: template, product clients, directory groups, and the
+  // backend secret (made once, kept in the secrets store, never in Postgres, ADR-0023). Every step can
+  // run again. Returns the backend secret.
+  async buildRealm(tenant: TenantRecord, realm: string): Promise<string> {
+    const vars = this.vars(tenant);
+    await this.provisioner.ensureRealm(realm);
+    await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
+    await this.provisioner.ensureClients(realm, loadProductClients(vars));
+    await this.provisioner.ensureGroups(realm);
+    const key = backendSecretKey(realm);
+    let secret = await this.secrets.get(key);
+    if (!secret) {
+      secret = randomBytes(32).toString('base64url');
+      await this.secrets.put(key, secret);
+    }
+    await this.provisioner.setBackendSecret(realm, secret);
+    return secret;
   }
 
   // The steps that must come after clients and groups: once admin permissions v2 are on, the provisioner

@@ -218,6 +218,17 @@ export function platformRepository(ex: Executor) {
       });
     },
 
+    // A second identity for a person we know already: a move to Enterprise (ADR-0007). Idempotent; false
+    // when the identity belongs to someone else.
+    async addIdentity(input: { userId: string; issuer: string; subject: string }): Promise<boolean> {
+      await ex.insert(identities).values(input).onConflictDoNothing();
+      const [row] = await ex
+        .select({ userId: identities.userId })
+        .from(identities)
+        .where(and(eq(identities.issuer, input.issuer), eq(identities.subject, input.subject)));
+      return row?.userId === input.userId;
+    },
+
     async userIdsForSubjects(issuer: string, subjects: string[]): Promise<Map<string, string>> {
       if (subjects.length === 0) return new Map();
       const rows = await ex

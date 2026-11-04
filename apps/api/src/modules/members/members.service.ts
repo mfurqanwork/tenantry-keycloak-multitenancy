@@ -24,6 +24,7 @@ import type { SignedInUser } from '../../auth/request-context.js';
 import { ConflictProblem, ForbiddenProblem, NotFoundProblem } from '../../common/http-errors.js';
 import type { MemberDirectories } from '../../infrastructure/member-directories.js';
 import { DB, MEMBER_DIRECTORIES } from '../../infrastructure/tokens.js';
+import { assertNotMigrating } from '../../common/migrating.js';
 import { AuditService } from '../audit/audit.service.js';
 import { ConsoleAccessService } from '../console/console.service.js';
 
@@ -85,6 +86,7 @@ export class MembersService {
     actor: SignedInUser,
     input: { email: string; role: Role },
   ): Promise<InviteRecord> {
+    assertNotMigrating(tenant);
     const members = await this.directories.forTenant(tenant);
     return this.underLock(ctx, async (tx) => {
       const listed = await members.listMembers();
@@ -120,6 +122,7 @@ export class MembersService {
     actor: SignedInUser,
     id: string,
   ): Promise<void> {
+    assertNotMigrating(tenant);
     const members = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
       const listed = await members.listMembers();
@@ -146,6 +149,7 @@ export class MembersService {
     userId: string,
     to: Role,
   ): Promise<void> {
+    assertNotMigrating(tenant);
     if (userId === ctx.userId) throw new ForbiddenProblem('You cannot change your own role.');
     const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
@@ -161,6 +165,7 @@ export class MembersService {
   }
 
   async remove(ctx: TenantContext, tenant: TenantRecord, actor: SignedInUser, userId: string): Promise<void> {
+    assertNotMigrating(tenant);
     const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
       const { target, members } = await this.findMember(tenant, directory, userId);
@@ -178,6 +183,7 @@ export class MembersService {
 
   // Anyone may leave a workspace they belong to, except its last owner.
   async leave(ctx: TenantContext, tenant: TenantRecord, actor: SignedInUser): Promise<void> {
+    assertNotMigrating(tenant);
     const directory = await this.directories.forTenant(tenant);
     await this.underLock(ctx, async (tx) => {
       const members = await directory.listMembers();
