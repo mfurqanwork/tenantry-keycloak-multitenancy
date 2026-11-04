@@ -59,6 +59,14 @@ runRealmMemberContract('in-memory realm', () => {
       return Promise.resolve();
     },
     emailsTo: (address: string) => Promise.resolve(members.emailsSent.filter((e) => e === address).length),
+    joinGroup: (kcUserId, group) => {
+      members.joinGroup(kcUserId, group);
+      return Promise.resolve();
+    },
+    leaveGroup: (kcUserId, group) => {
+      members.leaveGroup(kcUserId, group);
+      return Promise.resolve();
+    },
     cleanup: () => Promise.resolve(),
   });
 });
