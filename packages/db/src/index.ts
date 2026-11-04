@@ -57,6 +57,7 @@ export {
 export { createProject, getProject, listProjects, type ProjectRecord } from './repositories/projects.js';
 export { lockTenantMembership } from './repositories/membership-lock.js';
 export {
+  cutOver,
   getMigration,
   markAborted,
   markCutOver,

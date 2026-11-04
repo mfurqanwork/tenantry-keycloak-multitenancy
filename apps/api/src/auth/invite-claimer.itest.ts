@@ -1,4 +1,11 @@
-import { createInvite, listAudit, revokeInvite, tenantTx } from '@tenantry/db';
+import {
+  createInvite,
+  listAudit,
+  listOpenInvites,
+  platformRepository,
+  revokeInvite,
+  tenantTx,
+} from '@tenantry/db';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp, type TestTenant } from '../testing/test-app.js';
 import { Controller, Get } from '@nestjs/common';
@@ -133,5 +140,25 @@ describe('invite claimer (first request of an invited member)', () => {
     expect(res.status).toBe(403);
     const after = await tenantTx(t.db, acme.id, (tx) => listAudit(tx, { limit: 50 }));
     expect(after).toHaveLength(before.length);
+  });
+
+  it('claims no invite while the workspace is moving to Enterprise', async () => {
+    const moving = await t.seedTenant();
+    const dora = t.newUser();
+    await tenantTx(t.db, moving.id, (tx) =>
+      createInvite(tx, { email: dora.email, role: 'admin', invitedBy: inviterId }),
+    );
+    await t.join(moving, dora, null);
+    await platformRepository(t.db).setTenantStatus(moving.id, 'migrating');
+    await t.request({
+      host: moving.host,
+      path: '/api/probe/context',
+      token: await t.token(dora, { alias: moving.slug, groups: [] }),
+    });
+    expect(
+      (await t.directory.listMembers(moving.kcOrgId)).find((m) => m.kcUserId === dora.sub)?.group,
+    ).toBeNull();
+    const open = await tenantTx(t.db, moving.id, (tx) => listOpenInvites(tx));
+    expect(open.map((i) => i.email)).toEqual([dora.email]);
   });
 });

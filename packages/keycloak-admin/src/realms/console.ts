@@ -158,11 +158,19 @@ export function createRealmConsole(o: RealmConsoleOptions): RealmConsole {
 
     // The group is what the permissions name; the role carries the two query roles the console needs to
     // start. Both are ones the provisioner may still grant with admin permissions on (probed, ADR-0026).
+    // The role first, the group (what the permissions name) last; a failed group change takes the role back.
     async grant(kcUserId) {
       const id = encodeURIComponent(kcUserId);
-      await call('grantConsole', 'PUT', `/users/${id}/groups/${await consoleGroupId('grantConsole')}`);
       const role = await json<Named>(await call('grantConsole', 'GET', `/roles/${CONSOLE_ROLE}`));
       await call('grantConsole', 'POST', `/users/${id}/role-mappings/realm`, [role]);
+      try {
+        await call('grantConsole', 'PUT', `/users/${id}/groups/${await consoleGroupId('grantConsole')}`);
+      } catch (err) {
+        await call('grantConsole', 'DELETE', `/users/${id}/role-mappings/realm`, [role], [404]).catch(
+          () => undefined,
+        );
+        throw err;
+      }
     },
 
     async revoke(kcUserId) {

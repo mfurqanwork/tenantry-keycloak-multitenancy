@@ -6,6 +6,7 @@ import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import type { RealmScimFactory } from '../../infrastructure/realm-scim.js';
 import { DB, REALM_SCIM } from '../../infrastructure/tokens.js';
 import { AuditService, type AuditAction } from '../audit/audit.service.js';
+import { ConsoleAccessService } from '../console/console.service.js';
 import { ScimError } from './scim-errors.js';
 
 // The scheme is case-insensitive (RFC 7235); anything but Bearer is no token at all.
@@ -83,6 +84,7 @@ export class ScimGatewayService {
     @Inject(REALM_SCIM) private readonly realms: RealmScimFactory,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly audit: AuditService,
+    private readonly consoleAccess: ConsoleAccessService,
   ) {}
 
   async handle(tenant: TenantRecord, call: GatewayCall): Promise<ScimResponse> {
@@ -101,7 +103,11 @@ export class ScimGatewayService {
       }
       const { segments, ...rest } = call;
       const res = await scim.forward({ ...rest, path: scimPathOf(segments) });
-      if (res.status < 300) await this.after(tenant, call, kind, id, res);
+      if (res.status < 300) {
+        await this.after(tenant, call, kind, id, res);
+        // Roles may have changed outside Tenantry: console access follows them (ADR-0026).
+        if (call.method !== 'GET' && id !== '.search') await this.consoleAccess.reconcile(tenant);
+      }
       return this.rewrite(tenant, res);
     } catch (err) {
       if (err instanceof DirectoryError) {

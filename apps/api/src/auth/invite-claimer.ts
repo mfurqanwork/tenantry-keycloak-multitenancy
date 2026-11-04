@@ -33,8 +33,9 @@ export class InviteClaimer {
     const { tenant, userId, kcUserId, email, emailVerified } = input;
     if (!tenant.kcOrgId) return null;
     const orgId = tenant.kcOrgId;
-    // Only a verified address may claim what was sent to that address.
-    const claimable = emailVerified ? email : null;
+    // Only a verified address may claim what was sent to that address. While the workspace moves to
+    // Enterprise nobody joins: the move would leave them behind (ADR-0025).
+    const claimable = emailVerified && tenant.status !== 'migrating' ? email : null;
 
     return tenantTx(this.db, tenant.id, async (tx) => {
       const invite = claimable ? await findOpenInviteByEmail(tx, claimable, { lock: true }) : null;

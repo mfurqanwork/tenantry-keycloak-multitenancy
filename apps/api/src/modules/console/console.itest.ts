@@ -147,4 +147,44 @@ describe('console access', () => {
     expect((await grant(owner, admin)).status).toBeGreaterThanOrEqual(400);
     expect(await tenantTx(t.db, ent.id, (tx) => listConsole(tx))).toEqual([]);
   });
+
+  it('a demotion takes console access away in Keycloak even when our row is missing', async () => {
+    const admin = await realmMember('admin');
+    fake().members.add(admin.user.sub);
+    await call(owner, 'PATCH', `/api/members/${admin.userId}`, { role: 'member' });
+    expect(fake().members.has(admin.user.sub)).toBe(false);
+  });
+
+  it('a demotion outside Tenantry ends console access: no console URL, and gone at the next directory change', async () => {
+    const admin = await realmMember('admin');
+    await grant(owner, admin);
+    // The directory (or the console itself) moved them out of the admins.
+    await t.realmMembers(ent.realm).setRole(admin.user.sub, 'member');
+    const me = await t.request<{ consoleUrl?: string }>({
+      host: ent.host,
+      path: '/api/me',
+      token: admin.token,
+    });
+    expect(me.body.consoleUrl).toBeUndefined();
+    const scimToken = (
+      await t.request<{ token: string }>({
+        host: ent.host,
+        method: 'POST',
+        path: '/api/scim/token',
+        token: owner.token,
+        body: { expiresInDays: 90 },
+      })
+    ).body.token;
+    const scim = t.realmScim(ent.realm);
+    const group = scim.groupNamed('tenantry-members');
+    await t.request({
+      host: ent.host,
+      method: 'PATCH',
+      path: `/scim/v2/Groups/${group}`,
+      token: scimToken,
+      body: { schemas: ['urn:ietf:params:scim:api:messages:2.0:PatchOp'], Operations: [] },
+    });
+    expect(fake().members.has(admin.user.sub)).toBe(false);
+    expect(await tenantTx(t.db, ent.id, (tx) => listConsole(tx))).toEqual([]);
+  });
 });

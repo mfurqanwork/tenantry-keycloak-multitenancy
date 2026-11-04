@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { grantConsole, listConsole, revokeConsole } from '../src/repositories/console-access.js';
 import {
+  cutOver,
   getMigration,
   markAborted,
   markCutOver,
@@ -136,5 +137,28 @@ describe('a second identity for the same person', () => {
     expect((await platform.userIdsForSubjects(input.issuer, [subject])).get(subject)).toBe(t.userId);
     const other = await seedTenant(conn.owner);
     expect(await platform.addIdentity({ ...input, userId: other.userId })).toBe(false);
+  });
+});
+
+describe('the cut-over', () => {
+  it('is all or nothing: a failure after it, in the same transaction, leaves the tenant Standard', async () => {
+    const t = await seedTenant(conn.owner);
+    const platform = platformRepository(conn.db);
+    const before = await platform.findTenantById(t.tenantId);
+    await tenantTx(conn.db, t.tenantId, (tx) => startMigration(tx, { fromOrgId: 'org-x', realm: 'ent-x' }));
+    const failed = await failure(
+      tenantTx(conn.db, t.tenantId, async (tx) => {
+        await cutOver(tx, t.tenantId, { realm: 'ent-x', issuer: 'http://auth.test/realms/ent-x', templateVersion: 4 });
+        throw new Error('the audit entry could not be written');
+      }),
+    );
+    expect(failed).toMatch(/audit entry/);
+    expect(await platform.findTenantById(t.tenantId)).toEqual(before);
+    expect((await tenantTx(conn.db, t.tenantId, (tx) => getMigration(tx)))?.cutOverAt).toBeNull();
+    await tenantTx(conn.db, t.tenantId, (tx) =>
+      cutOver(tx, t.tenantId, { realm: 'ent-x', issuer: 'http://auth.test/realms/ent-x', templateVersion: 4 }),
+    );
+    expect(await platform.findTenantById(t.tenantId)).toMatchObject({ tier: 'enterprise', realm: 'ent-x', kcOrgId: null });
+    expect((await tenantTx(conn.db, t.tenantId, (tx) => getMigration(tx)))?.cutOverAt).toBeInstanceOf(Date);
   });
 });

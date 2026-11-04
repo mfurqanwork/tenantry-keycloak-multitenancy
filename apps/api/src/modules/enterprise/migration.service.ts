@@ -2,12 +2,12 @@ import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { roleForGroupPath, type Role } from '@tenantry/auth';
 import {
+  cutOver,
   getMigration,
   insertAudit,
   listIdps,
   listOpenInvites,
   markAborted,
-  markCutOver,
   markFinished,
   platformRepository,
   startMigration,
@@ -109,7 +109,14 @@ export class MigrationService {
     if (migration.finishedAt) return;
     await this.bridges.forRealm(migration.realm).remove();
     await this.directory.deleteBridgeClient(tenant.slug);
-    await this.directory.deleteOrganization(migration.fromOrgId);
+    // Keycloak deletes the accounts an organization's company login made when it deletes the
+    // organization; keep it while any of its people still belongs to another workspace.
+    let organizationKept = false;
+    for (const m of await this.directory.listMembers(migration.fromOrgId)) {
+      const orgs = await this.directory.listUserOrganizations(m.kcUserId);
+      if (orgs.some((o) => o.id !== migration.fromOrgId)) organizationKept = true;
+    }
+    if (!organizationKept) await this.directory.deleteOrganization(migration.fromOrgId);
     for (const app of ['web', 'portal'] as const) {
       await this.directory.removeTenantOrigin(tenantOrigin(tenant.slug, this.config, app), app);
     }
@@ -119,7 +126,7 @@ export class MigrationService {
         ...OPS,
         action: 'tenant.migration_finished',
         target: tenant.id,
-        metadata: { ...OPS.metadata },
+        metadata: { ...OPS.metadata, organizationKept },
       });
     });
   }
@@ -246,7 +253,9 @@ export class MigrationService {
     const members = await this.realmMembers.forRealm(realm);
     const owners: string[] = [];
     let people = 0;
+    const seen = new Set<string>();
     for (const m of await this.directory.listMembers(orgId)) {
+      seen.add(m.kcUserId);
       const user = await this.directory.getUser(m.kcUserId);
       const email = user?.email ?? m.email;
       if (!email) continue;
@@ -281,9 +290,13 @@ export class MigrationService {
     for (const invite of invites) await members.invite(invite.email, invite.role);
 
     // 7. The cut-over: from here the guard accepts only the new realm's tokens for this workspace.
-    await platform.cutOverToEnterprise(tenant.id, { realm, issuer, templateVersion: TEMPLATE_VERSION });
+    // People who joined while it ran would be left behind: stop, and let a rerun take them too.
+    if ((await this.directory.listMembers(orgId)).some((m) => !seen.has(m.kcUserId))) {
+      throw new ConflictProblem('People joined the workspace during the move. Run it again.');
+    }
+    // One transaction: the new issuer, the tier, the stamp and the audit entry, or none of them.
     await tenantTx(this.db, tenant.id, async (tx) => {
-      await markCutOver(tx);
+      await cutOver(tx, tenant.id, { realm, issuer, templateVersion: TEMPLATE_VERSION });
       await insertAudit(tx, {
         ...OPS,
         action: 'tenant.migrated',

@@ -273,4 +273,34 @@ describe('moving a Standard workspace to Enterprise', () => {
     });
     expect([401, 403]).toContain(person.status);
   });
+
+  it('finish keeps the organization when one of its people is in another workspace', async () => {
+    const other = await t.seedTenant();
+    await t.join(other, owner.user, 'members');
+    await migrate();
+    expect((await finish()).status).toBe(204);
+    expect(t.directory.orgs.has(ws.kcOrgId)).toBe(true);
+    expect(t.realmBridge(realm()).present).toBe(false);
+    const entry = (await audit()).find((e) => e.action === 'tenant.migration_finished');
+    expect(entry?.metadata).toMatchObject({ organizationKept: true });
+  });
+
+  it('stops before the cut-over when someone joined during the move, and a rerun takes them', async () => {
+    const late = t.newUser();
+    const listMembers = t.directory.listMembers.bind(t.directory);
+    let calls = 0;
+    t.directory.listMembers = async (orgId) => {
+      calls++;
+      if (calls === 3) await t.join(ws, late, 'members');
+      return listMembers(orgId);
+    };
+    const first = await migrate();
+    t.directory.listMembers = listMembers;
+    expect(first.status).toBe(409);
+    expect(first.body.detail).toBe('People joined the workspace during the move. Run it again.');
+    expect((await tenant())?.tier).toBe('standard');
+    const again = await migrate();
+    expect(again.body.cutOver).toBe(true);
+    expect(moved(late.email)?.[1].role).toBe('member');
+  });
 });

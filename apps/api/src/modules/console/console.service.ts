@@ -65,9 +65,13 @@ export class ConsoleAccessService {
   ): Promise<void> {
     if (tenant.tier !== 'enterprise' || !tenant.realm) return;
     const keeps = change.to !== null && MAY_HAVE.includes(change.to);
-    if (!keeps && change.userId && (await revokeConsole(tx, change.userId))) {
+    if (!keeps) {
+      // Keycloak too, row or not: a grant that failed half-way may have left them in the group.
+      const had = change.userId ? await revokeConsole(tx, change.userId) : false;
       await this.consoles.forRealm(tenant.realm).revoke(change.kcUserId);
-      await this.audit.record(tx, actor, 'console.revoked', change.userId, { reason: 'role' });
+      if (had && change.userId) {
+        await this.audit.record(tx, actor, 'console.revoked', change.userId, { reason: 'role' });
+      }
     }
     await this.syncOwners(tenant);
   }
@@ -80,6 +84,31 @@ export class ConsoleAccessService {
     await this.consoles.forRealm(tenant.realm).protectOwners(owners);
   }
 
+  // After a change Tenantry did not make (the directory over SCIM): whoever has console access but is no
+  // longer an owner or admin loses it, and the owners are rewritten.
+  async reconcile(tenant: TenantRecord): Promise<void> {
+    if (tenant.tier !== 'enterprise' || !tenant.realm || !tenant.issuer) return;
+    const realm = tenant.realm;
+    const issuer = tenant.issuer;
+    const members = await (await this.directories.forTenant(tenant)).listMembers();
+    const roleOf = new Map(members.map((m) => [m.kcUserId, m.role]));
+    await tenantTx(this.db, tenant.id, async (tx) => {
+      await lockTenantMembership(tx);
+      for (const userId of await listConsole(tx)) {
+        const subject = await platformRepository(this.db).subjectForUser(userId, issuer);
+        const role = subject ? roleOf.get(subject) : null;
+        if (role && MAY_HAVE.includes(role)) continue;
+        await revokeConsole(tx, userId);
+        if (subject) await this.consoles.forRealm(realm).revoke(subject);
+        await this.audit.record(tx, { userId: null }, 'console.revoked', userId, {
+          reason: 'role',
+          via: 'directory',
+        });
+      }
+    });
+    await this.syncOwners(tenant);
+  }
+
   // Our user ids that have console access in this tenant (enterprise only; empty otherwise).
   async holders(tenant: TenantRecord): Promise<Set<string>> {
     if (tenant.tier !== 'enterprise') return new Set();
@@ -89,6 +118,9 @@ export class ConsoleAccessService {
   async consoleUrlFor(tenant: TenantRecord, userId: string): Promise<string | undefined> {
     if (tenant.tier !== 'enterprise' || !tenant.realm) return undefined;
     if (!(await this.holders(tenant)).has(userId)) return undefined;
+    // The live role, not the row alone: a change outside Tenantry may have made them a member.
+    const target = await this.member(tenant, userId).catch(() => null);
+    if (!target?.role || !MAY_HAVE.includes(target.role)) return undefined;
     return this.consoles.forRealm(tenant.realm).consoleUrl();
   }
 

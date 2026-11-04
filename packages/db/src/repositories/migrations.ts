@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { tenantMigrations } from '../schema/index.js';
 import type { TenantTx } from '../tenant-tx.js';
+import { platformRepository } from './platform.js';
 
 export interface MigrationRecord {
   fromOrgId: string;
@@ -67,4 +68,15 @@ export async function markAborted(tx: TenantTx): Promise<void> {
   await tx
     .update(tenantMigrations)
     .set({ abortedAt: sql`coalesce(${tenantMigrations.abortedAt}, clock_timestamp())` });
+}
+
+// The cut-over of a move to Enterprise, all or nothing (ADR-0025): the tenant's own realm becomes its only
+// issuer, and the move is stamped. Run it in the transaction that also writes its audit entry.
+export async function cutOver(
+  tx: TenantTx,
+  tenantId: string,
+  identity: { realm: string; issuer: string; templateVersion: number },
+): Promise<void> {
+  await platformRepository(tx).cutOverToEnterprise(tenantId, identity);
+  await markCutOver(tx);
 }
