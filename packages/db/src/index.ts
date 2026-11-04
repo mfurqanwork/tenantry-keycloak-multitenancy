@@ -56,3 +56,12 @@ export {
 } from './repositories/platform.js';
 export { createProject, getProject, listProjects, type ProjectRecord } from './repositories/projects.js';
 export { lockTenantMembership } from './repositories/membership-lock.js';
+export {
+  getMigration,
+  markAborted,
+  markCutOver,
+  markFinished,
+  startMigration,
+  type MigrationRecord,
+} from './repositories/migrations.js';
+export { grantConsole, listConsole, revokeConsole } from './repositories/console-access.js';

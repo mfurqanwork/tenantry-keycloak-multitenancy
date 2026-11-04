@@ -157,6 +157,19 @@ export function platformRepository(ex: Executor) {
       await ex.update(tenantIdentity).set({ templateVersion }).where(eq(tenantIdentity.tenantId, id));
     },
 
+    async setTenantStatus(id: string, status: TenantStatus): Promise<void> {
+      await ex.update(tenants).set({ status }).where(eq(tenants.id, id));
+    },
+
+    // The cut-over of a move to Enterprise (ADR-0025): the tenant's own realm is now the only issuer.
+    async cutOverToEnterprise(
+      id: string,
+      identity: { realm: string; issuer: string; templateVersion: number },
+    ): Promise<void> {
+      await registerIdentity(id, { ...identity, kcOrgId: null });
+      await ex.update(tenants).set({ tier: 'enterprise', status: 'active' }).where(eq(tenants.id, id));
+    },
+
     async markTenantFailed(id: string): Promise<void> {
       await ex.update(tenants).set({ status: 'failed' }).where(eq(tenants.id, id));
     },
