@@ -31,6 +31,8 @@ export interface RealmScim {
   disable(): Promise<void>;
   forward(req: ScimRequest): Promise<ScimResponse>;
   grantRole(kcUserId: string, role: 'member'): Promise<void>;
+  // Owners are never managed by SCIM (ADR-0024): the gateway asks before any write to a person.
+  isOwner(kcUserId: string): Promise<boolean>;
   isMappedGroup(groupId: string): Promise<boolean>;
   emptyGroup(groupId: string): Promise<void>;
 }
@@ -202,6 +204,19 @@ export function createRealmScim(o: RealmScimOptions): RealmScim {
         `/users/${encodeURIComponent(kcUserId)}/role-mappings/clients/${api ?? ''}`,
         [rep],
       );
+    },
+
+    async isOwner(kcUserId) {
+      const api = await clientUuid('isOwner', API_CLIENT);
+      const res = await call(
+        'isOwner',
+        'GET',
+        `/users/${encodeURIComponent(kcUserId)}/role-mappings/clients/${api ?? ''}/composite`,
+        undefined,
+        [404],
+      );
+      if (res.status === 404) return false;
+      return (await json<{ name: string }[]>(res)).some((r) => r.name === 'owner');
     },
 
     async isMappedGroup(groupId) {

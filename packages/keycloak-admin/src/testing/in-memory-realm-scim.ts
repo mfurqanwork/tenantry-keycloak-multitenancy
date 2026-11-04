@@ -6,7 +6,7 @@ import { MAPPED_GROUPS } from '../realms/templates.js';
 interface FakePerson {
   userName: string;
   active: boolean;
-  role: 'member' | null;
+  role: 'member' | 'owner' | null;
 }
 
 const ERROR = 'urn:ietf:params:scim:api:messages:2.0:Error';
@@ -63,7 +63,7 @@ export class InMemoryRealmScim implements RealmScim {
   private handle(req: ScimRequest): ScimResponse {
     const [kind, id] = req.path.split('/');
     const body = req.body?.length ? (JSON.parse(req.body.toString('utf8')) as Record<string, unknown>) : {};
-    if (kind === 'Users' && !id && req.method === 'GET') {
+    if (kind === 'Users' && ((!id && req.method === 'GET') || (id === '.search' && req.method === 'POST'))) {
       const all = [...this.people].map(([pid, p]) => ({ id: pid, userName: p.userName, active: p.active }));
       return reply(200, {
         schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
@@ -134,6 +134,10 @@ export class InMemoryRealmScim implements RealmScim {
     if (!person) return Promise.reject(new DirectoryError('grantRole', 404, kcUserId));
     person.role = role;
     return Promise.resolve();
+  }
+
+  isOwner(kcUserId: string): Promise<boolean> {
+    return Promise.resolve(this.people.get(kcUserId)?.role === 'owner');
   }
 
   isMappedGroup(groupId: string): Promise<boolean> {

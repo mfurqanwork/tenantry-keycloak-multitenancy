@@ -205,4 +205,50 @@ describe('SCIM gateway: what it passes on', () => {
     expect(res.status).toBe(409);
     expect(res.body.detail).toBe('injected');
   });
+
+  it('refuses a path that climbs out of SCIM, literal or encoded, without forwarding it', async () => {
+    for (const path of [
+      '%2e%2e/%2e%2e/%2e%2e/%2e%2e/admin/realms/x/users',
+      'Users/%2E%2E/%2E%2E/x',
+      'Bulk',
+    ]) {
+      const res = await scim<ScimError>({ path });
+      expect(res.status).toBe(404);
+      expect(res.body.schemas).toEqual([ERROR]);
+    }
+    expect(t.realmScim(ent.realm).calls).toHaveLength(0);
+  });
+
+  it('empties a mapped group named by an encoded id', async () => {
+    const fake = t.realmScim(ent.realm);
+    const admins = fake.groupNamed('tenantry-admins');
+    fake.groups.get(admins)?.members.add('someone');
+    const res = await scim({ method: 'DELETE', path: `Groups/${admins.replace('-', '%2D')}` });
+    expect(res.status).toBe(204);
+    expect(fake.groups.has(admins)).toBe(true);
+    expect(fake.groups.get(admins)?.members.size).toBe(0);
+  });
+
+  it('never changes an owner', async () => {
+    const { body } = await createUser();
+    const fake = t.realmScim(ent.realm);
+    const person = fake.people.get(body.id);
+    if (person) person.role = 'owner';
+    for (const method of ['PUT', 'PATCH', 'DELETE']) {
+      const res = await scim<ScimError>({
+        method,
+        path: `Users/${body.id}`,
+        ...(method === 'DELETE' ? {} : { body: { active: false } }),
+      });
+      expect(res.status).toBe(403);
+      expect(res.body.schemas).toEqual([ERROR]);
+    }
+    expect(fake.people.get(body.id)).toMatchObject({ active: true, role: 'owner' });
+  });
+
+  it('treats a search as a read: no person audited, no role granted', async () => {
+    await scim({ method: 'POST', path: 'Users/.search', body: { filter: 'userName eq "x"' } });
+    const entries = await audit();
+    expect(entries.some((e) => e.target === '.search')).toBe(false);
+  });
 });

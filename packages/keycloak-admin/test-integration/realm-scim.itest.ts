@@ -41,6 +41,14 @@ runRealmScimContract('Keycloak realm', async () => {
     async groupMembers(name) {
       return (await get<{ id: string }[]>(`/groups/${await groupId(name)}/members`)).map((m) => m.id);
     },
+    async makeOwner(kcUserId) {
+      const [api] = await get<{ id: string }[]>('/clients?clientId=tenantry-api');
+      const owner = await get<unknown>(`/clients/${api?.id ?? ''}/roles/owner`);
+      await bootstrap('POST', `/${realm}/users/${kcUserId}/role-mappings/clients/${api?.id ?? ''}`, [owner]);
+    },
+    async isEnabled(kcUserId) {
+      return (await get<{ enabled: boolean }>(`/users/${kcUserId}`)).enabled;
+    },
     async cleanup() {
       await bootstrap('DELETE', `/${realm}`);
     },

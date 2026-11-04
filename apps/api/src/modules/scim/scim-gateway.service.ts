@@ -35,9 +35,35 @@ export function rewriteLocation(text: string, from: string, to: string): string 
   return text.split(from).join(to);
 }
 
+const RESOURCES = new Set(['Users', 'Groups', 'ServiceProviderConfig', 'Schemas', 'ResourceTypes']);
+
+// The path under /scim/v2, decoded once, or null for anything that is not one of SCIM's resources.
+// Keycloak's URL parser would resolve a dot segment, so "../" (even encoded) could climb into the
+// realm's admin API with the gateway's token (ADR-0024): no dot segments, no slashes inside one.
+export function parseScimPath(raw: string): string[] | null {
+  const parts = raw.split('/');
+  if (parts.length > 2) return null;
+  const segments: string[] = [];
+  for (const part of parts) {
+    let segment: string;
+    try {
+      segment = decodeURIComponent(part);
+    } catch {
+      return null;
+    }
+    if (!segment || segment === '.' || segment === '..' || /[/\\%]/.test(segment)) return null;
+    segments.push(segment);
+  }
+  return segments[0] && RESOURCES.has(segments[0]) ? segments : null;
+}
+
+// The decoded segments again as a path Keycloak reads back to exactly those segments.
+export const scimPathOf = (segments: string[]) => segments.map(encodeURIComponent).join('/');
+
 export interface GatewayCall {
   method: string;
-  path: string;
+  // Decoded, from parseScimPath; forwarded through scimPathOf.
+  segments: string[];
   query: string;
   body?: Buffer;
   contentType?: string;
@@ -61,15 +87,20 @@ export class ScimGatewayService {
 
   async handle(tenant: TenantRecord, call: GatewayCall): Promise<ScimResponse> {
     const scim = this.realms.forTenant(tenant);
-    const [kind, id] = call.path.split('/');
+    const [kind, id] = call.segments;
     try {
+      // Owners are never managed by SCIM: give and take the owner role in Tenantry.
+      if (kind === 'Users' && id && id !== '.search' && call.method !== 'GET' && (await scim.isOwner(id))) {
+        throw new ScimError(403, 'Owners are not managed by directory sync.');
+      }
       // The mapped groups give roles: a directory's delete empties one and keeps the mapping.
       if (call.method === 'DELETE' && kind === 'Groups' && id && (await scim.isMappedGroup(id))) {
         await scim.emptyGroup(id);
         await this.record(tenant, 'scim.group_changed', id, { emptied: true });
         return { status: 204, headers: {}, body: Buffer.alloc(0) };
       }
-      const res = await scim.forward(call);
+      const { segments, ...rest } = call;
+      const res = await scim.forward({ ...rest, path: scimPathOf(segments) });
       if (res.status < 300) await this.after(tenant, call, kind, id, res);
       return this.rewrite(tenant, res);
     } catch (err) {
@@ -88,7 +119,8 @@ export class ScimGatewayService {
     id: string | undefined,
     res: ScimResponse,
   ): Promise<void> {
-    if (call.method === 'GET') return;
+    // A search (POST .search) is a read.
+    if (call.method === 'GET' || id === '.search') return;
     if (kind === 'Groups') {
       const target = id ?? this.idOf(res) ?? 'unknown';
       await this.record(tenant, 'scim.group_changed', target, { method: call.method });

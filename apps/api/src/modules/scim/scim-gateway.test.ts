@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bearerToken, isDeactivation, rewriteLocation } from './scim-gateway.service.js';
+import { bearerToken, isDeactivation, parseScimPath, rewriteLocation } from './scim-gateway.service.js';
 
 describe('isDeactivation', () => {
   it('sees active false in a PUT body', () => {
@@ -48,5 +48,36 @@ describe('bearerToken (scheme is case-insensitive)', () => {
     expect(bearerToken('Basic dXNlcjpwYXNz')).toBeNull();
     expect(bearerToken(undefined)).toBeNull();
     expect(bearerToken('Bearer')).toBeNull();
+  });
+});
+
+describe('parseScimPath', () => {
+  it('takes the SCIM resources, decoded once', () => {
+    expect(parseScimPath('Users')).toEqual(['Users']);
+    expect(parseScimPath('Users/ab%2Dcd')).toEqual(['Users', 'ab-cd']);
+    expect(parseScimPath('Schemas/urn:ietf:params:scim:schemas:core:2.0:User')).toHaveLength(2);
+    expect(parseScimPath('ServiceProviderConfig')).toEqual(['ServiceProviderConfig']);
+  });
+
+  it('refuses dot segments, literal or encoded', () => {
+    expect(parseScimPath('../../admin/realms/x/users')).toBeNull();
+    expect(parseScimPath('%2e%2e/%2e%2e/admin/realms/x/users')).toBeNull();
+    expect(parseScimPath('Users/%2E%2E')).toBeNull();
+    expect(parseScimPath('Users/.')).toBeNull();
+  });
+
+  it('refuses slashes, backslashes and double encoding inside a segment', () => {
+    expect(parseScimPath('Users/a%2Fb')).toBeNull();
+    expect(parseScimPath('Users/a%5Cb')).toBeNull();
+    expect(parseScimPath('Users/%252e%252e')).toBeNull();
+    expect(parseScimPath('Users/%zz')).toBeNull();
+  });
+
+  it('refuses anything but the SCIM resources, and deeper paths', () => {
+    expect(parseScimPath('')).toBeNull();
+    expect(parseScimPath('Bulk')).toBeNull();
+    expect(parseScimPath('admin')).toBeNull();
+    expect(parseScimPath('Users/a/b')).toBeNull();
+    expect(parseScimPath('Users//')).toBeNull();
   });
 });

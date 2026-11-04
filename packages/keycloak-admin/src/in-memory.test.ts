@@ -108,6 +108,12 @@ runRealmScimContract('in-memory', () => {
       return Promise.resolve();
     },
     groupMembers: (name) => Promise.resolve([...(scim.groups.get(scim.groupNamed(name))?.members ?? [])]),
+    makeOwner: (id) => {
+      const person = scim.people.get(id);
+      if (person) person.role = 'owner';
+      return Promise.resolve();
+    },
+    isEnabled: (id) => Promise.resolve(scim.people.get(id)?.active ?? false),
     cleanup: () => Promise.resolve(),
   });
 });

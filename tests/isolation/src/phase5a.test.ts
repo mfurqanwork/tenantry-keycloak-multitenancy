@@ -107,6 +107,33 @@ describe('guarantee: SCIM gateway (Phase 5a)', () => {
     await api(host, 'PUT', '/api/security', { token: owner, body: before });
   });
 
+  it("does not climb out of SCIM into the realm's admin API", async () => {
+    for (const path of [
+      '%2e%2e/%2e%2e/%2e%2e/%2e%2e/admin/realms/ent-initech/users',
+      'Users/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/admin/realms/ent-initech/users',
+    ]) {
+      // Caddy resolves the dot segments and sends the result to the web app; the gateway refuses
+      // any that reach it (404). Either way no realm data comes back.
+      const res = await scim('GET', path);
+      expect(Array.isArray(res.body)).toBe(false);
+      expect(JSON.stringify(res.body)).not.toContain(INITECH.owner);
+    }
+  });
+
+  it('never deactivates or deletes an owner', async () => {
+    const [found] = (
+      await adminGet(`/users?username=${encodeURIComponent(INITECH.owner)}&exact=true`, INITECH.realm)
+    ).body as { id: string }[];
+    const id = found?.id ?? '';
+    const patch = {
+      schemas: ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+      Operations: [{ op: 'Replace', path: 'active', value: 'False' }],
+    };
+    expect((await scim('PATCH', `Users/${id}`, { body: patch })).status).toBe(403);
+    expect((await scim('DELETE', `Users/${id}`)).status).toBe(403);
+    expect(((await adminGet(`/users/${id}`, INITECH.realm)).body as { enabled: boolean }).enabled).toBe(true);
+  });
+
   it('refuses a revoked token', async () => {
     const res = await api<{ token: string }>(host, 'POST', '/api/scim/token', {
       token: owner,

@@ -9,6 +9,10 @@ export interface ScimContractSubject {
   groupId(name: string): Promise<string>;
   addToGroup(kcUserId: string, groupName: string): Promise<void>;
   groupMembers(groupName: string): Promise<string[]>;
+  // Gives a person the tenantry-api owner role directly, as an invite would.
+  makeOwner(kcUserId: string): Promise<void>;
+  // Whether the person can sign in (not deactivated).
+  isEnabled(kcUserId: string): Promise<boolean>;
   cleanup(): Promise<void>;
 }
 
@@ -80,6 +84,32 @@ export function runRealmScimContract(name: string, make: () => Promise<ScimContr
       await s.scim.emptyGroup(admins);
       expect(await s.groupMembers('tenantry-admins')).toEqual([]);
       expect(await s.groupId('tenantry-admins')).toBe(admins);
+    });
+
+    it('knows an owner from anyone else', async () => {
+      const owner = await createUser(s.scim);
+      const member = await createUser(s.scim);
+      await s.makeOwner(owner);
+      await s.scim.grantRole(member, 'member');
+      expect(await s.scim.isOwner(owner)).toBe(true);
+      expect(await s.scim.isOwner(member)).toBe(false);
+      expect(await s.scim.isOwner(randomUUID())).toBe(false);
+    });
+
+    it("takes Entra's deactivation: the string False, with a capital Replace", async () => {
+      const id = await createUser(s.scim);
+      const res = await s.scim.forward({
+        method: 'PATCH',
+        path: `Users/${id}`,
+        query: '',
+        ...scimJson,
+        body: body({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+          Operations: [{ op: 'Replace', path: 'active', value: 'False' }],
+        }),
+      });
+      expect(res.status).toBe(200);
+      expect(await s.isEnabled(id)).toBe(false);
     });
 
     it('answers nothing once turned off', async () => {
