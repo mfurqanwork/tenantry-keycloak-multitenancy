@@ -107,6 +107,20 @@ export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
           entry.roles.push(role);
           byUser.set(user.id, entry);
         }
+        // People in a directory group mapped to this role hold it too (SCIM, Phase 5a).
+        const groups = await json<{ id: string }[]>(
+          await call('listMembers', 'GET', `/clients/${id}/roles/${role}/groups?first=0&max=${String(PAGE)}`),
+        );
+        for (const group of groups) {
+          const members = await json<KcUser[]>(
+            await call('listMembers', 'GET', `/groups/${group.id}/members?first=0&max=${String(PAGE)}`),
+          );
+          for (const user of members) {
+            const entry = byUser.get(user.id) ?? { user, roles: [] };
+            entry.roles.push(role);
+            byUser.set(user.id, entry);
+          }
+        }
       }
       return [...byUser.values()].map(({ user, roles: held }): Member => ({
         kcUserId: user.id,

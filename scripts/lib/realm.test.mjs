@@ -126,7 +126,7 @@ test('the corp-demo realm is the stand-in company IdP, with no password in the f
 // Enterprise realms (Phase 3, ADR-0010): one versioned template, our product clients beside it.
 const template = JSON.parse(
   readFileSync(
-    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v2.json', import.meta.url),
+    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v3.json', import.meta.url),
     'utf8',
   ),
 );
@@ -139,7 +139,7 @@ const productClient = (name) =>
   );
 
 test('the enterprise template enforces PKCE on public clients, safe redirect URIs on every client, and no implicit or password grant anywhere', () => {
-  assert.equal(template.templateVersion, 2);
+  assert.equal(template.templateVersion, 3);
   const profile = (name) => template.clientProfiles.profiles.find((p) => p.name === name);
   const policy = (name) => template.clientPolicies.policies.find((p) => p.name === name);
   assert.deepEqual(

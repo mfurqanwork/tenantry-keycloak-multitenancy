@@ -8,6 +8,9 @@ export interface MemberContractSubject {
   completeSignUp(kcUserId: string): Promise<void>;
   // How many set-password emails went to this address.
   emailsTo(address: string): Promise<number>;
+  // Puts the person in, or takes them out of, a directory group that gives a role (SCIM, Phase 5a).
+  joinGroup(kcUserId: string, group: 'tenantry-members' | 'tenantry-admins'): Promise<void>;
+  leaveGroup(kcUserId: string, group: 'tenantry-members' | 'tenantry-admins'): Promise<void>;
   cleanup(): Promise<void>;
 }
 
@@ -75,6 +78,15 @@ export function runRealmMemberContract(name: string, make: () => Promise<MemberC
       await s.completeSignUp(used.kcUserId ?? '');
       expect(await s.members.deleteUnusedUser(used.kcUserId ?? '')).toBe(false);
       expect((await s.members.listMembers()).some((m) => m.kcUserId === used.kcUserId)).toBe(true);
+    });
+
+    it('lists people who hold a role through a mapped group, the higher role winning', async () => {
+      const address = email();
+      const kcUserId = (await s.members.invite(address, 'member')).kcUserId ?? '';
+      await s.joinGroup(kcUserId, 'tenantry-admins');
+      expect((await s.members.listMembers()).find((m) => m.kcUserId === kcUserId)?.role).toBe('admin');
+      await s.leaveGroup(kcUserId, 'tenantry-admins');
+      expect((await s.members.listMembers()).find((m) => m.kcUserId === kcUserId)?.role).toBe('member');
     });
   });
 }

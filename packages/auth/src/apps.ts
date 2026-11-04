@@ -55,5 +55,7 @@ export function uriProblem(uri: string, kind: 'redirect' | 'origin', type: AppTy
   if (uri.includes('*')) return 'No wildcards in a redirect URI.';
   if (web) return webProblem(url);
   if (type !== 'native') return 'Custom schemes are for mobile and desktop apps.';
-  return url.protocol.slice(0, -1).includes('.') ? null : 'A custom scheme needs a dot, like com.example.app.';
+  return url.protocol.slice(0, -1).includes('.')
+    ? null
+    : 'A custom scheme needs a dot, like com.example.app.';
 }

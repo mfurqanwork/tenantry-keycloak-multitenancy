@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { tenantOrigin } from '@tenantry/auth';
 import {
+  getSecurity,
   insertAudit,
   listAudit,
   platformRepository,
@@ -12,8 +13,10 @@ import {
 import {
   loadProductClients,
   loadRealmTemplate,
+  mergeSecurity,
   TEMPLATE_VERSION,
   type RealmProvisioner,
+  type RealmTemplate,
   type TemplateDiff,
   type TemplateVars,
 } from '@tenantry/keycloak-admin';
@@ -98,10 +101,11 @@ export class EnterpriseService {
     const realm = `ent-${input.slug}`;
     const vars = this.vars(tenant);
 
-    // 2–4. The realm, its template and our product clients.
+    // 2–4. The realm, its template, our product clients and the directory groups (Phase 5a).
     await this.provisioner.ensureRealm(realm);
     await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
     await this.provisioner.ensureClients(realm, loadProductClients(vars));
+    await this.provisioner.ensureGroups(realm);
     // 5. The backend secret: made once, kept in the secrets store, never in Postgres (ADR-0023).
     const key = backendSecretKey(realm);
     let secret = await this.secrets.get(key);
@@ -155,7 +159,8 @@ export class EnterpriseService {
     for (const tenant of tenants) {
       const realm = tenant.realm ?? `ent-${tenant.slug}`;
       const vars = this.vars(tenant);
-      const template = loadRealmTemplate(TEMPLATE_VERSION, vars);
+      // The tenant's own security settings are part of what the realm should be, not drift.
+      const template = await this.templateFor(tenant);
       const clients = loadProductClients(vars);
       let differences: TemplateDiff[];
       try {
@@ -178,6 +183,7 @@ export class EnterpriseService {
       if (applied) {
         await this.provisioner.applyTemplate(realm, template);
         await this.provisioner.ensureClients(realm, clients);
+        await this.provisioner.ensureGroups(realm);
         await tenantTx(this.db, tenant.id, async (tx) => {
           await platformRepository(tx).setTemplateVersion(tenant.id, TEMPLATE_VERSION);
           await insertAudit(tx, {
@@ -213,6 +219,12 @@ export class EnterpriseService {
       throw new NotFoundProblem('No enterprise workspace at this address.');
     }
     return tenant;
+  }
+
+  // The current template for this tenant's realm, with its owners' security settings applied.
+  async templateFor(tenant: TenantRecord): Promise<RealmTemplate> {
+    const settings = await tenantTx(this.db, tenant.id, (tx) => getSecurity(tx));
+    return mergeSecurity(loadRealmTemplate(TEMPLATE_VERSION, this.vars(tenant)), settings);
   }
 
   // A resumed run keeps the first owner the run began with; another address would make a second owner.

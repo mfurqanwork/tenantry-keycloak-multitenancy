@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { Role } from '@tenantry/auth';
+import { highestRole, type Role } from '@tenantry/auth';
 import { DirectoryError } from '../errors.js';
 import type { Member, MemberDirectory } from '../member-directory.js';
+import { MAPPED_GROUPS } from '../realms/templates.js';
 
 interface FakeUser {
   email: string;
@@ -13,10 +14,28 @@ interface FakeUser {
 export class InMemoryRealmMembers implements MemberDirectory {
   readonly users = new Map<string, FakeUser>();
   readonly emailsSent: string[] = [];
+  // Directory groups (SCIM) each person is in.
+  readonly groupsOf = new Map<string, Set<keyof typeof MAPPED_GROUPS>>();
   private readonly failing = new Set<keyof MemberDirectory>();
 
   failOn(operation: keyof MemberDirectory): void {
     this.failing.add(operation);
+  }
+
+  // A direct role and the roles of the person's mapped groups: the highest one counts.
+  private roleOf(kcUserId: string, direct: Role | null): Role | null {
+    const viaGroups = [...(this.groupsOf.get(kcUserId) ?? [])].map((g) => MAPPED_GROUPS[g]);
+    return highestRole([...(direct ? [direct] : []), ...viaGroups]);
+  }
+
+  joinGroup(kcUserId: string, group: keyof typeof MAPPED_GROUPS): void {
+    const held = this.groupsOf.get(kcUserId) ?? new Set();
+    held.add(group);
+    this.groupsOf.set(kcUserId, held);
+  }
+
+  leaveGroup(kcUserId: string, group: keyof typeof MAPPED_GROUPS): void {
+    this.groupsOf.get(kcUserId)?.delete(group);
   }
 
   // Tests: the person set their password and signed in.
@@ -41,8 +60,13 @@ export class InMemoryRealmMembers implements MemberDirectory {
   listMembers(): Promise<Member[]> {
     return this.run('listMembers', () =>
       [...this.users]
-        .filter(([, u]) => u.role !== null)
-        .map(([kcUserId, u]) => ({ kcUserId, email: u.email, displayName: null, role: u.role })),
+        .map(([kcUserId, u]) => ({
+          kcUserId,
+          email: u.email,
+          displayName: null,
+          role: this.roleOf(kcUserId, u.role),
+        }))
+        .filter((m) => m.role !== null),
     );
   }
 

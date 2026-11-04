@@ -1,7 +1,14 @@
 import { DirectoryError } from '../errors.js';
 import type { RealmProvisioner } from '../realms/provisioner.js';
 import { diffTemplate, type TemplateDiff } from '../realms/template-diff.js';
-import type { ClientTemplate, RealmTemplate } from '../realms/templates.js';
+import type { SecuritySettings, TwoStep } from '@tenantry/auth';
+import { securityRealmPatch } from '../realms/security.js';
+import {
+  MAPPED_GROUPS,
+  type ClientTemplate,
+  type RealmTemplate,
+  type SecondStep,
+} from '../realms/templates.js';
 
 interface FakeRealm {
   settings: Record<string, unknown>;
@@ -12,16 +19,19 @@ interface FakeRealm {
   admins: Map<string, string>;
   // First admins who have set a password.
   activated: Set<string>;
+  twoStep: TwoStep | null;
+  groups: Map<string, string>;
 }
 
 // A Keycloak stand-in for the provisioning saga's tests. Counts what each step really did.
 export class InMemoryRealmProvisioner implements RealmProvisioner {
   readonly realms = new Map<string, FakeRealm>();
   readonly emailsSent: { realm: string; email: string }[] = [];
-  private readonly failing = new Set<keyof RealmProvisioner>();
+  private readonly failing = new Map<keyof RealmProvisioner, number>();
 
-  failOn(step: keyof RealmProvisioner): void {
-    this.failing.add(step);
+  // The step fails as Keycloak would, with this status (500 by default).
+  failOn(step: keyof RealmProvisioner, status = 500): void {
+    this.failing.set(step, status);
   }
 
   clearFailures(): void {
@@ -30,7 +40,8 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
 
   private run<T>(step: keyof RealmProvisioner, fn: () => T): Promise<T> {
     return Promise.resolve().then(() => {
-      if (this.failing.has(step)) throw new DirectoryError(step, 500, 'injected failure');
+      const status = this.failing.get(step);
+      if (status !== undefined) throw new DirectoryError(step, status, 'injected failure');
       return fn();
     });
   }
@@ -52,6 +63,8 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
         backendSecret: null,
         admins: new Map(),
         activated: new Set(),
+        twoStep: null,
+        groups: new Map(),
       });
       return { created: true };
     });
@@ -63,7 +76,29 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
       r.settings = { ...r.settings, ...template.realm };
       r.profiles = template.clientProfiles;
       r.policies = template.clientPolicies;
+      r.twoStep = template.twoStep;
     });
+  }
+
+  applySecurity(realm: string, settings: SecuritySettings, _secondStep: SecondStep) {
+    return this.run('applySecurity', () => {
+      const r = this.realm('applySecurity', realm);
+      r.settings = { ...r.settings, ...securityRealmPatch(settings) };
+      r.twoStep = settings.twoStep;
+    });
+  }
+
+  ensureGroups(realm: string) {
+    return this.run('ensureGroups', () => {
+      const r = this.realm('ensureGroups', realm);
+      for (const [name, role] of Object.entries(MAPPED_GROUPS)) r.groups.set(name, role);
+    });
+  }
+
+  // Tests: someone changed the second step in the Keycloak console.
+  setTwoStepByHand(realm: string, twoStep: TwoStep): void {
+    const r = this.realms.get(realm);
+    if (r) r.twoStep = twoStep;
   }
 
   ensureClients(realm: string, clients: ClientTemplate[]) {
@@ -109,6 +144,15 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
       return [
         ...diffTemplate({ realm: template.realm }, { realm: r.settings }),
         ...diffTemplate({ clients: wanted }, { clients: live }),
+        ...(r.twoStep !== null && r.twoStep !== template.twoStep
+          ? [
+              {
+                path: `secondStep.${template.secondStep.subflow}`,
+                live: r.twoStep,
+                template: template.twoStep,
+              },
+            ]
+          : []),
       ];
     });
   }

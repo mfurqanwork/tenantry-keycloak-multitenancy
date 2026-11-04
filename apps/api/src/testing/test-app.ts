@@ -10,11 +10,13 @@ import {
   InMemoryRealmApps,
   InMemoryRealmMembers,
   InMemoryRealmProvisioner,
+  InMemoryRealmScim,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { organizationMembers, TEMPLATE_VERSION } from '@tenantry/keycloak-admin';
 import { AppModule } from '../app.module.js';
 import type { AppConfig } from '../config/config.js';
+import { setUpHttp } from '../http-setup.js';
 import type { MemberDirectories } from '../infrastructure/member-directories.js';
 import {
   DB_POOL,
@@ -22,6 +24,7 @@ import {
   MEMBER_DIRECTORIES,
   REALM_APPS,
   REALM_PROVISIONER,
+  REALM_SCIM,
   SECRET_STORE,
 } from '../infrastructure/tokens.js';
 import { stackEnv } from './env.js';
@@ -78,6 +81,10 @@ export interface TestApp {
   realmMembers(realm: string): InMemoryRealmMembers;
   // The in-memory clients of an enterprise realm (customer apps).
   realmApps(realm: string): InMemoryRealmApps;
+  // The in-memory native SCIM of an enterprise realm, behind the gateway.
+  realmScim(realm: string): InMemoryRealmScim;
+  // Moves the tenant's SCIM tokens' expiry into the past.
+  expireScimTokens(tenantId: string): Promise<void>;
   // Enterprise provisioning against an in-memory Keycloak and secrets store.
   provisioner: InMemoryRealmProvisioner;
   secrets: SecretStore;
@@ -131,6 +138,15 @@ export async function createTestApp(
     }
     return found;
   };
+  const realmScims = new Map<string, InMemoryRealmScim>();
+  const scimOf = (realm: string, realmIssuer?: string) => {
+    let found = realmScims.get(realm);
+    if (!found) {
+      found = new InMemoryRealmScim(realmIssuer ?? `${issuer.baseUrl}/realms/${realm}`);
+      realmScims.set(realm, found);
+    }
+    return found;
+  };
   const memberDirectories: MemberDirectories = {
     forTenant: (tenant) =>
       Promise.resolve(
@@ -171,13 +187,16 @@ export async function createTestApp(
     .useValue(secrets)
     .overrideProvider(REALM_APPS)
     .useValue({ forTenant: (tenant: TenantRecord) => Promise.resolve(appsOf(tenant.realm ?? '')) })
+    .overrideProvider(REALM_SCIM)
+    .useValue({ forTenant: (tenant: TenantRecord) => scimOf(tenant.realm ?? '', tenant.issuer ?? undefined) })
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
-  app.setGlobalPrefix('api');
+  setUpHttp(app);
   await app.listen(0, '127.0.0.1');
   const server = app.getHttpServer() as Server;
   const port = (server.address() as AddressInfo).port;
-  const db = createDb(app.get<Pool>(DB_POOL));
+  const pool = app.get<Pool>(DB_POOL);
+  const db = createDb(pool);
 
   const testApp: TestApp = {
     app,
@@ -268,6 +287,18 @@ export async function createTestApp(
       issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
     realmMembers: realmOf,
     realmApps: appsOf,
+    realmScim: scimOf,
+    async expireScimTokens(tenantId) {
+      const client = await pool.connect();
+      try {
+        await client.query('begin');
+        await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+        await client.query("update tenant_scim_tokens set expires_at = now() - interval '1 second'");
+        await client.query('commit');
+      } finally {
+        client.release();
+      }
+    },
     provisioner,
     secrets,
     newUser() {

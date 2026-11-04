@@ -7,5 +7,6 @@ import { EnterpriseService } from './enterprise.service.js';
   imports: [AppsModule],
   controllers: [EnterpriseController],
   providers: [EnterpriseService],
+  exports: [EnterpriseService],
 })
 export class EnterpriseModule {}

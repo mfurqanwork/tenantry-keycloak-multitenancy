@@ -56,6 +56,9 @@ importers:
       '@tenantry/keycloak-admin':
         specifier: workspace:*
         version: link:../../packages/keycloak-admin
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
       jose:
         specifier: ^6.2.15
         version: 6.2.15

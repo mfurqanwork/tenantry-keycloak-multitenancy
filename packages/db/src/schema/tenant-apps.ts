@@ -14,13 +14,26 @@ export const tenantApps = pgTable(
     kcClientUuid: text('kc_client_uuid').notNull(),
     name: text('name').notNull(),
     type: text('type').$type<AppType>().notNull(),
-    redirectUris: text('redirect_uris').array().notNull().default(sql`'{}'`),
-    postLogoutRedirectUris: text('post_logout_redirect_uris').array().notNull().default(sql`'{}'`),
-    webOrigins: text('web_origins').array().notNull().default(sql`'{}'`),
+    redirectUris: text('redirect_uris')
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    postLogoutRedirectUris: text('post_logout_redirect_uris')
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    webOrigins: text('web_origins')
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
     // Null when an operator registered the app.
     createdBy: uuid('created_by').references(() => users.id),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`clock_timestamp()`),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(sql`clock_timestamp()`),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
   },
   (t) => [
     check('tenant_apps_name', sql`char_length(${t.name}) between 1 and 80`),

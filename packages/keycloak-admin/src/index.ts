@@ -18,9 +18,11 @@ export { diffTemplate, type TemplateDiff } from './realms/template-diff.js';
 export {
   loadProductClients,
   loadRealmTemplate,
+  MAPPED_GROUPS,
   TEMPLATE_VERSION,
   type ClientTemplate,
   type RealmTemplate,
+  type SecondStep,
   type TemplateVars,
 } from './realms/templates.js';
 export { organizationMembers, type Member, type MemberDirectory } from './member-directory.js';
@@ -37,3 +39,13 @@ export {
   type RealmApps,
   type RealmAppsOptions,
 } from './realms/realm-apps.js';
+export {
+  createRealmScim,
+  SCIM_CLIENT,
+  scimSecretKey,
+  type RealmScim,
+  type RealmScimOptions,
+  type ScimRequest,
+  type ScimResponse,
+} from './realms/scim.js';
+export { mergeSecurity, secondStepRequirements, securityRealmPatch } from './realms/security.js';

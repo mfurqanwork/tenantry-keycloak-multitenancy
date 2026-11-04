@@ -5,6 +5,8 @@ export { tenantApps } from './tenant-apps.js';
 export { tenantDomains } from './tenant-domains.js';
 export { tenantIdentity } from './tenant-identity.js';
 export { tenantIdps } from './tenant-idps.js';
+export { tenantScimTokens } from './tenant-scim-tokens.js';
+export { tenantSecurity } from './tenant-security.js';
 export { tenantInvites } from './tenant-invites.js';
 export { tenantLogos } from './tenant-logos.js';
 export { tenants, type TenantBranding, type TenantStatus, type TenantTier } from './tenants.js';

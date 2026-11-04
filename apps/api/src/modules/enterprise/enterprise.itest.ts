@@ -81,6 +81,10 @@ describe('POST /api/platform/enterprise-tenants', () => {
       'tenantry-web',
     ]);
     expect(await t.secrets.get(`ent-${s}/tenantry-backend`)).toBe(realm?.backendSecret);
+    expect(Object.fromEntries(realm?.groups ?? [])).toEqual({
+      'tenantry-members': 'member',
+      'tenantry-admins': 'admin',
+    });
     const audit = await auditOf(tenant?.id ?? '');
     expect(audit.map((e) => e.action)).toEqual(
       expect.arrayContaining(['tenant.provisioning', 'tenant.created']),
