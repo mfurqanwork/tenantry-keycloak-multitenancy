@@ -7,6 +7,8 @@ import { InMemoryRealmMembers } from './testing/in-memory-realm-members.js';
 import { runRealmMemberContract } from './testing/member-contract.js';
 import { runRealmAppsContract } from './testing/apps-contract.js';
 import { InMemoryRealmApps } from './testing/in-memory-realm-apps.js';
+import { InMemoryRealmScim } from './testing/in-memory-realm-scim.js';
+import { runRealmScimContract } from './testing/scim-contract.js';
 
 runIdentityDirectoryContract('in-memory', () => {
   const dir = new InMemoryIdentityDirectory();
@@ -84,5 +86,20 @@ describe('InMemoryRealmApps', () => {
     });
     await expect(failed).rejects.toMatchObject({ status: 400, detail: 'Invalid Redirect Uri' });
     expect(apps.clients.size).toBe(1);
+  });
+});
+
+runRealmScimContract('in-memory', () => {
+  const scim = new InMemoryRealmScim();
+  return Promise.resolve({
+    scim,
+    roleOf: (id) => Promise.resolve(scim.people.get(id)?.role ?? null),
+    groupId: (name) => Promise.resolve(scim.groupNamed(name)),
+    addToGroup: (id, name) => {
+      scim.groups.get(scim.groupNamed(name))?.members.add(id);
+      return Promise.resolve();
+    },
+    groupMembers: (name) => Promise.resolve([...(scim.groups.get(scim.groupNamed(name))?.members ?? [])]),
+    cleanup: () => Promise.resolve(),
   });
 });

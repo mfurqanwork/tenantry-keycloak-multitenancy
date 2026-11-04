@@ -39,3 +39,12 @@ export {
   type RealmApps,
   type RealmAppsOptions,
 } from './realms/realm-apps.js';
+export {
+  createRealmScim,
+  SCIM_CLIENT,
+  scimSecretKey,
+  type RealmScim,
+  type RealmScimOptions,
+  type ScimRequest,
+  type ScimResponse,
+} from './realms/scim.js';
