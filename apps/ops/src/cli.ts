@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util';
 import { createAppPool, createDb } from '@tenantry/db';
 import { createHttpIdentityDirectory } from '@tenantry/keycloak-admin';
 import { createDevUsers } from '@tenantry/keycloak-admin/dev';
+import { createFileSecretStore } from '@tenantry/keycloak-admin/secrets';
 import { setTxt } from './commands/dns.js';
 import { listAppsCommand, registerAppCommand, rotateAppCommand } from './commands/apps.js';
 import { claimDomain, verifyDomain } from './commands/domain.js';
@@ -67,6 +68,7 @@ function realDeps(): { deps: OpsDeps; close: () => Promise<void> } {
         portalClientId: 'tenantry-portal',
       }),
       resolveTxt: (name) => resolveTxt(name, dnsServer || undefined),
+      secrets: createFileSecretStore(stackEnv('TENANTRY_SECRETS_DIR', '../../.secrets')),
       origins: {
         authUrl,
         baseDomain: stackEnv('TENANTRY_BASE_DOMAIN', 'tenantry.localhost'),

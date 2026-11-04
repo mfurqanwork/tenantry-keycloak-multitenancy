@@ -1,5 +1,5 @@
 import { findDomain, insertAudit, insertIdp, isUniqueViolation, listIdps, tenantTx } from '@tenantry/db';
-import type { CompanyIdentityProvider } from '@tenantry/keycloak-admin';
+import { idpSecretKey, type CompanyIdentityProvider } from '@tenantry/keycloak-admin';
 import type { ExitCode, OpsDeps } from '../deps.js';
 import { normaliseDomain } from './domain.js';
 import { activeWorkspace, OPS } from './workspace.js';
@@ -77,6 +77,11 @@ export async function linkIdp(
     if (state.created) await deps.directory.deleteIdentityProvider(input.alias);
     throw err;
   }
+  // The secret, kept for a move to Enterprise (ADR-0025): never in Postgres, logs or audit. Kept when
+  // this run gave it to Keycloak, or for a link made before any was kept; a rerun leaves Keycloak's
+  // settings as they were, so it leaves the kept secret alone too.
+  const key = idpSecretKey(input.alias);
+  if (state.created || !(await deps.secrets.get(key))) await deps.secrets.put(key, input.clientSecret);
   deps.out(
     state.alreadyLinked
       ? `${input.alias} is already linked to ${domain} for ${tenant.slug}; nothing changed, and its settings stay as they were.`
