@@ -27,6 +27,16 @@ export {
   type AppPatch,
   type AppRecord,
 } from './repositories/apps.js';
+export {
+  findActiveScimToken,
+  findScimTokenByHash,
+  insertScimToken,
+  lockTenantScim,
+  revokeScimTokens,
+  touchScimToken,
+  type ScimTokenRecord,
+} from './repositories/scim-tokens.js';
+export { getSecurity, putSecurity } from './repositories/security.js';
 export { insertAudit, listAudit, type AuditEntry } from './repositories/audit.js';
 export type { Executor } from './repositories/executor.js';
 export {

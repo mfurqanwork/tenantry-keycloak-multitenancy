@@ -118,22 +118,20 @@ export function platformRepository(ex: Executor) {
     }): Promise<{ id: string }> {
       try {
         return await ex.transaction(async (tx) => {
-          await tx
-            .delete(tenants)
-            .where(
-              and(
-                eq(tenants.slug, input.slug),
-                // Only Standard signups are replaced; an operator finishes an enterprise run (ADR-0010).
-                eq(tenants.tier, 'standard'),
-                or(
-                  eq(tenants.status, 'failed'),
-                  and(
-                    eq(tenants.status, 'provisioning'),
-                    lt(tenants.createdAt, sql`now() - interval '10 minutes'`),
-                  ),
+          await tx.delete(tenants).where(
+            and(
+              eq(tenants.slug, input.slug),
+              // Only Standard signups are replaced; an operator finishes an enterprise run (ADR-0010).
+              eq(tenants.tier, 'standard'),
+              or(
+                eq(tenants.status, 'failed'),
+                and(
+                  eq(tenants.status, 'provisioning'),
+                  lt(tenants.createdAt, sql`now() - interval '10 minutes'`),
                 ),
               ),
-            );
+            ),
+          );
           const [row] = await tx.insert(tenants).values(input).returning({ id: tenants.id });
           if (!row) throw new Error('insert returned no row');
           return row;
