@@ -32,13 +32,19 @@ function setup(routes: Record<string, unknown> = {}) {
 
 const next = () => screen.getByRole('button', { name: 'Next' });
 
+// Fills a field in one change, as a paste does: typing long URIs key by key is slow on CI.
+async function fill(user: ReturnType<typeof userEvent.setup>, label: string, text: string) {
+  await user.click(screen.getByLabelText(label));
+  await user.paste(text);
+}
+
 describe('RegisterAppRoute', () => {
   it('walks type, details and review, then opens the new app with its secret', async () => {
     const { api, user } = setup({ 'POST /api/apps': { app: sampleApp(), clientSecret: 's3cret' } });
     await user.click(screen.getByLabelText('Web app'));
     await user.click(next());
-    await user.type(screen.getByLabelText('Name'), 'HR portal');
-    await user.type(screen.getByLabelText('Redirect URI 1'), 'https://hr.acme.test/callback');
+    await fill(user, 'Name', 'HR portal');
+    await fill(user, 'Redirect URI 1', 'https://hr.acme.test/callback');
     await user.click(next());
     expect(screen.getByRole('table', { name: 'Review' })).toHaveTextContent('https://hr.acme.test/callback');
     await user.click(screen.getByRole('button', { name: 'Register app' }));
@@ -56,12 +62,12 @@ describe('RegisterAppRoute', () => {
     const { user } = setup();
     await user.click(screen.getByLabelText('Single-page app'));
     await user.click(next());
-    await user.type(screen.getByLabelText('Name'), 'Dash');
-    await user.type(screen.getByLabelText('Redirect URI 1'), 'http://localhost:3000/cb');
+    await fill(user, 'Name', 'Dash');
+    await fill(user, 'Redirect URI 1', 'http://localhost:3000/cb');
     expect(screen.getByText('Use 127.0.0.1 instead of localhost.')).toBeInTheDocument();
     expect(next()).toBeDisabled();
     await user.clear(screen.getByLabelText('Redirect URI 1'));
-    await user.type(screen.getByLabelText('Redirect URI 1'), 'http://127.0.0.1:3000/cb');
+    await fill(user, 'Redirect URI 1', 'http://127.0.0.1:3000/cb');
     expect(next()).toBeEnabled();
   });
 
@@ -80,7 +86,7 @@ describe('RegisterAppRoute', () => {
     await user.click(screen.getByLabelText('Machine to machine'));
     await user.click(next());
     expect(screen.queryByLabelText('Redirect URI 1')).not.toBeInTheDocument();
-    await user.type(screen.getByLabelText('Name'), 'Sync');
+    await fill(user, 'Name', 'Sync');
     expect(next()).toBeEnabled();
   });
 
@@ -94,14 +100,14 @@ describe('RegisterAppRoute', () => {
     });
     await user.click(screen.getByLabelText('Web app'));
     await user.click(next());
-    await user.type(screen.getByLabelText('Name'), 'HR');
-    await user.type(screen.getByLabelText('Redirect URI 1'), 'https://hr.acme.test/cb');
+    await fill(user, 'Name', 'HR');
+    await fill(user, 'Redirect URI 1', 'https://hr.acme.test/cb');
     await user.click(next());
     await user.click(screen.getByRole('button', { name: 'Register app' }));
     expect(await screen.findByText('Invalid Redirect Uri: invalid uri')).toBeInTheDocument();
     expect(next()).toBeDisabled();
     await user.clear(screen.getByLabelText('Redirect URI 1'));
-    await user.type(screen.getByLabelText('Redirect URI 1'), 'https://hr2.acme.test/cb');
+    await fill(user, 'Redirect URI 1', 'https://hr2.acme.test/cb');
     api.post.mockRejectedValueOnce(
       new ApiProblem(409, 'Conflict', 'This workspace has the most apps allowed (20).'),
     );

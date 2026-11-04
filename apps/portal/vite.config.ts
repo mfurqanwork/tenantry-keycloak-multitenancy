@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ['./src/test-setup.ts'],
       css: false,
+      // jsdom and Carbon render slowly on CI runners; a form test can pass 5 s there.
+      testTimeout: 15000,
     },
   };
 });
