@@ -18,6 +18,8 @@ export { diffTemplate, type TemplateDiff } from './realms/template-diff.js';
 export {
   loadProductClients,
   loadRealmTemplate,
+  CONSOLE_GROUP,
+  CONSOLE_ROLE,
   MAPPED_GROUPS,
   TEMPLATE_VERSION,
   type ClientTemplate,
@@ -49,3 +51,4 @@ export {
   type ScimResponse,
 } from './realms/scim.js';
 export { mergeSecurity, secondStepRequirements, securityRealmPatch } from './realms/security.js';
+export { createRealmConsole, type RealmConsole, type RealmConsoleOptions } from './realms/console.js';

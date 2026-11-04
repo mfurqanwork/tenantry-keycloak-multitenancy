@@ -175,4 +175,44 @@ describe('realm provisioner (Keycloak)', () => {
       expect(mappings.clientMappings?.['tenantry-api']?.mappings.map((m) => m.name)).toEqual([role]);
     }
   });
+
+  it('creates the console group (no role) and the console role (the query roles) once, and turns admin events on', async () => {
+    await provisioner.ensureGroups(realm);
+    const found = (await (
+      await bootstrap('GET', `/${realm}/groups?search=tenantry-console&exact=true`)
+    ).json()) as {
+      id: string;
+      name: string;
+    }[];
+    expect(found.filter((g) => g.name === 'tenantry-console')).toHaveLength(1);
+    const mappings = (await (
+      await bootstrap('GET', `/${realm}/groups/${found[0]?.id ?? ''}/role-mappings`)
+    ).json()) as { clientMappings?: unknown };
+    expect(mappings.clientMappings).toBeUndefined();
+    const role = (await (await bootstrap('GET', `/${realm}/roles/tenantry-console-user`)).json()) as {
+      id: string;
+    };
+    const parts = (await (await bootstrap('GET', `/${realm}/roles-by-id/${role.id}/composites`)).json()) as {
+      name: string;
+    }[];
+    expect(parts.map((p) => p.name).sort()).toEqual(['query-groups', 'query-users']);
+    // Not on everyone: a person holding realm-management roles is guarded like an admin (5a's SCIM breaks).
+    const defaults = (await (await bootstrap('GET', `/${realm}/roles/default-roles-${realm}`)).json()) as {
+      id: string;
+    };
+    const composites = (await (
+      await bootstrap('GET', `/${realm}/roles-by-id/${defaults.id}/composites`)
+    ).json()) as { name: string }[];
+    expect(composites.map((c) => c.name)).not.toContain('query-users');
+    const rep = (await (await bootstrap('GET', `/${realm}`)).json()) as Record<string, unknown>;
+    expect(rep).toMatchObject({ adminEventsEnabled: true, adminEventsDetailsEnabled: true });
+  });
+
+  it('runs again without a refusal once admin permissions are on', async () => {
+    await bootstrap('PUT', `/${realm}`, { adminPermissionsEnabled: true });
+    const vars = testRealmVars(realm, 'Provisioner Test');
+    await provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
+    await expect(provisioner.ensureClients(realm, loadProductClients(vars))).resolves.toBeUndefined();
+    await expect(provisioner.ensureGroups(realm)).resolves.toBeUndefined();
+  });
 });

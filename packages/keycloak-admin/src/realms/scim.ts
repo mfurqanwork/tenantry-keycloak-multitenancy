@@ -27,6 +27,9 @@ export interface ScimResponse {
 
 // One enterprise realm's native SCIM (Keycloak 26.8), behind Tenantry's gateway (ADR-0024).
 export interface RealmScim {
+  // Makes tenantry-scim and its rights, without turning SCIM on. Provisioning runs it before admin
+  // permissions v2 go on, after which the provisioner can no longer map realm-management roles (ADR-0026).
+  prepare(): Promise<void>;
   enable(): Promise<void>;
   disable(): Promise<void>;
   forward(req: ScimRequest): Promise<ScimResponse>;
@@ -93,6 +96,15 @@ export function createRealmScim(o: RealmScimOptions): RealmScim {
     return found?.id ?? null;
   }
 
+  // Only what is not held yet: a held mapping posted again is refused once admin permissions are on.
+  async function grantMissing(mappings: string, wanted: { id: string; name: string }[]) {
+    const held = new Set(
+      (await json<{ name: string }[]>(await call('enableScim', 'GET', mappings))).map((r) => r.name),
+    );
+    const missing = wanted.filter((r) => !held.has(r.name));
+    if (missing.length > 0) await call('enableScim', 'POST', mappings, missing);
+  }
+
   async function ensureScimClient(): Promise<string> {
     let secret = await o.secrets.get(scimSecretKey(o.realm));
     if (!secret) {
@@ -140,13 +152,17 @@ export function createRealmScim(o: RealmScimOptions): RealmScim {
     const wanted = roles.filter((r) =>
       ['manage-users', 'view-users', 'query-users', 'query-groups'].includes(r.name),
     );
-    await call('enableScim', 'POST', `/users/${user.id}/role-mappings/clients/${management ?? ''}`, wanted);
+    await grantMissing(`/users/${user.id}/role-mappings/clients/${management ?? ''}`, wanted);
     // With full scope off, only the roles in the client's scope reach its token.
-    await call('enableScim', 'POST', `/clients/${id}/scope-mappings/clients/${management ?? ''}`, wanted);
+    await grantMissing(`/clients/${id}/scope-mappings/clients/${management ?? ''}`, wanted);
     return secret;
   }
 
   return {
+    async prepare() {
+      await ensureScimClient();
+    },
+
     async enable() {
       const secret = await ensureScimClient();
       await call('enableScim', 'PUT', '', { scimApiEnabled: true });
