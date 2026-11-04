@@ -98,10 +98,11 @@ export class EnterpriseService {
     const realm = `ent-${input.slug}`;
     const vars = this.vars(tenant);
 
-    // 2–4. The realm, its template and our product clients.
+    // 2–4. The realm, its template, our product clients and the directory groups (Phase 5a).
     await this.provisioner.ensureRealm(realm);
     await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
     await this.provisioner.ensureClients(realm, loadProductClients(vars));
+    await this.provisioner.ensureGroups(realm);
     // 5. The backend secret: made once, kept in the secrets store, never in Postgres (ADR-0023).
     const key = backendSecretKey(realm);
     let secret = await this.secrets.get(key);
@@ -178,6 +179,7 @@ export class EnterpriseService {
       if (applied) {
         await this.provisioner.applyTemplate(realm, template);
         await this.provisioner.ensureClients(realm, clients);
+        await this.provisioner.ensureGroups(realm);
         await tenantTx(this.db, tenant.id, async (tx) => {
           await platformRepository(tx).setTemplateVersion(tenant.id, TEMPLATE_VERSION);
           await insertAudit(tx, {

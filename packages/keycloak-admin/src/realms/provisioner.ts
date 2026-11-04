@@ -1,7 +1,9 @@
 import { createAdminTokenSource } from '../admin-token.js';
 import { DirectoryError } from '../errors.js';
+import type { SecuritySettings, TwoStep } from '@tenantry/auth';
+import { secondStepRequirements, securityRealmPatch } from './security.js';
 import { diffTemplate, type TemplateDiff } from './template-diff.js';
-import type { ClientTemplate, RealmTemplate } from './templates.js';
+import { MAPPED_GROUPS, type ClientTemplate, type RealmTemplate, type SecondStep } from './templates.js';
 
 // Builds and upgrades enterprise realms (ADR-0010) with the master-realm account that may only create
 // realms; Keycloak makes it admin of the realms it creates. Every step can run again without effect.
@@ -18,6 +20,10 @@ export interface RealmProvisioner {
   ): Promise<{ created: boolean; kcUserId: string }>;
   // Discovery and keys answer, and the backend client gets a token with this secret.
   smokeTest(realm: string, backendSecret: string): Promise<void>;
+  // An owner's sign-in rules (Phase 5a): realm settings and the second step of the browser flow.
+  applySecurity(realm: string, settings: SecuritySettings, secondStep: SecondStep): Promise<void>;
+  // The directory groups that give a tenantry-api role (SCIM), each created once.
+  ensureGroups(realm: string): Promise<void>;
   // What applyTemplate and ensureClients would change; changes nothing.
   diff(realm: string, template: RealmTemplate, clients: ClientTemplate[]): Promise<TemplateDiff[]>;
 }
@@ -97,6 +103,39 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
     );
   }
 
+  interface Execution {
+    id: string;
+    displayName: string;
+    requirement: string;
+    [key: string]: unknown;
+  }
+  const executionsOf = async (operation: string, realm: string, step: SecondStep) =>
+    json<Execution[]>(
+      await call(
+        operation,
+        'GET',
+        `${r(realm)}/authentication/flows/${encodeURIComponent(step.flow)}/executions`,
+      ),
+    );
+
+  async function setSecondStep(operation: string, realm: string, step: SecondStep, twoStep: TwoStep) {
+    const want = secondStepRequirements(step, twoStep);
+    for (const e of await executionsOf(operation, realm, step)) {
+      const requirement = want[e.displayName];
+      if (requirement && e.requirement !== requirement) {
+        await call(
+          operation,
+          'PUT',
+          `${r(realm)}/authentication/flows/${encodeURIComponent(step.flow)}/executions`,
+          {
+            ...e,
+            requirement,
+          },
+        );
+      }
+    }
+  }
+
   return {
     async ensureRealm(realm) {
       const found = await call('ensureRealm', 'GET', r(realm), undefined, [404]);
@@ -109,6 +148,37 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
       await call('applyTemplate', 'PUT', r(realm), template.realm);
       await call('applyTemplate', 'PUT', `${r(realm)}/client-policies/profiles`, template.clientProfiles);
       await call('applyTemplate', 'PUT', `${r(realm)}/client-policies/policies`, template.clientPolicies);
+      await setSecondStep('applyTemplate', realm, template.secondStep, template.twoStep);
+    },
+
+    async applySecurity(realm, settings, secondStep) {
+      await call('applySecurity', 'PUT', r(realm), securityRealmPatch(settings));
+      await setSecondStep('applySecurity', realm, secondStep, settings.twoStep);
+    },
+
+    async ensureGroups(realm) {
+      const api = await client('ensureGroups', realm, API_CLIENT);
+      for (const [name, role] of Object.entries(MAPPED_GROUPS)) {
+        const found = await json<{ id: string; name: string }[]>(
+          await call(
+            'ensureGroups',
+            'GET',
+            `${r(realm)}/groups?search=${encodeURIComponent(name)}&exact=true`,
+          ),
+        );
+        let id = found.find((g) => g.name === name)?.id;
+        if (!id) {
+          const res = await call('ensureGroups', 'POST', `${r(realm)}/groups`, { name });
+          id = res.headers.get('location')?.split('/').pop();
+          if (!id) throw new DirectoryError('ensureGroups', res.status, 'no Location header');
+        }
+        const roleRep = await json<{ id: string; name: string }>(
+          await call('ensureGroups', 'GET', `${r(realm)}/clients/${api.id}/roles/${role}`),
+        );
+        await call('ensureGroups', 'POST', `${r(realm)}/groups/${id}/role-mappings/clients/${api.id}`, [
+          roleRep,
+        ]);
+      }
     },
 
     async ensureClients(realm, clients) {
@@ -217,6 +287,13 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
         ...diffTemplate({ clientProfiles: template.clientProfiles }, { clientProfiles: profiles }),
         ...diffTemplate({ clientPolicies: template.clientPolicies }, { clientPolicies: policies }),
       ];
+      const want = secondStepRequirements(template.secondStep, template.twoStep);
+      for (const e of await executionsOf('diff', realm, template.secondStep)) {
+        const expected = want[e.displayName];
+        if (expected && e.requirement !== expected) {
+          out.push({ path: `secondStep.${e.displayName}`, live: e.requirement, template: expected });
+        }
+      }
       for (const c of clients) {
         const clientId = String(c.representation['clientId']);
         const found = await findClient('diff', realm, clientId);

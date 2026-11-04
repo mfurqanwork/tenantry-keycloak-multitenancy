@@ -1,8 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from '../src/realms/templates.js';
+import { SECURITY_DEFAULTS } from '@tenantry/auth';
+import { securityRealmPatch } from '../src/realms/security.js';
+import {
+  loadProductClients,
+  loadRealmTemplate,
+  MAPPED_GROUPS,
+  TEMPLATE_VERSION,
+} from '../src/realms/templates.js';
 import { mailsTo } from './mailpit.js';
-import { bootstrap, testProvisioner, testRealmVars } from './stack.js';
+import { bootstrap, passwordSignIn, testProvisioner, testRealmVars } from './stack.js';
 
 const realm = `ent-it${randomBytes(3).toString('hex')}`;
 const vars = testRealmVars(realm, 'Integration Co');
@@ -99,5 +106,73 @@ describe('realm provisioner (Keycloak)', () => {
       expect(res.status, `${uri} (public: ${String(publicClient)})`).toBe(400);
     }
     await provisioner.applyTemplate(realm, template);
+  });
+
+  it('applies security settings: the realm takes them, and the second step follows the choice', async () => {
+    const custom = {
+      ...SECURITY_DEFAULTS,
+      passwordMinLength: 14,
+      passwordHistory: 3,
+      sessionIdleMinutes: 20,
+    };
+    await provisioner.applySecurity(realm, custom, template.secondStep);
+    const live = (await (await bootstrap('GET', `/${realm}`)).json()) as Record<string, unknown>;
+    expect(live).toMatchObject(securityRealmPatch(custom));
+
+    const password = `Pw-${randomBytes(12).toString('base64url')}`;
+    const username = `two-step-${realm}@example.test`;
+    await bootstrap('POST', `/${realm}/users`, {
+      username,
+      email: username,
+      firstName: 'Two',
+      lastName: 'Step',
+      emailVerified: true,
+      enabled: true,
+      credentials: [{ type: 'password', value: password, temporary: false }],
+    });
+    const signIn = () =>
+      passwordSignIn({
+        realm,
+        clientId: 'tenantry-web',
+        redirectUri: `${vars.webOrigin}/`,
+        username,
+        password,
+      });
+    for (const [twoStep, toApp] of [
+      ['optional', true],
+      ['required', false],
+      ['off', true],
+    ] as const) {
+      await provisioner.applySecurity(realm, { ...custom, twoStep }, template.secondStep);
+      expect((await signIn()).toApp, twoStep).toBe(toApp);
+    }
+  });
+
+  it('reports a second step changed by hand as drift', async () => {
+    await provisioner.applyTemplate(realm, template);
+    expect(await provisioner.diff(realm, template, clients)).toEqual([]);
+    await provisioner.applySecurity(realm, SECURITY_DEFAULTS, template.secondStep);
+    const changed = { ...template, twoStep: 'required' as const };
+    const diff = await provisioner.diff(realm, changed, clients);
+    expect(diff.map((d) => d.path)).toContain('secondStep.Browser - Conditional 2FA');
+    await provisioner.applyTemplate(realm, template);
+  });
+
+  it('creates the two mapped groups once, each giving its role', async () => {
+    await provisioner.ensureGroups(realm);
+    await provisioner.ensureGroups(realm);
+    for (const [name, role] of Object.entries(MAPPED_GROUPS)) {
+      const found = (await (await bootstrap('GET', `/${realm}/groups?search=${name}&exact=true`)).json()) as {
+        id: string;
+        name: string;
+      }[];
+      expect(found.filter((g) => g.name === name)).toHaveLength(1);
+      const mappings = (await (
+        await bootstrap('GET', `/${realm}/groups/${found[0]?.id ?? ''}/role-mappings`)
+      ).json()) as {
+        clientMappings?: Record<string, { mappings: { name: string }[] }>;
+      };
+      expect(mappings.clientMappings?.['tenantry-api']?.mappings.map((m) => m.name)).toEqual([role]);
+    }
   });
 });

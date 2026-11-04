@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { createHttpRealmProvisioner, type RealmProvisioner } from '../src/realms/provisioner.js';
 import {
@@ -80,4 +80,50 @@ export async function provisionTestRealm(
   await provisioner.ensureClients(realm, loadProductClients(vars));
   await provisioner.setBackendSecret(realm, secret);
   return { realm, secret };
+}
+
+// A person signing in with only a password through the realm's browser flow (authorization code with
+// PKCE). True when Keycloak sends them back to the app; false when it asks for something more.
+export async function passwordSignIn(o: {
+  realm: string;
+  clientId: string;
+  redirectUri: string;
+  username: string;
+  password: string;
+}): Promise<{ toApp: boolean; status: number }> {
+  const jar = new Map<string, string>();
+  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+  const keep = (res: Response) => {
+    for (const line of res.headers.getSetCookie()) {
+      const [pair = ''] = line.split(';');
+      const at = pair.indexOf('=');
+      jar.set(pair.slice(0, at), pair.slice(at + 1));
+    }
+  };
+  const challenge = createHash('sha256').update(randomBytes(32).toString('base64url')).digest('base64url');
+  const auth = `${baseUrl}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+    client_id: o.clientId,
+    redirect_uri: o.redirectUri,
+    response_type: 'code',
+    scope: 'openid',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+  }).toString()}`;
+  const page = await fetch(auth, { redirect: 'manual' });
+  keep(page);
+  const html = await page.text();
+  const action = (
+    /"loginAction"\s*:\s*"([^"]+)"/.exec(html)?.[1] ??
+    /<form[^>]*\saction="([^"]+)"/.exec(html)?.[1] ??
+    ''
+  )
+    .replace(/&amp;/g, '&')
+    .replace(new URL(env('TENANTRY_AUTH_URL')).origin, baseUrl);
+  const res = await fetch(action, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { cookie: cookie(), 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ username: o.username, password: o.password }),
+  });
+  return { toApp: (res.headers.get('location') ?? '').startsWith(o.redirectUri), status: res.status };
 }
