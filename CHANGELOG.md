@@ -4,7 +4,21 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-Phase 3: Enterprise tenants. Phase 4: Customer applications.
+Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings.
+
+### Added (Phase 5a)
+
+- Security settings for enterprise workspaces: two-step sign-in (off, optional, required), password length, history and expiry, session idle and maximum times, and lockout. `GET/PUT /api/security`, the portal's Security page, `tenant_security` (migration 0004), applied to the realm on save and audited as `security.updated`.
+- Directory sync over SCIM through a Tenantry gateway at `https://<slug>.<base>/scim/v2` (ADR-0024): long-lived `tnt_scim_` tokens kept as hashes in `tenant_scim_tokens`, one active per workspace, with `GET /api/scim`, `POST/DELETE /api/scim/token` and `PUT /api/scim/default-role`, and the portal's Directory sync (SCIM) page.
+- A default role for people the directory creates, and the groups `tenantry-members` and `tenantry-admins` that give roles; the Members page shows roles held through them.
+- Realm template v3: the second sign-in step and the mapped groups.
+- `docs/guides/connect-scim.md` for Entra ID and Okta.
+- Guarantee tests: another workspace's SCIM token, a person's token on `/scim` and a SCIM token on `/api`, a revoked token, SCIM people only in their own realm with the default role, and required two-step stopping a password-only sign-in.
+
+### Changed (Phase 5a)
+
+- Realm upgrades merge each tenant's own security settings into the template, so they are not reported as drift.
+- Caddy sends `/scim/*` on tenant hosts to the API.
 
 ### Added (Phase 4)
 

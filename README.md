@@ -7,7 +7,7 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** v0.1 (Phases 0–2) plus Phases 3 and 4. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. Their owners and admins connect their own apps to that realm from the portal. The Phase 1 to 4 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
+> **Status:** v0.1 (Phases 0–2) plus Phases 3, 4 and 5a. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. Their owners and admins connect their own apps to that realm from the portal, and their owners set its sign-in rules and connect their directory over SCIM. The Phase 1 to 5a guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
 
 ## Guarantees
 
@@ -109,11 +109,11 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | Login page branding                 | Logo and colour per tenant                    | Full custom theme              |
 | MFA, password and session rules     | Platform defaults                             | Their own                      |
 | Connect their own apps              | No                                            | Yes, through our portal        |
-| SCIM from their directory           | No                                            | Yes, Keycloak native per realm |
+| SCIM from their directory           | No                                            | Yes, through our SCIM gateway  |
 | Users in several tenants            | One account                                   | Separate account per realm     |
 | Scale                               | Thousands of tenants                          | Tens to low hundreds of realms |
 
-Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 lets its customers connect their own apps ([guide](docs/guides/connect-your-app.md)). SCIM and per-tenant policies follow in Phase 5.
+Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 lets its customers connect their own apps ([guide](docs/guides/connect-your-app.md)). Phase 5a adds per-tenant security settings and SCIM ([guide](docs/guides/connect-scim.md)); Standard → Enterprise migration and console access follow in 5b.
 
 ## Repository
 
@@ -141,7 +141,7 @@ Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 let
 | 2     | SSO across both apps, tenant switching, branding → **v0.1**                      |
 | 3     | Enterprise realm provisioning from versioned templates                           |
 | 4     | Customer applications registered through the portal                              |
-| 5     | SCIM, per-tenant policies, Standard → Enterprise migration                       |
+| 5     | 5a: SCIM and per-tenant policies. 5b: Standard → Enterprise migration            |
 | 6     | Production hardening and realm-count measurements → **v1.0**                     |
 
 ## Licence
