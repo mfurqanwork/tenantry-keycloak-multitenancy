@@ -48,3 +48,4 @@ export {
   type ScimRequest,
   type ScimResponse,
 } from './realms/scim.js';
+export { mergeSecurity, secondStepRequirements, securityRealmPatch } from './realms/security.js';

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { tenantOrigin } from '@tenantry/auth';
 import {
+  getSecurity,
   insertAudit,
   listAudit,
   platformRepository,
@@ -12,8 +13,10 @@ import {
 import {
   loadProductClients,
   loadRealmTemplate,
+  mergeSecurity,
   TEMPLATE_VERSION,
   type RealmProvisioner,
+  type RealmTemplate,
   type TemplateDiff,
   type TemplateVars,
 } from '@tenantry/keycloak-admin';
@@ -156,7 +159,8 @@ export class EnterpriseService {
     for (const tenant of tenants) {
       const realm = tenant.realm ?? `ent-${tenant.slug}`;
       const vars = this.vars(tenant);
-      const template = loadRealmTemplate(TEMPLATE_VERSION, vars);
+      // The tenant's own security settings are part of what the realm should be, not drift.
+      const template = await this.templateFor(tenant);
       const clients = loadProductClients(vars);
       let differences: TemplateDiff[];
       try {
@@ -215,6 +219,12 @@ export class EnterpriseService {
       throw new NotFoundProblem('No enterprise workspace at this address.');
     }
     return tenant;
+  }
+
+  // The current template for this tenant's realm, with its owners' security settings applied.
+  async templateFor(tenant: TenantRecord): Promise<RealmTemplate> {
+    const settings = await tenantTx(this.db, tenant.id, (tx) => getSecurity(tx));
+    return mergeSecurity(loadRealmTemplate(TEMPLATE_VERSION, this.vars(tenant)), settings);
   }
 
   // A resumed run keeps the first owner the run began with; another address would make a second owner.

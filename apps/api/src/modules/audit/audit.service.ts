@@ -23,7 +23,8 @@ export type AuditAction =
   | 'app.updated'
   | 'app.secret_rotated'
   | 'app.deleted'
-  | 'app.token_checked';
+  | 'app.token_checked'
+  | 'security.updated';
 
 export interface AuditView {
   id: string;

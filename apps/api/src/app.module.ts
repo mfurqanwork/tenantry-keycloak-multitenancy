@@ -16,6 +16,7 @@ import { EnterpriseModule } from './modules/enterprise/enterprise.module.js';
 import { MembersModule } from './modules/members/members.module.js';
 import { AppsModule } from './modules/apps/apps.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
+import { SecurityModule } from './modules/security/security.module.js';
 import { SignupModule } from './modules/signup/signup.module.js';
 import { TenantsModule } from './modules/tenants/tenants.module.js';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module.js';
@@ -39,6 +40,7 @@ export class AppModule {
         WorkspacesModule,
         BrandingModule,
         EnterpriseModule,
+        SecurityModule,
       ],
       controllers: [HealthController],
       providers: [

@@ -27,10 +27,11 @@ interface FakeRealm {
 export class InMemoryRealmProvisioner implements RealmProvisioner {
   readonly realms = new Map<string, FakeRealm>();
   readonly emailsSent: { realm: string; email: string }[] = [];
-  private readonly failing = new Set<keyof RealmProvisioner>();
+  private readonly failing = new Map<keyof RealmProvisioner, number>();
 
-  failOn(step: keyof RealmProvisioner): void {
-    this.failing.add(step);
+  // The step fails as Keycloak would, with this status (500 by default).
+  failOn(step: keyof RealmProvisioner, status = 500): void {
+    this.failing.set(step, status);
   }
 
   clearFailures(): void {
@@ -39,7 +40,8 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
 
   private run<T>(step: keyof RealmProvisioner, fn: () => T): Promise<T> {
     return Promise.resolve().then(() => {
-      if (this.failing.has(step)) throw new DirectoryError(step, 500, 'injected failure');
+      const status = this.failing.get(step);
+      if (status !== undefined) throw new DirectoryError(step, status, 'injected failure');
       return fn();
     });
   }
