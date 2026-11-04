@@ -11,6 +11,8 @@ export interface Me {
   tenant: { slug: string; name: string; tier: 'standard' | 'enterprise' };
   role: Role | null;
   permissions: Permission[];
+  // Set when the person may open their realm's Keycloak console (ADR-0026).
+  consoleUrl?: string;
 }
 
 const MeContext = createContext<Me | null>(null);

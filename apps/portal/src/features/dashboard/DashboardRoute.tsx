@@ -13,6 +13,15 @@ export function DashboardRoute() {
   if (web) {
     tiles.push(<StatTile key="web" label="App" value={<Link href={web}>Open Tenantry</Link>} />);
   }
+  if (me.consoleUrl) {
+    tiles.push(
+      <StatTile
+        key="console"
+        label="Keycloak console"
+        value={<Link href={me.consoleUrl}>Open the Keycloak console</Link>}
+      />,
+    );
+  }
   if (me.can('tenant:settings')) {
     tiles.push(
       <StatTile

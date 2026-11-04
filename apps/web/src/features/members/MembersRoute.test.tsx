@@ -87,3 +87,76 @@ describe('MembersRoute', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Members' })).toBeInTheDocument();
   });
 });
+
+describe('MembersRoute: console access (enterprise)', () => {
+  const ENT = {
+    members: [
+      { userId: 'u-me', email: 'me@example.com', displayName: 'Me', role: 'owner', console: false },
+      { userId: 'u-ann', email: 'ann@example.com', displayName: 'Ann', role: 'admin', console: true },
+      { userId: 'u-bob', email: 'bob@example.com', displayName: 'Bob', role: 'member', console: false },
+    ],
+    invites: [],
+  };
+  const enterpriseOwner = () => {
+    const me = makeMe('owner', [...ALL, 'tenant:settings']);
+    return { ...me, tenant: { ...me.tenant, tier: 'enterprise' as const } };
+  };
+  const menu = async (email: string) => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: `Actions for ${email}` }));
+    return user;
+  };
+
+  it('shows who has console access', async () => {
+    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
+    expect(await screen.findByText('Admin · Console access')).toBeInTheDocument();
+  });
+
+  it('owners give an admin, or themselves, console access and take it back', async () => {
+    const api = fakeApi({
+      '/api/members': ENT,
+      'POST /api/members/u-me/console': undefined,
+      'DELETE /api/members/u-ann/console': undefined,
+    });
+    renderPage(<MembersRoute />, { api, me: enterpriseOwner() });
+    let user = await menu('me@example.com');
+    await user.click(await screen.findByText('Give console access'));
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/api/members/u-me/console', {});
+    });
+    user = await menu('ann@example.com');
+    await user.click(await screen.findByText('Take console access away'));
+    await waitFor(() => {
+      expect(api.del).toHaveBeenCalledWith('/api/members/u-ann/console');
+    });
+  });
+
+  it("offers nothing for a member's row", async () => {
+    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
+    await menu('bob@example.com');
+    expect(await screen.findByText('Change role')).toBeInTheDocument();
+    expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
+  });
+
+  it('offers nothing on a Standard workspace', async () => {
+    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
+    await menu('bob@example.com');
+    expect(await screen.findByText('Change role')).toBeInTheDocument();
+    expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
+  });
+
+  it("shows the API's refusal", async () => {
+    const refused = new ApiProblem(
+      502,
+      'Bad Gateway',
+      'The identity service is unavailable. Try again shortly.',
+    );
+    renderPage(<MembersRoute />, {
+      api: fakeApi({ '/api/members': ENT, 'DELETE /api/members/u-ann/console': refused }),
+      me: enterpriseOwner(),
+    });
+    const user = await menu('ann@example.com');
+    await user.click(await screen.findByText('Take console access away'));
+    expect(await screen.findByText(/The identity service is unavailable/)).toBeInTheDocument();
+  });
+});
