@@ -5,6 +5,7 @@ import { Ctx, CurrentTenant, Public, SignedIn } from '../../auth/decorators.js';
 import { tenantFromHost } from '../../auth/host.js';
 import type { SignedInUser } from '../../auth/request-context.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
+import { ConsoleAccessService } from '../console/console.service.js';
 import { TenantsService } from './tenants.service.js';
 
 @Controller()
@@ -12,6 +13,7 @@ export class TenantsController {
   constructor(
     private readonly tenants: TenantsService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly console: ConsoleAccessService,
   ) {}
 
   // Before login the SPA has only its hostname; this says which realm, client and organization to use.
@@ -23,12 +25,14 @@ export class TenantsController {
   }
 
   @Get('me')
-  me(@Ctx() ctx: TenantContext, @CurrentTenant() tenant: TenantRecord, @SignedIn() user: SignedInUser) {
+  async me(@Ctx() ctx: TenantContext, @CurrentTenant() tenant: TenantRecord, @SignedIn() user: SignedInUser) {
+    const consoleUrl = await this.console.consoleUrlFor(tenant, user.userId);
     return {
       user: { id: user.userId, email: user.email, displayName: user.displayName },
       tenant: { slug: tenant.slug, name: tenant.name, tier: tenant.tier },
       role: ctx.roles[0] ?? null,
       permissions: [...ctx.permissions].sort(),
+      ...(consoleUrl ? { consoleUrl } : {}),
     };
   }
 }

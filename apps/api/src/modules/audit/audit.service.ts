@@ -31,7 +31,14 @@ export type AuditAction =
   | 'scim.user_updated'
   | 'scim.user_deactivated'
   | 'scim.group_changed'
-  | 'scim.role_grant_failed';
+  | 'scim.role_grant_failed'
+  | 'console.granted'
+  | 'console.revoked'
+  | 'tenant.migrating'
+  | 'tenant.migrated'
+  | 'tenant.migration_finished'
+  | 'tenant.migration_aborted'
+  | 'idp.secret_set';
 
 export interface AuditView {
   id: string;

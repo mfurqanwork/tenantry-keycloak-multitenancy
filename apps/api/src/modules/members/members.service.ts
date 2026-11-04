@@ -25,12 +25,15 @@ import { ConflictProblem, ForbiddenProblem, NotFoundProblem } from '../../common
 import type { MemberDirectories } from '../../infrastructure/member-directories.js';
 import { DB, MEMBER_DIRECTORIES } from '../../infrastructure/tokens.js';
 import { AuditService } from '../audit/audit.service.js';
+import { ConsoleAccessService } from '../console/console.service.js';
 
 export interface MemberView {
   userId: string;
   email: string | null;
   displayName: string | null;
   role: Role | null;
+  // Enterprise workspaces: whether they may open the realm's Keycloak console (ADR-0026).
+  console?: boolean;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,6 +46,7 @@ export class MembersService {
     @Inject(DB) private readonly db: Db,
     @Inject(MEMBER_DIRECTORIES) private readonly directories: MemberDirectories,
     private readonly audit: AuditService,
+    private readonly console: ConsoleAccessService,
   ) {}
 
   async list(
@@ -52,6 +56,7 @@ export class MembersService {
     const issuer = this.issuer(tenant);
     const platform = platformRepository(this.db);
     const listed = await (await this.directories.forTenant(tenant)).listMembers();
+    const holders = await this.console.holders(tenant);
     // Every member gets our own user id, even one who has never signed in yet.
     const members = await Promise.all(
       listed.map(async (m) => ({
@@ -68,8 +73,10 @@ export class MembersService {
         role: m.role,
       })),
     );
+    const withConsole =
+      tenant.tier === 'enterprise' ? members.map((m) => ({ ...m, console: holders.has(m.userId) })) : members;
     const invites = await tenantTx(this.db, ctx.tenantId, (tx) => listOpenInvites(tx));
-    return { members, invites };
+    return { members: withConsole, invites };
   }
 
   async invite(
@@ -99,8 +106,10 @@ export class MembersService {
       }
       // Inside the transaction: if Keycloak refuses, the invite row is rolled back too. Enterprise: the
       // account exists at once with the role; the invite is accepted when the person first signs in.
-      await members.invite(input.email, input.role);
+      const { kcUserId } = await members.invite(input.email, input.role);
       await this.audit.record(tx, ctx, 'member.invited', invite.id, { email: input.email, role: input.role });
+      // An enterprise invite as owner makes an owner at once: console users must not change them.
+      if (kcUserId && input.role === 'owner') await this.console.syncOwners(tenant);
       return invite;
     });
   }
@@ -147,6 +156,7 @@ export class MembersService {
       if (from === 'owner' && to !== 'owner') this.keepAnOwner(members);
       await directory.setRole(target.kcUserId, to);
       await this.audit.record(tx, ctx, 'member.role_changed', userId, { from, to });
+      await this.console.afterRoleChange(tx, ctx, tenant, { kcUserId: target.kcUserId, userId, to });
     });
   }
 
@@ -162,6 +172,7 @@ export class MembersService {
       }
       await directory.remove(target.kcUserId);
       await this.audit.record(tx, ctx, 'member.removed', userId, { email: target.email, role });
+      await this.console.afterRoleChange(tx, ctx, tenant, { kcUserId: target.kcUserId, userId, to: null });
     });
   }
 
@@ -178,6 +189,11 @@ export class MembersService {
       }
       await directory.remove(actor.kcUserId);
       await this.audit.record(tx, ctx, 'member.left', ctx.userId, { email: me.email, role });
+      await this.console.afterRoleChange(tx, ctx, tenant, {
+        kcUserId: actor.kcUserId,
+        userId: ctx.userId,
+        to: null,
+      });
     });
   }
 

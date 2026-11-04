@@ -10,6 +10,7 @@ import {
   InMemoryRealmApps,
   InMemoryRealmMembers,
   InMemoryRealmProvisioner,
+  InMemoryRealmConsole,
   InMemoryRealmScim,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
@@ -24,6 +25,7 @@ import {
   MEMBER_DIRECTORIES,
   REALM_APPS,
   REALM_PROVISIONER,
+  REALM_CONSOLE,
   REALM_SCIM,
   SECRET_STORE,
 } from '../infrastructure/tokens.js';
@@ -83,6 +85,8 @@ export interface TestApp {
   realmApps(realm: string): InMemoryRealmApps;
   // The in-memory native SCIM of an enterprise realm, behind the gateway.
   realmScim(realm: string): InMemoryRealmScim;
+  // The in-memory console access of an enterprise realm.
+  realmConsole(realm: string): InMemoryRealmConsole;
   // Moves the tenant's SCIM tokens' expiry into the past.
   expireScimTokens(tenantId: string): Promise<void>;
   // Enterprise provisioning against an in-memory Keycloak and secrets store.
@@ -147,6 +151,15 @@ export async function createTestApp(
     }
     return found;
   };
+  const realmConsoles = new Map<string, InMemoryRealmConsole>();
+  const consoleOf = (realm: string) => {
+    let found = realmConsoles.get(realm);
+    if (!found) {
+      found = new InMemoryRealmConsole(realm, issuer.baseUrl);
+      realmConsoles.set(realm, found);
+    }
+    return found;
+  };
   const memberDirectories: MemberDirectories = {
     forTenant: (tenant) =>
       Promise.resolve(
@@ -187,6 +200,8 @@ export async function createTestApp(
     .useValue(secrets)
     .overrideProvider(REALM_APPS)
     .useValue({ forTenant: (tenant: TenantRecord) => Promise.resolve(appsOf(tenant.realm ?? '')) })
+    .overrideProvider(REALM_CONSOLE)
+    .useValue({ forRealm: consoleOf })
     .overrideProvider(REALM_SCIM)
     .useValue({ forTenant: (tenant: TenantRecord) => scimOf(tenant.realm ?? '', tenant.issuer ?? undefined) })
     .compile();
@@ -288,6 +303,7 @@ export async function createTestApp(
     realmMembers: realmOf,
     realmApps: appsOf,
     realmScim: scimOf,
+    realmConsole: consoleOf,
     async expireScimTokens(tenantId) {
       const client = await pool.connect();
       try {
