@@ -82,7 +82,7 @@ export function runRealmMemberContract(name: string, make: () => Promise<MemberC
 
     it('lists people who hold a role through a mapped group, the higher role winning', async () => {
       const address = email();
-      const { kcUserId } = await s.members.invite(address, 'member');
+      const kcUserId = (await s.members.invite(address, 'member')).kcUserId ?? '';
       await s.joinGroup(kcUserId, 'tenantry-admins');
       expect((await s.members.listMembers()).find((m) => m.kcUserId === kcUserId)?.role).toBe('admin');
       await s.leaveGroup(kcUserId, 'tenantry-admins');
