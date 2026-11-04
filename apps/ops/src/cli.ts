@@ -10,7 +10,15 @@ import { createFileSecretStore } from '@tenantry/keycloak-admin/secrets';
 import { setTxt } from './commands/dns.js';
 import { listAppsCommand, registerAppCommand, rotateAppCommand } from './commands/apps.js';
 import { claimDomain, verifyDomain } from './commands/domain.js';
-import { provisionEnterprise, upgradeEnterprise, type EnterpriseDeps } from './commands/enterprise.js';
+import {
+  abortMigration,
+  finishMigration,
+  migrateEnterprise,
+  provisionEnterprise,
+  setIdpSecretCommand,
+  upgradeEnterprise,
+  type EnterpriseDeps,
+} from './commands/enterprise.js';
 import { linkIdp } from './commands/idp.js';
 import { syncOrigins } from './commands/tenants.js';
 import type { OpsDeps } from './deps.js';
@@ -30,6 +38,10 @@ const USAGE = `Usage: pnpm ops <command>
   dns set-txt <name> <value>     (dev only: writes the local DNS zone)
   enterprise provision --slug <slug> --name <name> --admin-email <email>
   enterprise upgrade [--tenant <slug>] [--dry-run]
+  enterprise migrate --tenant <slug> [--dry-run | --finish | --abort]
+                (moves a Standard workspace into its own realm, ADR-0025)
+  enterprise idp-secret --tenant <slug> --alias <alias> [--client-secret-env <NAME>]
+                (a company login copied without its secret; read from that variable or .env)
   apps list     --tenant <slug>
   apps register --tenant <slug> --name <name> --type web|spa|native|m2m [--redirect <uri>]... [--post-logout <uri>]...
                 (prints the client secret once)
@@ -180,6 +192,8 @@ async function main(argv: string[]): Promise<number> {
       name: { type: 'string' },
       'admin-email': { type: 'string' },
       'dry-run': { type: 'boolean' },
+      finish: { type: 'boolean' },
+      abort: { type: 'boolean' },
       type: { type: 'string' },
       app: { type: 'string' },
       redirect: { type: 'string', multiple: true },
@@ -244,6 +258,18 @@ async function main(argv: string[]): Promise<number> {
       return upgradeEnterprise(enterpriseDeps(), {
         ...(values.tenant ? { tenant: values.tenant } : {}),
         dryRun: values['dry-run'] === true,
+      });
+    case 'enterprise migrate': {
+      const target = { tenant: need('tenant') };
+      if (values.finish === true) return finishMigration(enterpriseDeps(), target);
+      if (values.abort === true) return abortMigration(enterpriseDeps(), target);
+      return migrateEnterprise(enterpriseDeps(), { ...target, dryRun: values['dry-run'] === true });
+    }
+    case 'enterprise idp-secret':
+      return setIdpSecretCommand(enterpriseDeps(), {
+        tenant: need('tenant'),
+        alias: need('alias'),
+        secret: secretFrom(values['client-secret-env'], (key) => stackEnv(key, '') || undefined),
       });
     case 'apps list':
       return listAppsCommand(enterpriseDeps(), { tenant: need('tenant') });

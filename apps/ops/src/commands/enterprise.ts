@@ -79,3 +79,88 @@ export async function upgradeEnterprise(
   }
   return code;
 }
+
+interface MigrationPlan {
+  slug: string;
+  realm: string;
+  members: { email: string | null; role: string | null }[];
+  invites: number;
+  companyLogins: { alias: string; secretKept: boolean }[];
+  cutOver?: boolean;
+  waitingForSecret?: string[];
+}
+
+const refused = (deps: EnterpriseDeps, res: { status: number; body: unknown }): ExitCode => {
+  deps.err((res.body as Problem | undefined)?.detail ?? `The API answered ${String(res.status)}.`);
+  return 1;
+};
+
+// Moving a Standard workspace into its own realm (ADR-0025). A failed run is finished by running it again.
+export async function migrateEnterprise(
+  deps: EnterpriseDeps,
+  input: { tenant: string; dryRun: boolean },
+): Promise<ExitCode> {
+  const res = await deps.api(deps.baseDomain, 'POST', '/api/platform/enterprise-tenants/migrate', {
+    token: await deps.operatorToken(),
+    body: { slug: input.tenant, dryRun: input.dryRun },
+  });
+  if (res.status !== 200) return refused(deps, res);
+  const p = res.body as MigrationPlan;
+  if (input.dryRun) {
+    deps.out(`${p.slug} would move to ${p.realm} (dry run, nothing changed).`);
+    for (const m of p.members) deps.out(`  ${m.email ?? '(no email)'}: ${m.role ?? 'no role'}`);
+    deps.out(`  ${String(p.invites)} open invite${p.invites === 1 ? '' : 's'}, sent again from ${p.realm}`);
+    for (const c of p.companyLogins) {
+      deps.out(
+        `  company login ${c.alias}: ${c.secretKept ? 'copied with its kept secret' : 'no kept secret, copied switched off'}`,
+      );
+    }
+    return 0;
+  }
+  deps.out(
+    `${p.slug} now signs in through ${p.realm}. People use "Continue with your Tenantry account" the first time.`,
+  );
+  for (const alias of p.waitingForSecret ?? []) {
+    deps.out(
+      `  ${alias} is copied but off: IDP_CLIENT_SECRET=... pnpm ops enterprise idp-secret --tenant ${p.slug} --alias ${alias}`,
+    );
+  }
+  deps.out(`When everyone has signed in: pnpm ops enterprise migrate --tenant ${p.slug} --finish`);
+  return 0;
+}
+
+export async function finishMigration(deps: EnterpriseDeps, input: { tenant: string }): Promise<ExitCode> {
+  const res = await deps.api(deps.baseDomain, 'POST', '/api/platform/enterprise-tenants/migrate/finish', {
+    token: await deps.operatorToken(),
+    body: { slug: input.tenant },
+  });
+  if (res.status !== 204) return refused(deps, res);
+  deps.out(`${input.tenant}: the bridge is gone and its organization removed from the shared realm.`);
+  return 0;
+}
+
+export async function abortMigration(deps: EnterpriseDeps, input: { tenant: string }): Promise<ExitCode> {
+  const res = await deps.api(deps.baseDomain, 'POST', '/api/platform/enterprise-tenants/migrate/abort', {
+    token: await deps.operatorToken(),
+    body: { slug: input.tenant },
+  });
+  if (res.status !== 204) return refused(deps, res);
+  deps.out(`${input.tenant} is a Standard workspace again; its half-built realm is gone.`);
+  return 0;
+}
+
+// The secret comes from an environment variable (secretFrom), never the command line.
+export async function setIdpSecretCommand(
+  deps: EnterpriseDeps,
+  input: { tenant: string; alias: string; secret: string },
+): Promise<ExitCode> {
+  const res = await deps.api(
+    deps.baseDomain,
+    'PUT',
+    `/api/platform/enterprise-tenants/${encodeURIComponent(input.tenant)}/idps/${encodeURIComponent(input.alias)}/secret`,
+    { token: await deps.operatorToken(), body: { secret: input.secret } },
+  );
+  if (res.status !== 204) return refused(deps, res);
+  deps.out(`${input.alias} signs people in again, in ${input.tenant}'s own realm.`);
+  return 0;
+}

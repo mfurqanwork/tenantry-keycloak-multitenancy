@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { provisionEnterprise, upgradeEnterprise, type EnterpriseDeps } from './enterprise.js';
+import {
+  abortMigration,
+  finishMigration,
+  migrateEnterprise,
+  provisionEnterprise,
+  setIdpSecretCommand,
+  upgradeEnterprise,
+  type EnterpriseDeps,
+} from './enterprise.js';
 
 function deps(reply: { status: number; body: unknown }) {
   const out: string[] = [];
@@ -114,5 +122,104 @@ describe('ops enterprise upgrade', () => {
     expect(err.join('\n')).toMatch(/ent-initech: could not be read \(Keycloak diff failed \(404\)\)/);
     expect(out.join('\n')).toMatch(/ent-umbrella: up to date/);
     expect(out.join('\n')).not.toMatch(/ent-initech: up to date/);
+  });
+});
+
+describe('ops enterprise migrate', () => {
+  const plan = {
+    slug: 'globex',
+    realm: 'ent-globex',
+    members: [
+      { email: 'owner@globex.test', role: 'owner' },
+      { email: 'quiet@globex.test', role: null },
+    ],
+    invites: 1,
+    companyLogins: [
+      { alias: 'globex-corp', secretKept: true },
+      { alias: 'old-corp', secretKept: false },
+    ],
+  };
+
+  it('prints the plan of a dry run', async () => {
+    const { d, out, api } = deps({ status: 200, body: plan });
+    expect(await migrateEnterprise(d, { tenant: 'globex', dryRun: true })).toBe(0);
+    expect(api).toHaveBeenCalledWith(
+      'tenantry.localhost',
+      'POST',
+      '/api/platform/enterprise-tenants/migrate',
+      {
+        token: 'op-token',
+        body: { slug: 'globex', dryRun: true },
+      },
+    );
+    const text = out.join('\n');
+    expect(text).toMatch(/globex would move to ent-globex \(dry run, nothing changed\)/);
+    expect(text).toMatch(/owner@globex\.test: owner/);
+    expect(text).toMatch(/quiet@globex\.test: no role/);
+    expect(text).toMatch(/1 open invite/);
+    expect(text).toMatch(/old-corp: no kept secret/);
+  });
+
+  it('prints the result and names the company logins waiting for a secret', async () => {
+    const { d, out } = deps({
+      status: 200,
+      body: { ...plan, cutOver: true, waitingForSecret: ['old-corp'] },
+    });
+    expect(await migrateEnterprise(d, { tenant: 'globex', dryRun: false })).toBe(0);
+    const text = out.join('\n');
+    expect(text).toMatch(/globex now signs in through ent-globex/);
+    expect(text).toMatch(/pnpm ops enterprise idp-secret --tenant globex --alias old-corp/);
+    expect(text).toMatch(/pnpm ops enterprise migrate --tenant globex --finish/);
+  });
+
+  it('calls finish and abort', async () => {
+    const f = deps({ status: 204, body: undefined });
+    expect(await finishMigration(f.d, { tenant: 'globex' })).toBe(0);
+    expect(f.api).toHaveBeenCalledWith(
+      'tenantry.localhost',
+      'POST',
+      '/api/platform/enterprise-tenants/migrate/finish',
+      {
+        token: 'op-token',
+        body: { slug: 'globex' },
+      },
+    );
+    const a = deps({ status: 204, body: undefined });
+    expect(await abortMigration(a.d, { tenant: 'globex' })).toBe(0);
+    expect(a.api).toHaveBeenCalledWith(
+      'tenantry.localhost',
+      'POST',
+      '/api/platform/enterprise-tenants/migrate/abort',
+      {
+        token: 'op-token',
+        body: { slug: 'globex' },
+      },
+    );
+  });
+
+  it("says the API's reason and exits 1 when refused", async () => {
+    const { d, err } = deps({
+      status: 409,
+      body: { detail: 'This move is past its cut-over and cannot be undone.' },
+    });
+    expect(await abortMigration(d, { tenant: 'globex' })).toBe(1);
+    expect(err).toEqual(['This move is past its cut-over and cannot be undone.']);
+  });
+});
+
+describe('ops enterprise idp-secret', () => {
+  it('sends the secret it was given and never prints it', async () => {
+    const { d, out, err, api } = deps({ status: 204, body: undefined });
+    expect(
+      await setIdpSecretCommand(d, { tenant: 'globex', alias: 'old-corp', secret: 's3cret-value' }),
+    ).toBe(0);
+    expect(api).toHaveBeenCalledWith(
+      'tenantry.localhost',
+      'PUT',
+      '/api/platform/enterprise-tenants/globex/idps/old-corp/secret',
+      { token: 'op-token', body: { secret: 's3cret-value' } },
+    );
+    expect([...out, ...err].join('\n')).not.toContain('s3cret-value');
+    expect(out.join('\n')).toMatch(/old-corp signs people in again/);
   });
 });
