@@ -49,6 +49,18 @@ const decode = (s: string) =>
     .replace(/&#47;/g, '/')
     .replace(/&quot;/g, '"');
 
+// A sign-in form (username or password), not a set-up step such as configuring an authenticator.
+function isSignInForm(html: string): boolean {
+  try {
+    return (
+      formAction(html).includes('/login-actions/authenticate') &&
+      /name="(username|password)"|"(username|password)"/.test(html)
+    );
+  } catch {
+    return false;
+  }
+}
+
 // The login form's target: a plain <form action> (Keycloak's own themes) or Keycloakify's kcContext.
 export function formAction(html: string): string {
   const fromContext = /"loginAction"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(html)?.[1];
@@ -103,6 +115,8 @@ export function authorizeUrl(o: {
   redirectUri: string;
   challenge: string;
   scope?: string;
+  // An identity provider's button to take at once (the bridge, ADR-0025).
+  idpHint?: string;
 }): string {
   return `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
     client_id: o.clientId,
@@ -112,6 +126,7 @@ export function authorizeUrl(o: {
     state: randomBytes(8).toString('hex'),
     code_challenge: o.challenge,
     code_challenge_method: 'S256',
+    ...(o.idpHint ? { kc_idp_hint: o.idpHint } : {}),
   }).toString()}`;
 }
 
@@ -125,6 +140,8 @@ export async function signInWithBrowser(o: {
   password: string;
   // A browser that keeps its cookies for later steps (single sign-on into another app).
   browser?: Browser;
+  // Sign in through this identity provider (the bridge) instead of the realm's own form.
+  via?: string;
 }): Promise<string> {
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
@@ -132,9 +149,19 @@ export async function signInWithBrowser(o: {
   const browser = o.browser ?? new Browser(o.redirectUri);
   browser.stopAt = o.redirectUri;
   const login = await browser.open(
-    authorizeUrl({ realm: o.realm, clientId: o.clientId, redirectUri: o.redirectUri, challenge }),
+    authorizeUrl({
+      realm: o.realm,
+      clientId: o.clientId,
+      redirectUri: o.redirectUri,
+      challenge,
+      ...(o.via ? { idpHint: o.via } : {}),
+    }),
   );
-  const done = await browser.submit(login, { username: o.username, password: o.password });
+  let done = await browser.submit(login, { username: o.username, password: o.password });
+  // A realm that asks for the username first (organizations on) shows its password page next.
+  for (let step = 0; step < 2 && !done.url.startsWith(o.redirectUri) && isSignInForm(done.html); step++) {
+    done = await browser.submit(done, { username: o.username, password: o.password });
+  }
   const code = done.url.startsWith(o.redirectUri) ? new URL(done.url).searchParams.get('code') : null;
   if (!code) throw new Error(`sign-in to ${o.realm} did not finish: ${String(done.status)} at ${done.url}`);
   const res = await fetch(local(`${oidc}/token`), {
@@ -148,5 +175,37 @@ export async function signInWithBrowser(o: {
     }),
   });
   if (!res.ok) throw new Error(`code exchange in ${o.realm}: ${String(res.status)} ${await res.text()}`);
+  return ((await res.json()) as { access_token: string }).access_token;
+}
+
+// A person signing in to their realm's Keycloak admin console (its own security-admin-console client),
+// returning the console's access token (ADR-0026).
+export async function consoleSignIn(o: {
+  realm: string;
+  username: string;
+  password: string;
+}): Promise<string> {
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  const redirectUri = `${PUBLIC_AUTH}/admin/${o.realm}/console/`;
+  const browser = new Browser(redirectUri);
+  const login = await browser.open(
+    authorizeUrl({ realm: o.realm, clientId: 'security-admin-console', redirectUri, challenge }),
+  );
+  const done = await browser.submit(login, { username: o.username, password: o.password });
+  const code = done.url.startsWith(redirectUri) ? new URL(done.url).searchParams.get('code') : null;
+  if (!code)
+    throw new Error(`console sign-in to ${o.realm} did not finish: ${String(done.status)} at ${done.url}`);
+  const res = await fetch(local(`${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect/token`), {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: 'security-admin-console',
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: verifier,
+    }),
+  });
+  if (!res.ok) throw new Error(`console code exchange: ${String(res.status)} ${await res.text()}`);
   return ((await res.json()) as { access_token: string }).access_token;
 }

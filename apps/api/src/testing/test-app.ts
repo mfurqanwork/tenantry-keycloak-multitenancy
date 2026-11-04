@@ -247,7 +247,15 @@ export async function createTestApp(
     .overrideProvider(REALM_CONSOLE)
     .useValue({ forRealm: consoleOf })
     .overrideProvider(REALM_SCIM)
-    .useValue({ forTenant: (tenant: TenantRecord) => scimOf(tenant.realm ?? '', tenant.issuer ?? undefined) })
+    .useValue({
+      // As the real factory: only an enterprise tenant with a realm and an issuer has native SCIM.
+      forTenant: (tenant: TenantRecord) => {
+        if (tenant.tier !== 'enterprise' || !tenant.realm || !tenant.issuer) {
+          throw new Error(`tenant ${tenant.slug} has no realm of its own`);
+        }
+        return scimOf(tenant.realm, tenant.issuer);
+      },
+    })
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   setUpHttp(app);

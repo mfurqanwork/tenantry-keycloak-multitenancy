@@ -212,7 +212,8 @@ export class MigrationService {
     }
 
     // 2. The realm, built like every enterprise realm, with its permissions last (ADR-0026).
-    const moving = { ...tenant, realm, issuer };
+    // The realm being built is an enterprise realm, though the workspace stays Standard until the cut-over.
+    const moving: TenantRecord & { realm: string } = { ...tenant, tier: 'enterprise', realm, issuer };
     await this.enterprise.buildRealm(tenant, realm);
     await this.enterprise.finishRealm(moving);
 
