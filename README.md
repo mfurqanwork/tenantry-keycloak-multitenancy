@@ -34,6 +34,11 @@ These are the project's promises. Each one is an automated test that runs in CI 
 | Tenant A admin registers or edits an app in tenant B        | 401 or 404                                                       | 4     | tested  |
 | User of another tenant signs in to a customer app           | Refused                                                          | 4     | tested  |
 | Token issued to a customer app, used on Tenantry's API      | 401                                                              | 4     | tested  |
+| A workspace's SCIM token on another workspace               | 401 (another enterprise) or 404 (Standard)                       | 5a    | tested  |
+| A person's token on `/scim`, a SCIM token on `/api`         | 401                                                              | 5a    | tested  |
+| A revoked or expired SCIM token                             | 401                                                              | 5a    | tested  |
+| A person created through SCIM                               | Exists only in the workspace's realm, with its default role      | 5a    | tested  |
+| Two-step sign-in required, password-only sign-in            | Stopped at the authenticator set-up step                         | 5a    | tested  |
 | Migrated tenant's user signs in through the new realm       | Same user id and data                                            | 5     | planned |
 
 ## Quick start

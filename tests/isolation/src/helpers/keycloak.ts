@@ -42,8 +42,10 @@ async function admin(method: string, path: string, body?: unknown, realm = 'plat
 }
 
 // A read with the bootstrap admin, for checking what is (or is not) in Keycloak.
-export async function adminGet(path: string): Promise<{ status: number; body: unknown }> {
-  const res = await fetch(`${ADMIN}${path}`, { headers: { authorization: `Bearer ${await adminToken()}` } });
+export async function adminGet(path: string, realm = 'platform'): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(`${realm === 'platform' ? ADMIN : adminOf(realm)}${path}`, {
+    headers: { authorization: `Bearer ${await adminToken()}` },
+  });
   const text = await res.text();
   return { status: res.status, body: text ? (JSON.parse(text) as unknown) : undefined };
 }
@@ -126,4 +128,19 @@ export async function grantClientRole(
     await admin('GET', `/clients/${client.id}/roles/${role}`, undefined, realm)
   ).json()) as unknown;
   await admin('POST', `/users/${kcUserId}/role-mappings/clients/${client.id}`, [rep], realm);
+}
+
+// A verified address and a lasting password, as a person finishing their invite would have.
+export async function finishSignUp(realm: string, kcUserId: string, password: string): Promise<void> {
+  await admin('PUT', `/users/${kcUserId}`, { emailVerified: true }, realm);
+  await admin(
+    'PUT',
+    `/users/${kcUserId}/reset-password`,
+    { type: 'password', value: password, temporary: false },
+    realm,
+  );
+}
+
+export async function deleteUser(realm: string, kcUserId: string): Promise<void> {
+  await admin('DELETE', `/users/${kcUserId}`, undefined, realm);
 }
