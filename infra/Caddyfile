@@ -34,6 +34,10 @@ http://*.tenantry.localhost:{$TENANTRY_HTTP_PORT} {
 	handle /api/* {
 		reverse_proxy {$API_UPSTREAM}
 	}
+	# The workspace's SCIM address for its directory (ADR-0024).
+	handle /scim/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
 	handle {
 		reverse_proxy {$WEB_UPSTREAM}
 	}
