@@ -1,6 +1,6 @@
 # ADR-0007: Own users table plus identities keyed by issuer and subject
 
-Status: Accepted · Date: 2026-11-02
+Status: Accepted · Date: 2026-11-02 · Updated: 2026-11-07 (Phase 5b)
 
 ## Context
 
@@ -18,3 +18,7 @@ Our `users` table has our own ids. An `identities` table maps (issuer, subject) 
 
 - One extra lookup per request, which is cacheable.
 - Emails are not used as keys.
+
+## Update (Phase 5b)
+
+The move this ADR planned for is built ([ADR-0025](0025-standard-to-enterprise.md)): each moved person gets a second `identities` row, from the new realm's issuer and Keycloak id to the same `users.id`, and keeps the shared-realm one for any other workspace they are in.

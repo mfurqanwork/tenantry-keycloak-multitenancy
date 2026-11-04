@@ -1,6 +1,6 @@
 # ADR-0022: Company login is linked by an operator, after a DNS proof
 
-Status: Accepted · Date: 2026-11-03
+Status: Accepted · Date: 2026-11-03 · Updated: 2026-11-07 (Phase 5b)
 
 ## Context
 
@@ -29,3 +29,7 @@ A company wants its people to sign in to its workspace with its own identity pro
 
 - People from a linked domain are added to the organization by Keycloak with no group. As with invites (ADR-0019), they get a role through an invite for their email, or an admin gives them one.
 - Removing a link, and checking the TXT record again later, are not built yet (docs/known-issues.md).
+
+## Update (Phase 5b)
+
+`idp link` keeps the client secret it is given in the secrets store, as `platform/idp-<alias>` (ADR-0023), never in Postgres, logs or audit, so a workspace that moves to Enterprise takes its company login with it ([ADR-0025](0025-standard-to-enterprise.md)). A rerun keeps the secret already kept, as it keeps Keycloak's settings. The platform `tenantry-backend` may now read identity providers' settings (`view-identity-providers`), never their secrets, to copy them.
