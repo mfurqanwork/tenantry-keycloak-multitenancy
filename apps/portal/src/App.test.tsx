@@ -62,6 +62,16 @@ describe('portal app', () => {
     expect(screen.queryByRole('link', { name: 'Branding' })).not.toBeInTheDocument();
   });
 
+  it('shows Security to owners only', () => {
+    renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER) });
+    expect(screen.getAllByRole('link', { name: 'Security' }).length).toBeGreaterThan(0);
+  });
+
+  it('hides Security from admins', () => {
+    renderPortal(<App />, { api: api(), me: makeMe('admin', ADMIN) });
+    expect(screen.queryByRole('link', { name: 'Security' })).not.toBeInTheDocument();
+  });
+
   it("switches to another workspace's portal, and to this workspace's web app", async () => {
     renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER) });
     await userEvent.click(await screen.findByRole('button', { name: 'Switch workspace' }));
