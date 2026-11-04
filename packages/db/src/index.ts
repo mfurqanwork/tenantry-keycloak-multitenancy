@@ -15,6 +15,18 @@ export {
   type DomainRecord,
   type IdpRecord,
 } from './repositories/domains.js';
+export {
+  countApps,
+  createApp,
+  deleteApp,
+  getApp,
+  listApps,
+  lockTenantApps,
+  updateApp,
+  type AppInput,
+  type AppPatch,
+  type AppRecord,
+} from './repositories/apps.js';
 export { insertAudit, listAudit, type AuditEntry } from './repositories/audit.js';
 export type { Executor } from './repositories/executor.js';
 export {

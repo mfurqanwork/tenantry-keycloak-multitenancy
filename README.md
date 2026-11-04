@@ -7,33 +7,34 @@ Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It 
 
 One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
 
-> **Status:** v0.1 (Phases 0–2) plus Phase 3. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. The Phase 1 to 3 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
+> **Status:** v0.1 (Phases 0–2) plus Phases 3 and 4. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. Their owners and admins connect their own apps to that realm from the portal. The Phase 1 to 4 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
 
 ## Guarantees
 
 These are the project's promises. Each one is an automated test that runs in CI against real Keycloak and Postgres containers (`pnpm test:isolation`). Until its phase lands, a row stays _planned_.
 
-| Guarantee                                                   | Expected result                                             | Phase | Status  |
-| ----------------------------------------------------------- | ----------------------------------------------------------- | ----- | ------- |
-| Tenant A user requests tenant B data with A's token         | 404 (the row is invisible to A)                             | 1     | tested  |
-| Tenant A user calls B's subdomain with A's token            | 403                                                         | 1     | tested  |
-| A query that forgets the tenant filter                      | Returns only the current tenant's rows (row-level security) | 1     | tested  |
-| App database role tries to bypass row-level security        | Not allowed; the role does not own the tables               | 1     | tested  |
-| User is admin in org A and member in org B, acts in B       | Treated as member                                           | 1     | tested  |
-| Client sends a tenant id header that differs from the token | Ignored; the token decides                                  | 1     | tested  |
-| Member tries to invite, remove or change roles              | 403                                                         | 1     | tested  |
-| Logout in one app                                           | Session ends in the other app                               | 2     | tested  |
-| Domain link without a verified DNS record                   | Refused                                                     | 2     | tested  |
-| Valid token from another enterprise realm                   | 401 (issuer rule)                                           | 3     | tested  |
-| Valid token from the shared realm on an enterprise tenant   | 401                                                         | 3     | tested  |
-| Token for the wrong audience                                | 401                                                         | 3     | tested  |
-| Enterprise realm token on a Standard workspace              | 401                                                         | 3     | tested  |
-| Password grant in an enterprise realm                       | Refused by the realm's client policy                        | 3     | tested  |
-| Company login brings an email outside the verified domain   | Refused by Keycloak                                         | 3     | tested  |
-| Customer registers a wildcard or non-HTTPS redirect URI     | Refused by our API and by Keycloak client policy            | 4     | planned |
-| Tenant A admin registers or edits an app in tenant B        | 403                                                         | 4     | planned |
-| User of another tenant signs in to a customer app           | Refused                                                     | 4     | planned |
-| Migrated tenant's user signs in through the new realm       | Same user id and data                                       | 5     | planned |
+| Guarantee                                                   | Expected result                                                  | Phase | Status  |
+| ----------------------------------------------------------- | ---------------------------------------------------------------- | ----- | ------- |
+| Tenant A user requests tenant B data with A's token         | 404 (the row is invisible to A)                                  | 1     | tested  |
+| Tenant A user calls B's subdomain with A's token            | 403                                                              | 1     | tested  |
+| A query that forgets the tenant filter                      | Returns only the current tenant's rows (row-level security)      | 1     | tested  |
+| App database role tries to bypass row-level security        | Not allowed; the role does not own the tables                    | 1     | tested  |
+| User is admin in org A and member in org B, acts in B       | Treated as member                                                | 1     | tested  |
+| Client sends a tenant id header that differs from the token | Ignored; the token decides                                       | 1     | tested  |
+| Member tries to invite, remove or change roles              | 403                                                              | 1     | tested  |
+| Logout in one app                                           | Session ends in the other app                                    | 2     | tested  |
+| Domain link without a verified DNS record                   | Refused                                                          | 2     | tested  |
+| Valid token from another enterprise realm                   | 401 (issuer rule)                                                | 3     | tested  |
+| Valid token from the shared realm on an enterprise tenant   | 401                                                              | 3     | tested  |
+| Token for the wrong audience                                | 401                                                              | 3     | tested  |
+| Enterprise realm token on a Standard workspace              | 401                                                              | 3     | tested  |
+| Password grant in an enterprise realm                       | Refused by the realm's client policy                             | 3     | tested  |
+| Company login brings an email outside the verified domain   | Refused by Keycloak                                              | 3     | tested  |
+| Customer registers a wildcard or non-HTTPS redirect URI     | Refused by our API; plain http also by the realm's client policy | 4     | tested  |
+| Tenant A admin registers or edits an app in tenant B        | 401 or 404                                                       | 4     | tested  |
+| User of another tenant signs in to a customer app           | Refused                                                          | 4     | tested  |
+| Token issued to a customer app, used on Tenantry's API      | 401                                                              | 4     | tested  |
+| Migrated tenant's user signs in through the new realm       | Same user id and data                                            | 5     | planned |
 
 ## Quick start
 
@@ -107,7 +108,7 @@ The subdomain picks the tenant, and the token must prove it. Every request becom
 | Users in several tenants            | One account                                   | Separate account per realm     |
 | Scale                               | Thousands of tenants                          | Tens to low hundreds of realms |
 
-Phase 3 delivers the enterprise realm, its template and its sign-in. Connecting customer apps, SCIM and per-tenant policies follow in Phases 4 and 5.
+Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 lets its customers connect their own apps ([guide](docs/guides/connect-your-app.md)). SCIM and per-tenant policies follow in Phase 5.
 
 ## Repository
 

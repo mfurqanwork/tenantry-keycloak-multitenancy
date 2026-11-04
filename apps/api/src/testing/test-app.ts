@@ -4,14 +4,15 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { createDb, platformRepository, type Db, type Pool } from '@tenantry/db';
+import { createDb, platformRepository, type Db, type Pool, type TenantRecord } from '@tenantry/db';
 import {
   InMemoryIdentityDirectory,
+  InMemoryRealmApps,
   InMemoryRealmMembers,
   InMemoryRealmProvisioner,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
-import { organizationMembers } from '@tenantry/keycloak-admin';
+import { organizationMembers, TEMPLATE_VERSION } from '@tenantry/keycloak-admin';
 import { AppModule } from '../app.module.js';
 import type { AppConfig } from '../config/config.js';
 import type { MemberDirectories } from '../infrastructure/member-directories.js';
@@ -19,6 +20,7 @@ import {
   DB_POOL,
   IDENTITY_DIRECTORY,
   MEMBER_DIRECTORIES,
+  REALM_APPS,
   REALM_PROVISIONER,
   SECRET_STORE,
 } from '../infrastructure/tokens.js';
@@ -74,6 +76,8 @@ export interface TestApp {
   operatorToken(extra?: Record<string, unknown>): Promise<string>;
   // The in-memory member directory of an enterprise realm (its tenantry-api roles).
   realmMembers(realm: string): InMemoryRealmMembers;
+  // The in-memory clients of an enterprise realm (customer apps).
+  realmApps(realm: string): InMemoryRealmApps;
   // Enterprise provisioning against an in-memory Keycloak and secrets store.
   provisioner: InMemoryRealmProvisioner;
   secrets: SecretStore;
@@ -95,7 +99,9 @@ export interface TestApp {
 }
 
 // The real AppModule over the compose Postgres, with a local token issuer and an in-memory Keycloak.
-export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<TestApp> {
+export async function createTestApp(
+  o: { controllers?: Type[]; config?: Partial<AppConfig> } = {},
+): Promise<TestApp> {
   const issuer = await makeTestIssuer();
   const directory = new InMemoryIdentityDirectory();
   const realmMembers = new Map<string, InMemoryRealmMembers>();
@@ -113,6 +119,15 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     if (!found) {
       found = new InMemoryRealmMembers();
       realmMembers.set(realm, found);
+    }
+    return found;
+  };
+  const realmApps = new Map<string, InMemoryRealmApps>();
+  const appsOf = (realm: string) => {
+    let found = realmApps.get(realm);
+    if (!found) {
+      found = new InMemoryRealmApps();
+      realmApps.set(realm, found);
     }
     return found;
   };
@@ -139,6 +154,8 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     provisionerClientSecret: 'unused',
     secretsDir: '.secrets-test',
     smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
+    maxAppsPerTenant: 20,
+    ...o.config,
   };
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.forConfig(config)],
@@ -152,6 +169,8 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     .useValue(provisioner)
     .overrideProvider(SECRET_STORE)
     .useValue(secrets)
+    .overrideProvider(REALM_APPS)
+    .useValue({ forTenant: (tenant: TenantRecord) => Promise.resolve(appsOf(tenant.realm ?? '')) })
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix('api');
@@ -226,7 +245,12 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
         name: `Enterprise ${slug}`,
         tier: 'enterprise',
       });
-      await platform.activateTenant(id, { realm, issuer: realmIssuer, kcOrgId: null, templateVersion: 1 });
+      await platform.activateTenant(id, {
+        realm,
+        issuer: realmIssuer,
+        kcOrgId: null,
+        templateVersion: TEMPLATE_VERSION,
+      });
       return { id, slug, kcOrgId: '', host: `${slug}.tenantry.localhost`, issuer: realmIssuer, realm };
     },
     enterpriseToken: (tenant, user, roles, extra = {}) =>
@@ -243,6 +267,7 @@ export async function createTestApp(o: { controllers?: Type[] } = {}): Promise<T
     operatorToken: (extra = {}) =>
       issuer.sign({ sub: randomUUID(), aud: 'tenantry-api', azp: 'tenantry-ops', ...extra }),
     realmMembers: realmOf,
+    realmApps: appsOf,
     provisioner,
     secrets,
     newUser() {

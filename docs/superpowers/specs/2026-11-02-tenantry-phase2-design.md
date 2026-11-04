@@ -123,9 +123,9 @@ Passwords come from `SEED_PASSWORD` in `.env.example`. These are local test acco
 
 ## Risks
 
-| Risk                                                          | Mitigation                                                                                                      |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Risk                                                          | Mitigation                                                                                                                                                                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Keycloakify's build needs Maven, and Docker builds get slower | Maven 3.9 and JDK 21 are on the dev machine for host builds; the Keycloak image builds the JAR in a Maven stage. The plan's first task spikes both; if it fails, the person decides the fallback (ADR-0021) |
-| The login page loses `redirect_uri` after a failed submit     | The slug is kept in `sessionStorage` from the first page; without one, the Tenantry brand shows                 |
-| Organization IdP redirect-by-domain differs in Keycloak 26.8  | The contract test pins the calls against the real server first                                                  |
-| CoreDNS adds a container to the dev stack                     | Dev only, about 10 MB, loopback only                                                                            |
+| The login page loses `redirect_uri` after a failed submit     | The slug is kept in `sessionStorage` from the first page; without one, the Tenantry brand shows                                                                                                             |
+| Organization IdP redirect-by-domain differs in Keycloak 26.8  | The contract test pins the calls against the real server first                                                                                                                                              |
+| CoreDNS adds a container to the dev stack                     | Dev only, about 10 MB, loopback only                                                                                                                                                                        |

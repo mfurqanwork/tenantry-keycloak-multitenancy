@@ -3,17 +3,20 @@ import { createAppPool, createDb, type Pool } from '@tenantry/db';
 import {
   createHttpIdentityDirectory,
   createHttpRealmProvisioner,
+  createRealmApps,
   createRealmMembers,
   type IdentityDirectory,
 } from '@tenantry/keycloak-admin';
 import { createFileSecretStore, type SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { APP_CONFIG, type AppConfig } from '../config/config.js';
 import { createMemberDirectories } from './member-directories.js';
+import { createRealmAppsFactory } from './realm-apps.js';
 import {
   DB,
   DB_POOL,
   IDENTITY_DIRECTORY,
   MEMBER_DIRECTORIES,
+  REALM_APPS,
   REALM_PROVISIONER,
   SECRET_STORE,
 } from './tokens.js';
@@ -56,6 +59,16 @@ export class InfrastructureModule implements OnApplicationShutdown {
           inject: [IDENTITY_DIRECTORY, SECRET_STORE],
         },
         {
+          provide: REALM_APPS,
+          useFactory: (secrets: SecretStore) =>
+            createRealmAppsFactory({
+              secrets,
+              realmApps: (realm, clientSecret) =>
+                createRealmApps({ baseUrl: config.authInternalUrl, realm, clientSecret }),
+            }),
+          inject: [SECRET_STORE],
+        },
+        {
           provide: REALM_PROVISIONER,
           useFactory: () =>
             createHttpRealmProvisioner({
@@ -73,6 +86,7 @@ export class InfrastructureModule implements OnApplicationShutdown {
         SECRET_STORE,
         MEMBER_DIRECTORIES,
         REALM_PROVISIONER,
+        REALM_APPS,
       ],
     };
   }

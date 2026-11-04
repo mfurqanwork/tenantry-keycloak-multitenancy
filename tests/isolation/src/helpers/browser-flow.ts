@@ -62,14 +62,15 @@ export function formAction(html: string): string {
 export class Browser {
   private readonly jar = new Jar();
 
-  constructor(private readonly redirectUri: string) {}
+  // Where to stop following redirects (the app's redirect URI); a sign-in sets it for its own flow.
+  constructor(public stopAt: string) {}
 
   async open(url: string, init: { method?: string; form?: Record<string, string> } = {}): Promise<Page> {
     let next = url;
     let method = init.method ?? 'GET';
     let body: URLSearchParams | undefined = init.form ? new URLSearchParams(init.form) : undefined;
     for (let hops = 0; hops < 20; hops++) {
-      if (next.startsWith(this.redirectUri)) return { url: next, status: 302, html: '' };
+      if (next.startsWith(this.stopAt)) return { url: next, status: 302, html: '' };
       const target = local(next);
       const res = await fetch(target, {
         method,
@@ -95,6 +96,25 @@ export class Browser {
   }
 }
 
+// Keycloak's authorization request for a client, with PKCE (S256).
+export function authorizeUrl(o: {
+  realm: string;
+  clientId: string;
+  redirectUri: string;
+  challenge: string;
+  scope?: string;
+}): string {
+  return `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+    client_id: o.clientId,
+    redirect_uri: o.redirectUri,
+    response_type: 'code',
+    scope: o.scope ?? 'openid',
+    state: randomBytes(8).toString('hex'),
+    code_challenge: o.challenge,
+    code_challenge_method: 'S256',
+  }).toString()}`;
+}
+
 // Signs a person in through a realm's login page with the authorization code flow and PKCE,
 // the only way an enterprise realm hands out a token (it refuses the password grant).
 export async function signInWithBrowser(o: {
@@ -103,21 +123,16 @@ export async function signInWithBrowser(o: {
   redirectUri: string;
   username: string;
   password: string;
+  // A browser that keeps its cookies for later steps (single sign-on into another app).
+  browser?: Browser;
 }): Promise<string> {
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   const oidc = `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect`;
-  const browser = new Browser(o.redirectUri);
+  const browser = o.browser ?? new Browser(o.redirectUri);
+  browser.stopAt = o.redirectUri;
   const login = await browser.open(
-    `${oidc}/auth?${new URLSearchParams({
-      client_id: o.clientId,
-      redirect_uri: o.redirectUri,
-      response_type: 'code',
-      scope: 'openid',
-      state: randomBytes(8).toString('hex'),
-      code_challenge: challenge,
-      code_challenge_method: 'S256',
-    }).toString()}`,
+    authorizeUrl({ realm: o.realm, clientId: o.clientId, redirectUri: o.redirectUri, challenge }),
   );
   const done = await browser.submit(login, { username: o.username, password: o.password });
   const code = done.url.startsWith(o.redirectUri) ? new URL(done.url).searchParams.get('code') : null;

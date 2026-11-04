@@ -6,3 +6,5 @@ export const IDENTITY_DIRECTORY = Symbol('IDENTITY_DIRECTORY');
 export const MEMBER_DIRECTORIES = Symbol('MEMBER_DIRECTORIES');
 export const SECRET_STORE = Symbol('SECRET_STORE');
 export const REALM_PROVISIONER = Symbol('REALM_PROVISIONER');
+// Customer apps of one enterprise tenant, in its realm (ADR-0011).
+export const REALM_APPS = Symbol('REALM_APPS');

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 // The realm template version this code ships and provisions (ADR-0010). Upgrades move realms to it.
-export const TEMPLATE_VERSION = 1;
+export const TEMPLATE_VERSION = 2;
 
 export interface TemplateVars {
   displayName: string;

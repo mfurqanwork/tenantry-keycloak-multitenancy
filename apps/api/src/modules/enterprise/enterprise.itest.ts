@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { listAudit, platformRepository, tenantTx } from '@tenantry/db';
-import type { RealmProvisioner } from '@tenantry/keycloak-admin';
+import { TEMPLATE_VERSION, type RealmProvisioner } from '@tenantry/keycloak-admin';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from '../../testing/test-app.js';
 
@@ -70,7 +70,7 @@ describe('POST /api/platform/enterprise-tenants', () => {
       realm: `ent-${s}`,
       issuer: `${t.issuer.baseUrl}/realms/ent-${s}`,
       kcOrgId: null,
-      templateVersion: 1,
+      templateVersion: TEMPLATE_VERSION,
     });
     const realm = t.provisioner.realms.get(`ent-${s}`);
     expect(realm?.admins.has(`owner@${s}.test`)).toBe(true);
@@ -195,5 +195,50 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
   it('answers 404 for a slug that is not an enterprise tenant', async () => {
     const standard = await t.seedTenant();
     expect((await upgrade({ slug: standard.slug, dryRun: true })).status).toBe(404);
+  });
+});
+
+describe('operator app commands (pnpm ops apps, the seed)', () => {
+  interface OpsApp {
+    app: { id: string; clientId: string; connection: { issuer: string } };
+    clientSecret?: string;
+  }
+  const appsPath = (s: string) => `/api/platform/enterprise-tenants/${s}/apps`;
+  const ops = <T>(method: string, path: string, body?: unknown, token = operator) =>
+    t.request<T>({ host: t.apexHost, method, path, token, ...(body === undefined ? {} : { body }) });
+  const hr = {
+    name: 'Initech HR',
+    type: 'web',
+    redirectUris: ['http://127.0.0.1:4000/callback'],
+    postLogoutRedirectUris: ['http://127.0.0.1:4000/'],
+  };
+
+  it('registers, lists and rotates an app, audited as coming from ops', async () => {
+    const ent = await t.seedEnterpriseTenant();
+    const res = await ops<OpsApp>('POST', appsPath(ent.slug), hr);
+    expect(res.status).toBe(201);
+    expect(res.body.clientSecret).toEqual(expect.any(String));
+    expect(res.body.app.connection.issuer).toBe(ent.issuer);
+    const list = await ops<{ apps: { id: string }[] }>('GET', appsPath(ent.slug));
+    expect(list.body.apps.map((a) => a.id)).toEqual([res.body.app.id]);
+    const rotated = await ops<{ clientSecret: string }>(
+      'POST',
+      `${appsPath(ent.slug)}/${res.body.app.id}/secret`,
+    );
+    expect(rotated.status).toBe(200);
+    expect(rotated.body.clientSecret).not.toBe(res.body.clientSecret);
+    const audit = await tenantTx(t.db, ent.id, (tx) => listAudit(tx, { limit: 10 }));
+    const registered = audit.find((e) => e.action === 'app.registered');
+    expect(registered?.actorUserId).toBeNull();
+    expect(registered?.metadata).toMatchObject({ via: 'ops', name: 'Initech HR' });
+  });
+
+  it("refuses a person's token, and answers 404 for a slug that is not an enterprise tenant", async () => {
+    const ent = await t.seedEnterpriseTenant();
+    const person = await t.enterpriseToken(ent, t.newUser(), ['owner']);
+    expect((await ops('POST', appsPath(ent.slug), hr, person)).status).toBe(401);
+    const standard = await t.seedTenant();
+    expect((await ops('GET', appsPath(standard.slug))).status).toBe(404);
+    expect((await ops('GET', appsPath('nowhere'))).status).toBe(404);
   });
 });

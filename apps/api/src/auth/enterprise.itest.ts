@@ -63,6 +63,25 @@ describe('the Enterprise path', () => {
     expect((await me(ent.host, token)).status).toBe(401);
   });
 
+  it("refuses a token issued to a customer's app, even with every other claim right", async () => {
+    const token = await t.enterpriseToken(ent, t.newUser(), ['owner'], { azp: 'app-1a2b3c4d' });
+    expect((await me(ent.host, token)).status).toBe(401);
+  });
+
+  it('accepts tokens issued to our portal, and says the workspace is enterprise', async () => {
+    const token = await t.enterpriseToken(ent, t.newUser(), ['member'], { azp: 'tenantry-portal' });
+    const res = await t.request<{ tenant: { tier: string } }>({ host: ent.host, path: '/api/me', token });
+    expect(res.status).toBe(200);
+    expect(res.body.tenant.tier).toBe('enterprise');
+    const { token: std } = await t.member(standard, 'members');
+    const stdMe = await t.request<{ tenant: { tier: string } }>({
+      host: standard.host,
+      path: '/api/me',
+      token: std,
+    });
+    expect(stdMe.body.tenant.tier).toBe('standard');
+  });
+
   it('ignores roles outside tenantry-api', async () => {
     const token = await t.enterpriseToken(ent, t.newUser(), [], {
       realm_access: { roles: ['owner'] },

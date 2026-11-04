@@ -18,6 +18,7 @@ const config: AppConfig = {
   provisionerClientSecret: 'p',
   secretsDir: '.secrets',
   smtp: { host: 'mailpit', port: '1025', from: 'x@example.com' },
+  maxAppsPerTenant: 20,
 };
 const indicator = () => new KeycloakHealthIndicator(config, new HealthIndicatorService());
 const respond = (status: number, body: unknown) => {

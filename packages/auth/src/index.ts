@@ -10,3 +10,12 @@ export {
 export type { GroupName, Permission, Role } from './roles.js';
 export type { TenantApp, TenantContext } from './context.js';
 export { tenantOrigin, type OriginSettings } from './origins.js';
+export {
+  APP_LIMITS,
+  APP_TYPES,
+  confidential,
+  normaliseUris,
+  uriProblem,
+  userSignIn,
+  type AppType,
+} from './apps.js';

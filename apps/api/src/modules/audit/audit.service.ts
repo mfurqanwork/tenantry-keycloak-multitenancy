@@ -18,7 +18,12 @@ export type AuditAction =
   | 'domain.verified'
   | 'idp.linked'
   | 'tenant.provisioning'
-  | 'tenant.upgraded';
+  | 'tenant.upgraded'
+  | 'app.registered'
+  | 'app.updated'
+  | 'app.secret_rotated'
+  | 'app.deleted'
+  | 'app.token_checked';
 
 export interface AuditView {
   id: string;
@@ -47,7 +52,8 @@ export class AuditService {
 
   record(
     tx: TenantTx,
-    actor: { userId: string },
+    // No user for operator changes (pnpm ops): the metadata then says via: 'ops'.
+    actor: { userId: string | null },
     action: AuditAction,
     target: string,
     metadata?: Record<string, unknown>,

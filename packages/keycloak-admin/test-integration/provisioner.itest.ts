@@ -1,58 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createHttpRealmProvisioner } from '../src/realms/provisioner.js';
 import { loadProductClients, loadRealmTemplate, TEMPLATE_VERSION } from '../src/realms/templates.js';
 import { mailsTo } from './mailpit.js';
+import { bootstrap, testProvisioner, testRealmVars } from './stack.js';
 
-function env(key: string): string {
-  const file = new URL('../../../.env', import.meta.url);
-  let value = process.env[key];
-  if (!value && existsSync(file)) {
-    value = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'))?.[1]?.trim();
-  }
-  if (!value) throw new Error(`${key} is not set: copy .env.example to .env`);
-  return value;
-}
-
-const baseUrl = env('TENANTRY_AUTH_INTERNAL_URL');
 const realm = `ent-it${randomBytes(3).toString('hex')}`;
-const vars = {
-  displayName: 'Integration Co',
-  webOrigin: `http://${realm}.tenantry.localhost:8080`,
-  portalOrigin: `http://${realm}.portal.tenantry.localhost:8080`,
-  smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
-  allowHttpRedirects: true,
-};
+const vars = testRealmVars(realm, 'Integration Co');
 const template = loadRealmTemplate(TEMPLATE_VERSION, vars);
 const clients = loadProductClients(vars);
 const adminEmail = `owner-${realm}@example.test`;
 const secret = randomBytes(32).toString('base64url');
-const provisioner = createHttpRealmProvisioner({
-  baseUrl,
-  clientId: env('KEYCLOAK_PROVISIONER_CLIENT_ID'),
-  clientSecret: env('KEYCLOAK_PROVISIONER_CLIENT_SECRET'),
-});
-
-// The bootstrap admin checks results and cleans up; the provisioner never uses it.
-async function bootstrap(method: string, path: string, body?: unknown): Promise<Response> {
-  const token = (await (
-    await fetch(`${baseUrl}/realms/master/protocol/openid-connect/token`, {
-      method: 'POST',
-      body: new URLSearchParams({
-        grant_type: 'password',
-        client_id: 'admin-cli',
-        username: env('KC_BOOTSTRAP_ADMIN_USERNAME'),
-        password: env('KC_BOOTSTRAP_ADMIN_PASSWORD'),
-      }),
-    })
-  ).json()) as { access_token: string };
-  return fetch(`${baseUrl}/admin/realms${path}`, {
-    method,
-    headers: { authorization: `Bearer ${token.access_token}`, 'content-type': 'application/json' },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
+const provisioner = testProvisioner();
 
 afterAll(async () => {
   await bootstrap('DELETE', `/${realm}`);
@@ -114,5 +72,32 @@ describe('realm provisioner (Keycloak)', () => {
     expect(live.accessTokenLifespan).toBe(900);
     await provisioner.applyTemplate(realm, template);
     expect(await provisioner.diff(realm, template, clients)).toEqual([]);
+  });
+
+  // Keycloak's secure-redirect-URI check refuses plain http and a bare "*" on every client. It lets
+  // "https://*.host/cb" through, but matches "*" only at the end of a path, so such a host never matches;
+  // our API refuses it before Keycloak sees it (ADR-0011).
+  it('a realm on the template over https refuses an http redirect on any client', async () => {
+    await provisioner.applyTemplate(
+      realm,
+      loadRealmTemplate(TEMPLATE_VERSION, { ...vars, allowHttpRedirects: false }),
+    );
+    for (const [publicClient, uri] of [
+      [false, 'http://hr.example.test/cb'],
+      [true, 'http://hr.example.test/cb'],
+      [false, '*'],
+    ] as const) {
+      const res = await bootstrap('POST', `/${realm}/clients`, {
+        clientId: `bad-${randomBytes(3).toString('hex')}`,
+        publicClient,
+        standardFlowEnabled: true,
+        implicitFlowEnabled: false,
+        directAccessGrantsEnabled: false,
+        redirectUris: [uri],
+        attributes: { 'pkce.code.challenge.method': 'S256' },
+      });
+      expect(res.status, `${uri} (public: ${String(publicClient)})`).toBe(400);
+    }
+    await provisioner.applyTemplate(realm, template);
   });
 });

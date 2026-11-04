@@ -21,7 +21,7 @@ import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
 import { ConflictProblem, NotFoundProblem, ValidationProblem } from '../../common/http-errors.js';
 import { validateSlug } from '../../common/slug.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
-import { backendSecretKey } from '../../infrastructure/member-directories.js';
+import { backendSecretKey } from '../../infrastructure/per-realm.js';
 import { DB, REALM_PROVISIONER, SECRET_STORE } from '../../infrastructure/tokens.js';
 
 export interface ProvisionedTenant {
@@ -204,6 +204,15 @@ export class EnterpriseService {
       });
     }
     return results;
+  }
+
+  // The active enterprise tenant at this address, for the operator's app commands.
+  async activeEnterprise(slug: string): Promise<TenantRecord> {
+    const tenant = await platformRepository(this.db).findTenantBySlug(slug);
+    if (tenant?.tier !== 'enterprise' || tenant.status !== 'active' || !tenant.realm) {
+      throw new NotFoundProblem('No enterprise workspace at this address.');
+    }
+    return tenant;
   }
 
   // A resumed run keeps the first owner the run began with; another address would make a second owner.

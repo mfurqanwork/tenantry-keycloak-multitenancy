@@ -46,6 +46,22 @@ export default tseslint.config(
       'no-restricted-imports': restrict({}),
     },
   },
+  // Test helpers stay in tests: app code never imports a /testing entry (it would ship vitest).
+  {
+    files: ['apps/web/src/**', 'apps/portal/src/**'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx', '**/test-utils.tsx'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: '@tenantry/app-kit/testing', message: 'Test helpers are for tests (test-utils.tsx).' },
+            { name: '@tenantry/keycloak-admin/testing', message: 'Test fakes are for tests.' },
+          ],
+        },
+      ],
+    },
+  },
   { files: ['packages/db/**'], rules: { 'no-restricted-imports': restrict({ pg: false }) } },
   { files: ['packages/oidc-client/**'], rules: { 'no-restricted-imports': restrict({ oidc: false }) } },
   {

@@ -7,13 +7,15 @@ import {
   tenantTx,
   type TenantRecord,
 } from '@tenantry/db';
+import { TEMPLATE_VERSION } from '@tenantry/keycloak-admin';
 import type { DevUsers } from '@tenantry/keycloak-admin/dev';
 import { claimDomain, verifyDomain } from '../commands/domain.js';
-import { provisionEnterprise } from '../commands/enterprise.js';
+import { provisionEnterprise, upgradeEnterprise } from '../commands/enterprise.js';
 import { linkIdp } from '../commands/idp.js';
 import type { OpsDeps } from '../deps.js';
 import { verificationRecord } from '../dns/txt.js';
 import type { ApiCall } from './http.js';
+import { ensureExampleApp, type ExampleAppDeps } from './example-app.js';
 import { solidPng } from './png.js';
 
 type Group = 'owners' | 'admins' | 'members';
@@ -68,6 +70,9 @@ export interface SeedDeps extends OpsDeps {
   setTxt: (name: string, value: string) => void;
   // A tenantry-ops client-credentials token, for the operator-only enterprise endpoints.
   operatorToken: () => Promise<string>;
+  // Where the example customer app reaches Keycloak, and its settings file (Phase 4).
+  authInternalUrl: string;
+  exampleAppEnv: ExampleAppDeps['envFile'];
 }
 
 // Creates or completes the demo; a second run changes nothing.
@@ -217,8 +222,22 @@ async function ensureEnterprise(deps: SeedDeps, changes: string[]) {
     if (code !== 0) throw new Error(`could not provision ${ENTERPRISE.slug}`);
     changes.push(`enterprise workspace ${ENTERPRISE.slug}`);
   }
+  const operator = {
+    api: deps.api,
+    operatorToken: deps.operatorToken,
+    baseDomain: deps.baseDomain,
+    out: () => undefined,
+    err: deps.err,
+  };
   const tenant = await platform.findTenantBySlug(ENTERPRISE.slug);
   if (!tenant?.realm) throw new Error(`${ENTERPRISE.slug} has no realm`);
+  // A realm built from an older template moves to this one, as an operator would move it.
+  if (tenant.templateVersion !== TEMPLATE_VERSION) {
+    if ((await upgradeEnterprise(operator, { tenant: ENTERPRISE.slug, dryRun: false })) !== 0) {
+      throw new Error(`could not upgrade ${ENTERPRISE.slug}`);
+    }
+    changes.push(`${ENTERPRISE.slug} realm template ${String(TEMPLATE_VERSION)}`);
+  }
   // The first owner signs in with the demo password instead of the set-password email.
   await deps.users.ensureUser(tenant.realm, {
     email: ENTERPRISE.owner,
@@ -243,4 +262,10 @@ async function ensureEnterprise(deps: SeedDeps, changes: string[]) {
     });
     changes.push(`${ENTERPRISE.slug} colour and logo`);
   }
+  const exampleApp = await ensureExampleApp({
+    ...operator,
+    authInternalUrl: deps.authInternalUrl,
+    envFile: deps.exampleAppEnv,
+  });
+  if (exampleApp) changes.push(exampleApp);
 }

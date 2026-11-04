@@ -67,11 +67,13 @@ docs/demo-script.md, CHANGELOG.md
 The risk task. If the JAR cannot be built in Docker or Keycloak does not load it, stop and report to the person; do not switch to a plain FreeMarker theme on your own.
 
 **Files:**
+
 - Create: `apps/login-theme/{package.json,vite.config.ts,tsconfig.json,index.html,src/main.tsx,src/kc.gen.tsx,src/login/KcPage.tsx,src/login/KcContext.ts,src/login/pages/Login.tsx,src/login/login.scss}`
 - Create: `infra/keycloak/Dockerfile`
 - Modify: `infra/docker-compose.yml` (keycloak `build:` instead of `image:`), `infra/keycloak/platform-realm.json` (`"loginTheme": "tenantry"`), `scripts/lib/realm.test.mjs`, `scripts/lib/compose.test.mjs`, `scripts/smoke.mjs`, `.gitignore` (`dist_keycloak/`), `turbo.json` (`build` outputs include `dist_keycloak/**`)
 
 **Interfaces:**
+
 - Produces: package `@tenantry/login-theme`; script `build` = `vite build`; script `build:jar` = `keycloakify build`; JAR path `apps/login-theme/dist_keycloak/tenantry-login-theme.jar`; theme name `tenantry`; marker attribute `data-tenantry-theme` on the login page's root element.
 
 - [ ] **Step 1: Write the failing tests** in `scripts/lib/realm.test.mjs` and `scripts/lib/compose.test.mjs`
@@ -98,9 +100,11 @@ test('keycloak is built from infra/keycloak/Dockerfile so the theme JAR is insid
 ### Task 2: `@tenantry/brand` — colour maths
 
 **Files:**
+
 - Create: `packages/brand/{package.json,tsconfig.json,tsconfig.build.json,vitest.config.ts,src/index.ts,src/color.ts,src/color.test.ts}`
 
 **Interfaces:**
+
 - Produces:
   - `parseHex(hex: string): { r: number; g: number; b: number } | null` — `#rrggbb` only, case-insensitive.
   - `contrastRatio(a: string, b: string): number` — WCAG 2.x relative luminance.
@@ -134,10 +138,12 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 ### Task 3: `@tenantry/ui` — `applyBrand`, app switcher, workspace switcher
 
 **Files:**
+
 - Modify: `packages/ui/src/brand.ts`, `packages/ui/src/shell/AppShell.tsx`, `packages/ui/src/index.ts`, `packages/ui/package.json` (dep `@tenantry/brand`)
 - Create: `packages/ui/src/brand.test.ts`, `packages/ui/src/shell/AppSwitcher.tsx`, `packages/ui/src/shell/WorkspaceSwitcher.tsx`, `packages/ui/src/shell/switchers.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `brandTokens`, `BrandTokens` (Task 2).
 - Produces:
   - `applyBrand(tokens: BrandTokens | null, target?: HTMLElement /* document.body */): void` — sets or (for null) removes `--cds-interactive`, `--cds-button-primary`, `--cds-button-primary-hover`, `--cds-button-primary-active`, `--cds-link-primary`, `--cds-focus`, `--cds-border-interactive`.
@@ -155,10 +161,12 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 ### Task 4: Migration 0002 and repositories
 
 **Files:**
+
 - Create: `packages/db/migrations/0002_phase2.sql`, `packages/db/src/schema/{tenant-logos.ts,tenant-domains.ts,tenant-idps.ts}`, `packages/db/src/repositories/{branding.ts,domains.ts}`
 - Modify: `packages/db/migrations/meta/_journal.json` (idx 2, tag `0002_phase2`), `packages/db/src/schema/index.ts`, `packages/db/src/schema/tenants.ts` (branding type), `packages/db/src/index.ts`, `packages/db/src/repositories/platform.ts`, `packages/db/test-integration/{rls.itest.ts,repositories.itest.ts}`
 
 **Interfaces:**
+
 - Produces:
   - `TenantBranding = { primaryColor: string | null; logoVersion: number | null }`; `TenantRecord.branding: TenantBranding` (missing keys read as null).
   - `platformRepository(db).setBranding(tenantId: string, patch: Partial<TenantBranding>): Promise<TenantBranding>` (jsonb merge); `findActiveTenantsBySlugs(slugs: string[]): Promise<TenantRecord[]>`.
@@ -176,9 +184,11 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 ### Task 5: Portal host, per-app auth-config and the `tenantry-portal` client
 
 **Files:**
+
 - Modify: `apps/api/src/auth/host.ts`, `host.test.ts`, `apps/api/src/modules/tenants/{tenants.service.ts,tenants.controller.ts,tenants.itest.ts}`, `apps/api/src/modules/signup/{slug.ts,slug.test.ts,signup.saga.ts,signup.itest.ts}`, `infra/keycloak/platform-realm.json`, `scripts/lib/realm.test.mjs`, `packages/keycloak-admin/src/{identity-directory.ts,http-identity-directory.ts,testing/in-memory-identity-directory.ts,testing/contract.ts}`, `apps/api/src/infrastructure/infrastructure.module.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type TenantApp = 'web' | 'portal'`; `tenantFromHost(host, baseDomain): { slug: string; app: TenantApp } | null`; `slugFromHost` kept as `tenantFromHost(...)?.slug ?? null`. `acme.portal.<base>` → `{ slug: 'acme', app: 'portal' }`; `portal.<base>` → null.
   - `tenantOrigin(slug, config, app: TenantApp = 'web')` → `http://acme.portal.tenantry.localhost:8080` for portal.
@@ -195,10 +205,12 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 ### Task 6: Workspaces, leaving a workspace, and 502 for Keycloak outages
 
 **Files:**
+
 - Create: `apps/api/src/modules/workspaces/{workspaces.module.ts,workspaces.controller.ts,workspaces.service.ts,workspaces.itest.ts}`
 - Modify: `packages/keycloak-admin` (interface, HTTP, fake, contract), `apps/api/src/modules/members/{members.controller.ts,members.service.ts,members.itest.ts}`, `apps/api/src/common/{problem.filter.ts,problem.filter.test.ts}`, `apps/api/src/app.module.ts`, `AGENTS.md` (rule 2), `docs/known-issues.md`
 
 **Interfaces:**
+
 - Produces:
   - `IdentityDirectory.listUserOrganizations(kcUserId: string): Promise<{ id: string; alias: string; name: string }[]>` (`GET organizations/members/{id}/organizations`).
   - `GET /api/me/workspaces` → `{ slug: string; name: string; current: boolean; webUrl: string; portalUrl: string }[]`, only tenants that are `active`, sorted by name.
@@ -215,10 +227,12 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 ### Task 7: Branding endpoints
 
 **Files:**
+
 - Create: `apps/api/src/modules/branding/{branding.module.ts,branding.controller.ts,public-branding.controller.ts,branding.service.ts,branding.schemas.ts,logo-type.ts,logo-type.test.ts,branding.itest.ts}`
 - Modify: `apps/api/src/app.module.ts`, `apps/api/src/main.ts` (CORS), `apps/api/package.json` (`@tenantry/brand`, `@types/multer` dev)
 
 **Interfaces:**
+
 - Consumes: `meetsContrast`, `darkerUntilContrast` (Task 2); branding repositories (Task 4).
 - Produces:
   - `sniffImageType(bytes: Buffer): 'image/png' | 'image/jpeg' | 'image/webp' | null` — PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`, WebP `RIFF????WEBP`.
@@ -240,10 +254,12 @@ expect(contrastRatio(brandTokens('#0f62fe').hover, '#ffffff')).toBeGreaterThan(4
 Pure move plus one extraction; no behaviour change. Existing web tests are the proof.
 
 **Files:**
+
 - Create: `packages/app-kit/` with `src/{api.tsx,ApiErrorNotification.tsx,FormDialog.tsx,RouterLink.tsx,SignedInApi.tsx,me.tsx,useResource.ts,roles.ts,TenantAuth.tsx,index.ts}`, the moved `api.test.ts`, and `TenantAuth.test.tsx`
 - Modify: `apps/web/src/**` imports; delete `apps/web/src/lib/*` except `host.ts`; `eslint.config.mjs` (app-kit may import `@tenantry/oidc-client`, apps may not import `oidc-client-ts`)
 
 **Interfaces:**
+
 - Produces: everything `apps/web/src/lib` exported, same names, from `@tenantry/app-kit`; plus `TenantAuth({ slug, productName, notFound, children }: { slug: string; productName: string; notFound: ReactNode; children: (session: { signOut: () => void }) => ReactNode })` — the body of today's `TenantApp` (auth-config, client, `AuthProvider`, `SignedInApi`, `LoadMe`).
 
 - [ ] **Step 1: Write the failing test** `TenantAuth.test.tsx`: with a fetch stub answering 404 for auth-config, `notFound` renders; with a config, the loading text "Signing in" renders.
@@ -255,10 +271,12 @@ Pure move plus one extraction; no behaviour change. Existing web tests are the p
 ### Task 9: Session checks and single logout in `@tenantry/oidc-client`
 
 **Files:**
+
 - Modify: `packages/oidc-client/src/{auth-client.ts,auth-client.test.ts,AuthProvider.tsx,AuthProvider.test.tsx}`
 - Create: `docs/decisions/0020-single-logout-session-check.md`
 
 **Interfaces:**
+
 - Produces:
   - `AuthClient.checkSession: () => Promise<boolean>` — refreshes with the refresh token; on failure removes the user and returns false. Concurrent calls share one in-flight promise.
   - `AuthProvider` listens to `visibilitychange`; when the page becomes visible it calls `checkSession()` and, on false, calls `signIn()` once (a module-level guard stops a second redirect while one is under way).
@@ -275,11 +293,13 @@ Pure move plus one extraction; no behaviour change. Existing web tests are the p
 Run `ui-consistency:finding-patterns` for the header changes before Step 3; verify with `ui-consistency:verifying` (separate agent) after.
 
 **Files:**
+
 - Modify: `apps/web/src/{App.tsx,App.test.tsx,TenantApp.tsx}`, `apps/web/src/features/audit/{AuditRoute.tsx,AuditRoute.test.tsx}`, `apps/web/src/features/*` breadcrumbs, "Load more" buttons
 - Create: `packages/app-kit/src/{useWorkspaces.ts,useBranding.ts,useBranding.test.tsx}`
 - Modify: `apps/api/src/modules/audit/audit.service.ts` + itest (target label)
 
 **Interfaces:**
+
 - Consumes: `/api/me/workspaces` (Task 6), `/api/tenants/:slug/branding` (Task 7), `applyBrand` + switchers (Task 3).
 - Produces: `useWorkspaces(): { slug; name; current; webUrl; portalUrl }[]`; `useBranding(slug): { name; primaryColor; logoUrl } | null` which also calls `applyBrand(brandTokens(primaryColor))` and clears it on unmount; both apps pass `logoUrl` and the tenant name to `AppShell`; audit entries gain `targetLabel: string | null` (member email or project name, resolved in the API).
 
@@ -294,11 +314,13 @@ Run `ui-consistency:finding-patterns` for the header changes before Step 3; veri
 Run `ui-consistency:finding-patterns` (reference: `packages/ui` `SettingsPage` and the web app's pages) before Step 3; verify after with a separate agent.
 
 **Files:**
+
 - Modify: `apps/portal/src/{main.tsx,App.tsx,App.test.tsx}`, `apps/portal/package.json` (`@tenantry/app-kit`, `@tenantry/brand`, `react-router`)
 - Create: `apps/portal/src/{Root.tsx,lib/host.ts,lib/host.test.ts,features/dashboard/DashboardRoute.tsx,features/branding/BrandingRoute.tsx,features/branding/BrandingRoute.test.tsx}`
 - Delete: `apps/portal/src/routes/DashboardRoute.tsx`
 
 **Interfaces:**
+
 - Consumes: `TenantAuth`, `useMe`, `useWorkspaces`, `useBranding`, `api` (app-kit); Task 7 endpoints.
 - Produces: portal routes `/` (DashboardPage: tenant name, your role, links) and `/branding` (shown when `me.can('tenant:settings')`). Branding page: `SettingsPage` with a colour `TextInput` (`#rrggbb`), a live preview (primary `Button` and a `Link` inside a container that gets `applyBrand` of the typed colour), a `FileUploaderDropContainer` (accept `.png,.jpg,.jpeg,.webp`, 256 KB stated in the helper text), the current logo with "Remove logo", and the save bar. A 422 with `suggestion` shows an inline `InlineNotification` "This colour is too light for white text. Suggested: #xxxxxx" with a "Use this colour" button that fills the field.
 - `portalSlugFromHost(hostname, baseDomain)` — `acme.portal.tenantry.localhost` → `acme`.
@@ -312,10 +334,12 @@ Run `ui-consistency:finding-patterns` (reference: `packages/ui` `SettingsPage` a
 ### Task 12: Tenant brand on the login page
 
 **Files:**
+
 - Create: `apps/login-theme/src/login/{tenant-brand.ts,tenant-brand.test.ts,pages/Login.test.tsx}`
 - Modify: `apps/login-theme/src/login/{KcPage.tsx,pages/Login.tsx}`, `apps/login-theme/package.json` (`@tenantry/brand`, `@tenantry/ui` for `applyBrand`)
 
 **Interfaces:**
+
 - Produces:
   - `tenantFromLocation(search: string, storage: Storage): { origin: string; slug: string } | null` — reads `redirect_uri` from the query; slug = first label of its host; stores it under `tenantry.login.tenant`; with no `redirect_uri`, returns the stored value.
   - `loadTenantBrand(tenant, fetchFn = fetch): Promise<{ name: string; primaryColor: string | null; logoUrl: string | null } | null>` — `GET ${origin}/api/tenants/${slug}/branding`; null on any failure; `logoUrl` made absolute against `origin`.
@@ -330,10 +354,12 @@ Run `ui-consistency:finding-patterns` (reference: `packages/ui` `SettingsPage` a
 ### Task 13: Company login — CoreDNS, `corp-demo` realm, `apps/ops`
 
 **Files:**
+
 - Create: `infra/dns/Corefile`, `infra/dns/zones/.gitkeep` (`test.db` generated, git-ignored), `infra/keycloak/corp-demo-realm.json`, `apps/ops/{package.json,tsconfig.json,vitest.config.ts,vitest.integration.config.ts,src/cli.ts,src/env.ts,src/commands/{domain.ts,idp.ts,dns.ts,tenants.ts},src/dns/{txt.ts,txt.test.ts,zone-file.ts,zone-file.test.ts},src/commands/domain.itest.ts,src/commands/idp.itest.ts}`, `docs/decisions/0022-company-idp-by-operator.md`
 - Modify: `infra/docker-compose.yml` (service `dns`: `coredns/coredns:1.12.1`, `-conf /etc/coredns/Corefile`, ports `127.0.0.1:1053:53/udp` and `/tcp`, mounts; keycloak mounts the corp-demo realm), `packages/keycloak-admin` (interface, HTTP, fake, contract), `.env.example` (`TENANTRY_DNS_SERVER=127.0.0.1:1053`, `CORP_DEMO_CLIENT_SECRET=dev-corp-demo-secret`), root `package.json` (`"ops": "pnpm --filter @tenantry/ops exec tsx src/cli.ts"`), `scripts/lib/compose.test.mjs`, `scripts/lib/realm.test.mjs`
 
 **Interfaces:**
+
 - Produces (keycloak-admin):
   - `addOrganizationDomain(orgId: string, domain: string): Promise<void>` (verified: true; idempotent)
   - `createOidcIdentityProvider(input: { alias: string; issuer: string; clientId: string; clientSecret: string }): Promise<void>` — discovery from `${issuer}/.well-known/openid-configuration` done by Keycloak (`config.useDiscovery`/explicit URLs, whichever 26.8.1 accepts; the contract test pins it); `syncMode: IMPORT`, `trustEmail: true`.
@@ -351,10 +377,12 @@ Run `ui-consistency:finding-patterns` (reference: `packages/ui` `SettingsPage` a
 ### Task 14: Seed, demo script, isolation tests, release docs
 
 **Files:**
+
 - Create: `apps/ops/src/commands/seed.ts`, `apps/ops/src/commands/seed.itest.ts`, `packages/keycloak-admin/src/dev/seed-users.ts` (exported as `@tenantry/keycloak-admin/dev`), `tests/isolation/src/phase2.test.ts`, `docs/demo-script.md`, `CHANGELOG.md`
 - Modify: root `package.json` (`"seed": "pnpm ops seed"`), `.env.example` (`SEED_PASSWORD=dev-seed-password`), `README.md` (guarantee rows "Logout in one app" and "Domain link without verified DNS record" → `tested`; "Try it" uses `pnpm seed`), `.github/workflows/ci.yml` (isolation job runs `pnpm seed` before the suite), `docs/known-issues.md`
 
 **Interfaces:**
+
 - Produces: `ensureUser({ email, firstName, lastName, password }): Promise<{ id: string }>` (dev only; idempotent; email verified). `ops seed`: users `owner@acme.test`… — acme: `ada@acme.test` owner, `ben@acme.test` admin, `cy@acme.test` member; globex: `gil@globex.test` owner, `gwen@globex.test` admin, `gus@globex.test` member; `pat@example.test` member of both; `alice@acme.test` in corp-demo; acme `#0f62fe`, globex `#198038`, each with a generated PNG logo; acme.test verified and linked to corp-demo. Second run changes nothing and exits 0.
 
 - [ ] **Step 1: Write the failing tests:**

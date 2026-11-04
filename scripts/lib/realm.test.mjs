@@ -126,7 +126,7 @@ test('the corp-demo realm is the stand-in company IdP, with no password in the f
 // Enterprise realms (Phase 3, ADR-0010): one versioned template, our product clients beside it.
 const template = JSON.parse(
   readFileSync(
-    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v1.json', import.meta.url),
+    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v2.json', import.meta.url),
     'utf8',
   ),
 );
@@ -138,28 +138,29 @@ const productClient = (name) =>
     ),
   );
 
-test('the enterprise template enforces PKCE and safe redirect URIs on public clients, and no implicit or password grant anywhere', () => {
-  assert.equal(template.templateVersion, 1);
+test('the enterprise template enforces PKCE on public clients, safe redirect URIs on every client, and no implicit or password grant anywhere', () => {
+  assert.equal(template.templateVersion, 2);
   const profile = (name) => template.clientProfiles.profiles.find((p) => p.name === name);
   const policy = (name) => template.clientPolicies.policies.find((p) => p.name === name);
   assert.deepEqual(
-    profile('tenantry-public-clients')
-      .executors.map((e) => e.executor)
-      .sort(),
-    ['pkce-enforcer', 'secure-redirect-uris-enforcer'],
+    profile('tenantry-public-clients').executors.map((e) => e.executor),
+    ['pkce-enforcer'],
   );
-  const redirects = profile('tenantry-public-clients').executors.find(
-    (e) => e.executor === 'secure-redirect-uris-enforcer',
-  );
-  // https only; local http development leaves this executor out (ADR-0010). Never a wildcard host.
-  assert.equal(redirects.configuration['allow-http-scheme'], false);
-  assert.equal(redirects.configuration['allow-wildcard-context-path'], true);
   assert.deepEqual(
     profile('tenantry-all-clients')
       .executors.map((e) => e.executor)
       .sort(),
-    ['reject-implicit-grant', 'reject-ropc-grant'],
+    ['reject-implicit-grant', 'reject-ropc-grant', 'secure-redirect-uris-enforcer'],
   );
+  const redirects = profile('tenantry-all-clients').executors.find(
+    (e) => e.executor === 'secure-redirect-uris-enforcer',
+  );
+  // https only, plus custom schemes and loopback for native apps (ADR-0011); local http development
+  // leaves this executor out (ADR-0010). Never a wildcard host.
+  assert.equal(redirects.configuration['allow-http-scheme'], false);
+  assert.equal(redirects.configuration['allow-private-use-uri-scheme'], true);
+  assert.equal(redirects.configuration['allow-loopback-interface'], true);
+  assert.equal(redirects.configuration['allow-wildcard-context-path'], true);
   assert.deepEqual(policy('tenantry-public-clients').conditions, [
     { condition: 'client-access-type', configuration: { type: ['public'] } },
   ]);

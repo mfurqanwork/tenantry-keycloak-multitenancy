@@ -73,6 +73,19 @@ body {
   padding-inline: $spacing-05;
 }
 
+// A fact on a tile: a small label over its value (StatTile).
+.tenantry-stat__label {
+  @include type.type-style('label-01');
+
+  color: theme.$text-secondary;
+}
+
+.tenantry-stat__value {
+  @include type.type-style('productive-heading-04');
+
+  margin-block-start: $spacing-03;
+}
+
 // Carbon's grid has column gutters only; wrapped tiles need a row gap to read as separate tiles.
 .tenantry-dashboard__tiles {
   row-gap: $spacing-05;

@@ -1,0 +1,281 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { confidential, tenantOrigin, userSignIn } from '@tenantry/auth';
+import {
+  countApps,
+  createApp,
+  deleteApp,
+  getApp,
+  listApps,
+  lockTenantApps,
+  tenantTx,
+  updateApp,
+  type AppRecord,
+  type Db,
+  type TenantRecord,
+  type TenantTx,
+} from '@tenantry/db';
+import {
+  AppClientMissingError,
+  DirectoryError,
+  newAppClientId,
+  type AppClientSpec,
+} from '@tenantry/keycloak-admin';
+import { ConflictProblem, NotFoundProblem, ValidationProblem } from '../../common/http-errors.js';
+import { ZodPipe } from '../../common/zod.pipe.js';
+import { APP_CONFIG, type AppConfig } from '../../config/config.js';
+import type { RealmAppsFactory } from '../../infrastructure/realm-apps.js';
+import { DB, REALM_APPS } from '../../infrastructure/tokens.js';
+import { AuditService, type AuditAction } from '../audit/audit.service.js';
+import { appPatchBody, type AppBody } from './apps.schemas.js';
+
+// The register body, for the operator routes in the enterprise module (ADR-0017: through the service).
+export { appBody, type AppBody } from './apps.schemas.js';
+
+export interface AppConnection {
+  issuer: string;
+  discoveryUrl: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  jwksUri: string;
+  endSessionEndpoint: string;
+  clientId: string;
+  scopes: 'openid profile email';
+  // The portal's test sign-in, also registered on the client; null for machine to machine.
+  testRedirectUri: string | null;
+}
+
+export type AppView = Omit<AppRecord, 'kcClientUuid' | 'createdBy'> & { connection: AppConnection };
+
+// A person (userId) or the operator scripts (userId null, via 'ops').
+export interface AppActor {
+  userId: string | null;
+  via?: 'ops';
+}
+
+interface Created {
+  kcClientUuid: string;
+  secret: string | null;
+}
+
+// Customer apps of enterprise workspaces (ADR-0011). Our table is the record; the Keycloak client is
+// written in the same request, and taken back if the row cannot be written.
+@Injectable()
+export class AppsService {
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    @Inject(REALM_APPS) private readonly realms: RealmAppsFactory,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly audit: AuditService,
+  ) {}
+
+  async list(tenant: TenantRecord): Promise<{ apps: AppView[] }> {
+    this.enterpriseOnly(tenant);
+    const apps = await tenantTx(this.db, tenant.id, (tx) => listApps(tx));
+    return { apps: apps.map((app) => this.view(tenant, app)) };
+  }
+
+  async get(tenant: TenantRecord, id: string): Promise<AppView> {
+    return this.view(tenant, await this.find(tenant, id));
+  }
+
+  async register(
+    tenant: TenantRecord,
+    body: AppBody,
+    actor: AppActor,
+  ): Promise<{ app: AppView; clientSecret?: string }> {
+    this.enterpriseOnly(tenant);
+    const apps = await this.realms.forTenant(tenant);
+    const clientId = newAppClientId();
+    const made: { client: Created | null } = { client: null };
+    try {
+      const record = await tenantTx(this.db, tenant.id, async (tx) => {
+        await lockTenantApps(tx);
+        if ((await countApps(tx)) >= this.config.maxAppsPerTenant) {
+          throw new ConflictProblem(
+            `This workspace has the most apps allowed (${String(this.config.maxAppsPerTenant)}).`,
+          );
+        }
+        made.client = await apps.create(clientId, this.keycloakSpec(tenant, body));
+        const row = await createApp(tx, {
+          clientId,
+          kcClientUuid: made.client.kcClientUuid,
+          name: body.name,
+          type: body.type,
+          redirectUris: body.redirectUris,
+          postLogoutRedirectUris: body.postLogoutRedirectUris,
+          webOrigins: body.webOrigins,
+          createdBy: actor.userId,
+        });
+        await this.record(tx, actor, 'app.registered', row);
+        return row;
+      });
+      const secret = made.client?.secret;
+      return { app: this.view(tenant, record), ...(secret ? { clientSecret: secret } : {}) };
+    } catch (err) {
+      // The client exists in Keycloak but the row does not: take the client back.
+      if (made.client) await apps.remove(made.client.kcClientUuid).catch(() => undefined);
+      throw this.problem(err);
+    }
+  }
+
+  // Keycloak first, then our record and the audit entry; the type never changes.
+  async update(tenant: TenantRecord, id: string, raw: unknown, actor: AppActor): Promise<AppView> {
+    const app = await this.find(tenant, id);
+    const patch = new ZodPipe(appPatchBody(app.type)).transform(raw);
+    const apps = await this.realms.forTenant(tenant);
+    try {
+      const updated = await tenantTx(this.db, tenant.id, async (tx) => {
+        await apps.update(app.kcClientUuid, this.keycloakSpec(tenant, { ...patch, type: app.type }));
+        const row = await updateApp(tx, app.id, patch);
+        if (!row) throw new NotFoundProblem('No app with this id.');
+        await this.record(tx, actor, 'app.updated', row);
+        return row;
+      });
+      return this.view(tenant, updated);
+    } catch (err) {
+      throw this.problem(err);
+    }
+  }
+
+  // A new secret, shown once; the old one stops working at once.
+  async rotateSecret(tenant: TenantRecord, id: string, actor: AppActor): Promise<{ clientSecret: string }> {
+    const app = await this.find(tenant, id);
+    if (!confidential(app.type)) throw new ConflictProblem('This app has no secret (public client).');
+    const apps = await this.realms.forTenant(tenant);
+    try {
+      return await tenantTx(this.db, tenant.id, async (tx) => {
+        const clientSecret = await apps.rotateSecret(app.kcClientUuid);
+        await this.record(tx, actor, 'app.secret_rotated', app);
+        return { clientSecret };
+      });
+    } catch (err) {
+      throw this.problem(err);
+    }
+  }
+
+  // Asks Keycloak for one client-credentials token with the secret the person pasted; keeps nothing.
+  async checkToken(
+    tenant: TenantRecord,
+    id: string,
+    clientSecret: string,
+    actor: AppActor,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const app = await this.find(tenant, id);
+    if (app.type !== 'm2m') throw new ConflictProblem('Token checks are for machine-to-machine apps.');
+    const result = await (
+      await this.realms.forTenant(tenant)
+    ).checkClientCredentials(app.clientId, clientSecret);
+    await tenantTx(this.db, tenant.id, (tx) =>
+      this.record(tx, actor, 'app.token_checked', app, { ok: result.ok }),
+    );
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }
+
+  // The Keycloak client goes first (already gone counts as done), then our record.
+  async remove(tenant: TenantRecord, id: string, actor: AppActor): Promise<void> {
+    const app = await this.find(tenant, id);
+    await (await this.realms.forTenant(tenant)).remove(app.kcClientUuid);
+    await tenantTx(this.db, tenant.id, async (tx) => {
+      await deleteApp(tx, app.id);
+      await this.record(tx, actor, 'app.deleted', app);
+    });
+  }
+
+  protected enterpriseOnly(tenant: TenantRecord): void {
+    if (tenant.tier !== 'enterprise') {
+      throw new NotFoundProblem('Applications are available on Enterprise workspaces.');
+    }
+  }
+
+  protected async find(tenant: TenantRecord, id: string): Promise<AppRecord> {
+    this.enterpriseOnly(tenant);
+    const app = await tenantTx(this.db, tenant.id, (tx) => getApp(tx, id));
+    if (!app) throw new NotFoundProblem('No app with this id.');
+    return app;
+  }
+
+  // Never the secret: name and client id, and who acted when it was not a person.
+  protected record(
+    tx: TenantTx,
+    actor: AppActor,
+    action: AuditAction,
+    app: Pick<AppRecord, 'id' | 'name' | 'clientId'>,
+    extra: Record<string, unknown> = {},
+  ): Promise<void> {
+    return this.audit.record(tx, { userId: actor.userId }, action, app.id, {
+      name: app.name,
+      clientId: app.clientId,
+      ...extra,
+      ...(actor.via ? { via: actor.via } : {}),
+    });
+  }
+
+  protected testRedirectUri(tenant: TenantRecord): string {
+    return `${tenantOrigin(tenant.slug, this.config, 'portal')}/applications/test-callback`;
+  }
+
+  // What Keycloak gets: the customer's URIs plus, for apps people sign in to, our test sign-in. A public
+  // client's test trades its code in the browser, so the portal's origin must be allowed too (CORS); a
+  // single-page app with no origins of its own gets its redirect URIs' origins, the portal's among them.
+  protected keycloakSpec(tenant: TenantRecord, app: AppClientSpec): AppClientSpec {
+    const { name, type, redirectUris, postLogoutRedirectUris, webOrigins } = app;
+    const portal = tenantOrigin(tenant.slug, this.config, 'portal');
+    const browserTest = type === 'native' || (type === 'spa' && webOrigins.length > 0);
+    return {
+      name,
+      type,
+      redirectUris: userSignIn(type) ? [...redirectUris, this.testRedirectUri(tenant)] : redirectUris,
+      postLogoutRedirectUris,
+      webOrigins: browserTest ? [...webOrigins, portal] : webOrigins,
+    };
+  }
+
+  // Keycloak's refusals in terms the person can act on.
+  protected problem(err: unknown): unknown {
+    if (err instanceof DirectoryError && err.status === 400) {
+      return new ValidationProblem(err.detail ?? 'Keycloak refused this app.');
+    }
+    if (err instanceof AppClientMissingError) {
+      return new ConflictProblem("This app's client no longer exists in Keycloak. Delete the app.");
+    }
+    return err;
+  }
+
+  protected view(tenant: TenantRecord, app: AppRecord): AppView {
+    const issuer = tenant.issuer ?? '';
+    const oidc = `${issuer}/protocol/openid-connect`;
+    const {
+      id,
+      clientId,
+      name,
+      type,
+      redirectUris,
+      postLogoutRedirectUris,
+      webOrigins,
+      createdAt,
+      updatedAt,
+    } = app;
+    return {
+      id,
+      clientId,
+      name,
+      type,
+      redirectUris,
+      postLogoutRedirectUris,
+      webOrigins,
+      createdAt,
+      updatedAt,
+      connection: {
+        issuer,
+        discoveryUrl: `${issuer}/.well-known/openid-configuration`,
+        authorizationEndpoint: `${oidc}/auth`,
+        tokenEndpoint: `${oidc}/token`,
+        jwksUri: `${oidc}/certs`,
+        endSessionEndpoint: `${oidc}/logout`,
+        clientId: app.clientId,
+        scopes: 'openid profile email',
+        testRedirectUri: userSignIn(app.type) ? this.testRedirectUri(tenant) : null,
+      },
+    };
+  }
+}

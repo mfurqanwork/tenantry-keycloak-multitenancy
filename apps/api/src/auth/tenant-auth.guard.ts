@@ -15,6 +15,7 @@ import { createTokenVerifier, type TokenVerifier } from './token-verifier.js';
 
 const AUDIENCE = 'tenantry-api';
 const OPERATOR_CLIENT = 'tenantry-ops';
+const PRODUCT_APPS = new Set(['tenantry-web', 'tenantry-portal']);
 
 // The single place a request becomes a TenantContext (spec: "Auth guard", eight steps).
 // The tenant comes from the Host header and the token only; no header, query or body can set it.
@@ -63,6 +64,10 @@ export class TenantAuthGuard implements CanActivate {
 
     // 3–5. Signature, exact issuer (this tenant's realm) and audience.
     const payload = await this.verify(req, tenant.realm, tenant.issuer);
+    // An enterprise realm also holds the customer's own apps (ADR-0011): only our two apps' tokens count.
+    if (tenant.tier === 'enterprise' && !PRODUCT_APPS.has(String(payload['azp']))) {
+      throw new UnauthorizedProblem();
+    }
 
     // 6. Roles. Standard: only this tenant's organization block. Enterprise: only tenantry-api's client
     // roles in the tenant's own realm (AGENTS.md rule 2).
