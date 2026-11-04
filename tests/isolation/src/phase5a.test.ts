@@ -100,11 +100,15 @@ describe('guarantee: SCIM gateway (Phase 5a)', () => {
       token: owner,
       body: { ...before, twoStep: 'required' },
     });
-    expect(res.status).toBe(200);
-    await expect(signIn(person.userName, person.password)).rejects.toThrow(
-      /required-action\?execution=CONFIGURE_TOTP/,
-    );
-    await api(host, 'PUT', '/api/security', { token: owner, body: before });
+    try {
+      expect(res.status).toBe(200);
+      await expect(signIn(person.userName, person.password)).rejects.toThrow(
+        /required-action\?execution=CONFIGURE_TOTP/,
+      );
+    } finally {
+      // Back at once: everyone else signing in to Initech would meet the set-up step.
+      await api(host, 'PUT', '/api/security', { token: owner, body: before });
+    }
   });
 
   it("does not climb out of SCIM into the realm's admin API", async () => {
