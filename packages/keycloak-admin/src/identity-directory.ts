@@ -42,7 +42,42 @@ export interface IdentityDirectory {
   linkIdentityProvider(orgId: string, alias: string, domain: string): Promise<void>;
   // A missing provider counts as deleted.
   deleteIdentityProvider(alias: string): Promise<void>;
+
+  // Moving a workspace to Enterprise (ADR-0025): what the shared realm knows of a person, and the bridge.
+  getUser(kcUserId: string): Promise<PlatformUser | null>;
+  // The company logins (and the like) a person signed in through.
+  listFederatedIdentities(kcUserId: string): Promise<FederatedIdentity[]>;
+  // A company login's settings, without its secret: Keycloak never returns one.
+  getIdentityProvider(alias: string): Promise<IdentityProviderSettings | null>;
+  // The confidential client tenantry-bridge-<slug> that the new realm's bridge signs in through.
+  ensureBridgeClient(slug: string, redirectUri: string, secret: string): Promise<void>;
+  // A missing client counts as deleted.
+  deleteBridgeClient(slug: string): Promise<void>;
 }
+
+export interface PlatformUser {
+  username: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+export interface FederatedIdentity {
+  alias: string;
+  userId: string;
+  userName: string;
+}
+
+export interface IdentityProviderSettings {
+  alias: string;
+  issuer: string;
+  clientId: string;
+  // Keycloak's provider config with the secret taken out.
+  config: Record<string, string>;
+  mappers: { name: string; identityProviderMapper: string; config: Record<string, string> }[];
+}
+
+export const bridgeClientId = (slug: string) => `tenantry-bridge-${slug}`;
 
 export interface CompanyIdentityProvider {
   alias: string;

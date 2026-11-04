@@ -30,6 +30,12 @@ runRealmMemberContract('Keycloak realm', async () => {
     async leaveGroup(kcUserId, group) {
       await bootstrap('DELETE', `/${realm}/users/${kcUserId}/groups/${await groupId(group)}`);
     },
+    async isEmailVerified(kcUserId) {
+      const user = (await (await bootstrap('GET', `/${realm}/users/${kcUserId}`)).json()) as {
+        emailVerified: boolean;
+      };
+      return user.emailVerified;
+    },
     async cleanup() {
       await bootstrap('DELETE', `/${realm}`);
     },

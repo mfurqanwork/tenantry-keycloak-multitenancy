@@ -48,7 +48,7 @@ test('tenantry-web is a public PKCE client for the apex host', () => {
   assert.equal(groupMapper(web)?.config['access.token.claim'], 'true');
 });
 
-test('tenantry-backend is a service account with exactly the organization roles', () => {
+test('tenantry-backend is a service account with exactly the organization roles, and reads company logins', () => {
   const backend = client('tenantry-backend');
   assert.equal(backend.publicClient, false);
   assert.equal(backend.serviceAccountsEnabled, true);
@@ -61,6 +61,7 @@ test('tenantry-backend is a service account with exactly the organization roles'
     'manage-clients',
     'manage-realm',
     'manage-users',
+    'view-identity-providers',
     'view-users',
   ]);
 });

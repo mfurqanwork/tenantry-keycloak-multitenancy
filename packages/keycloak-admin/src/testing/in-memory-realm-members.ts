@@ -1,24 +1,26 @@
 import { randomUUID } from 'node:crypto';
 import { highestRole, type Role } from '@tenantry/auth';
 import { DirectoryError } from '../errors.js';
-import type { Member, MemberDirectory } from '../member-directory.js';
+import type { Member } from '../member-directory.js';
+import type { RealmMembers } from '../realms/realm-members.js';
 import { MAPPED_GROUPS } from '../realms/templates.js';
 
 interface FakeUser {
   email: string;
   role: Role | null;
   signedIn: boolean;
+  emailVerified?: boolean;
 }
 
 // An enterprise realm's members for unit tests. The member contract keeps it honest against Keycloak.
-export class InMemoryRealmMembers implements MemberDirectory {
+export class InMemoryRealmMembers implements RealmMembers {
   readonly users = new Map<string, FakeUser>();
   readonly emailsSent: string[] = [];
   // Directory groups (SCIM) each person is in.
   readonly groupsOf = new Map<string, Set<keyof typeof MAPPED_GROUPS>>();
-  private readonly failing = new Set<keyof MemberDirectory>();
+  private readonly failing = new Set<keyof RealmMembers>();
 
-  failOn(operation: keyof MemberDirectory): void {
+  failOn(operation: keyof RealmMembers): void {
     this.failing.add(operation);
   }
 
@@ -44,14 +46,14 @@ export class InMemoryRealmMembers implements MemberDirectory {
     if (user) user.signedIn = true;
   }
 
-  private run<T>(operation: keyof MemberDirectory, fn: () => T): Promise<T> {
+  private run<T>(operation: keyof RealmMembers, fn: () => T): Promise<T> {
     return Promise.resolve().then(() => {
       if (this.failing.has(operation)) throw new DirectoryError(operation, 500, 'injected failure');
       return fn();
     });
   }
 
-  private user(operation: keyof MemberDirectory, kcUserId: string): FakeUser {
+  private user(operation: string, kcUserId: string): FakeUser {
     const user = this.users.get(kcUserId);
     if (!user) throw new DirectoryError(operation, 404);
     return user;
@@ -68,6 +70,25 @@ export class InMemoryRealmMembers implements MemberDirectory {
         }))
         .filter((m) => m.role !== null),
     );
+  }
+
+  importMember(input: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    role: Role | null;
+  }): Promise<{ kcUserId: string; created: boolean }> {
+    return this.run('importMember', () => {
+      const address = input.email.toLowerCase();
+      const existing = [...this.users].find(([, u]) => u.email === address);
+      if (existing) {
+        if (input.role) existing[1].role = input.role;
+        return { kcUserId: existing[0], created: false };
+      }
+      const kcUserId = randomUUID();
+      this.users.set(kcUserId, { email: address, role: input.role, signedIn: false, emailVerified: true });
+      return { kcUserId, created: true };
+    });
   }
 
   invite(email: string, role: Role): Promise<{ kcUserId: string }> {

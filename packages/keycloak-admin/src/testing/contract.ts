@@ -11,6 +11,8 @@ export interface ContractSubject {
   companyIssuer: string;
   // How the organization's domains look now: name, and the identity provider that signs it in.
   orgDomains(orgId: string): Promise<{ name: string; identityProviderAlias: string | null }[]>;
+  // How many tenantry-bridge-<slug> clients exist, with the secret and redirect URIs of the one there is.
+  bridgeClient(slug: string): Promise<{ count: number; secret?: string; redirectUris?: string[] }>;
   cleanup(): Promise<void>;
 }
 
@@ -119,6 +121,42 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
       await s.dir.deleteIdentityProvider(alias);
       await expect(s.dir.deleteIdentityProvider(alias)).resolves.toBeUndefined();
       await s.dir.deleteOrganization(id);
+    });
+
+    it('reads a person for a move: email, names, username; null for a stranger', async () => {
+      const found = await s.dir.getUser(user);
+      expect(found?.username).toBeTruthy();
+      expect(found).toHaveProperty('email');
+      expect(found).toHaveProperty('firstName');
+      expect(await s.dir.getUser(randomUUID())).toBeNull();
+      expect(await s.dir.listFederatedIdentities(user)).toEqual([]);
+    });
+
+    it("reads a company identity provider's settings, never its secret", async () => {
+      const alias = `idr${randomUUID().slice(0, 8)}`;
+      await s.dir.createOidcIdentityProvider({
+        alias,
+        issuer: s.companyIssuer,
+        clientId: 'tenantry-platform',
+        clientSecret: 'contract-secret',
+      });
+      const found = await s.dir.getIdentityProvider(alias);
+      expect(found).toMatchObject({ alias, issuer: s.companyIssuer, clientId: 'tenantry-platform' });
+      expect(JSON.stringify(found)).not.toContain('contract-secret');
+      expect(found?.config['clientSecret']).toBeUndefined();
+      expect(await s.dir.getIdentityProvider(`missing${randomUUID().slice(0, 8)}`)).toBeNull();
+      await s.dir.deleteIdentityProvider(alias);
+    });
+
+    it('keeps one bridge client per workspace, with the latest secret, and removes it', async () => {
+      const slug = `br${randomUUID().slice(0, 8)}`;
+      const uri = `http://auth.test/realms/ent-${slug}/broker/tenantry-account/endpoint`;
+      await s.dir.ensureBridgeClient(slug, uri, 'first-secret');
+      await s.dir.ensureBridgeClient(slug, uri, 'second-secret');
+      expect(await s.bridgeClient(slug)).toEqual({ count: 1, secret: 'second-secret', redirectUris: [uri] });
+      await s.dir.deleteBridgeClient(slug);
+      await s.dir.deleteBridgeClient(slug);
+      expect((await s.bridgeClient(slug)).count).toBe(0);
     });
 
     it('refuses to link a domain the organization does not have', async () => {

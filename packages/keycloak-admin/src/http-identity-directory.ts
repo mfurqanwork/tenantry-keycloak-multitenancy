@@ -1,7 +1,12 @@
 import { roleForGroupPath, ROLES, groupForRole, type GroupName, type TenantApp } from '@tenantry/auth';
 import { createAdminTokenSource } from './admin-token.js';
 import { DirectoryError } from './errors.js';
-import type { DirectoryMember, IdentityDirectory } from './identity-directory.js';
+import {
+  bridgeClientId,
+  type DirectoryMember,
+  type IdentityDirectory,
+  type IdentityProviderSettings,
+} from './identity-directory.js';
 
 export interface HttpIdentityDirectoryOptions {
   // Where this process reaches Keycloak (container or loopback address), not the public issuer URL.
@@ -255,6 +260,91 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
           d.name === domain ? { ...d, identityProviderAlias: alias, autoRedirect: true } : d,
         ),
       });
+    },
+
+    async getUser(kcUserId) {
+      const res = await call('getUser', 'GET', `/users/${encodeURIComponent(kcUserId)}`, undefined, [404]);
+      if (res.status === 404) return null;
+      const u = await json<{ username: string; email?: string; firstName?: string; lastName?: string }>(res);
+      return {
+        username: u.username,
+        email: u.email ?? null,
+        firstName: u.firstName ?? null,
+        lastName: u.lastName ?? null,
+      };
+    },
+
+    async listFederatedIdentities(kcUserId) {
+      const res = await call(
+        'listFederatedIdentities',
+        'GET',
+        `/users/${encodeURIComponent(kcUserId)}/federated-identity`,
+        undefined,
+        [404],
+      );
+      if (res.status === 404) return [];
+      const links = await json<{ identityProvider: string; userId: string; userName: string }[]>(res);
+      return links.map((l) => ({ alias: l.identityProvider, userId: l.userId, userName: l.userName }));
+    },
+
+    async getIdentityProvider(alias) {
+      const path = `/identity-provider/instances/${encodeURIComponent(alias)}`;
+      const res = await call('getIdentityProvider', 'GET', path, undefined, [404]);
+      if (res.status === 404) return null;
+      const idp = await json<{ alias: string; config: Record<string, string> }>(res);
+      // Keycloak answers with the secret masked; drop the key so nothing passes it on.
+      const config = Object.fromEntries(Object.entries(idp.config).filter(([key]) => key !== 'clientSecret'));
+      const mappers = await json<IdentityProviderSettings['mappers'][number][]>(
+        await call('getIdentityProvider', 'GET', `${path}/mappers`),
+      );
+      return {
+        alias: idp.alias,
+        issuer: config['issuer'] ?? '',
+        clientId: config['clientId'] ?? '',
+        config,
+        mappers: mappers.map(({ name, identityProviderMapper, config: c }) => ({
+          name,
+          identityProviderMapper,
+          config: c,
+        })),
+      };
+    },
+
+    async ensureBridgeClient(slug, redirectUri, secret) {
+      const clientId = bridgeClientId(slug);
+      const representation = {
+        clientId,
+        name: `Bridge to ${slug}'s own realm`,
+        enabled: true,
+        publicClient: false,
+        secret,
+        standardFlowEnabled: true,
+        implicitFlowEnabled: false,
+        directAccessGrantsEnabled: false,
+        serviceAccountsEnabled: false,
+        redirectUris: [redirectUri],
+        webOrigins: [],
+        attributes: { 'pkce.code.challenge.method': 'S256' },
+      };
+      const [found] = await json<{ id: string }[]>(
+        await call('ensureBridgeClient', 'GET', `/clients?clientId=${encodeURIComponent(clientId)}`),
+      );
+      if (found) {
+        const current = await json<Record<string, unknown>>(
+          await call('ensureBridgeClient', 'GET', `/clients/${found.id}`),
+        );
+        await call('ensureBridgeClient', 'PUT', `/clients/${found.id}`, { ...current, ...representation });
+      } else {
+        await call('ensureBridgeClient', 'POST', '/clients', representation);
+      }
+    },
+
+    async deleteBridgeClient(slug) {
+      const clientId = bridgeClientId(slug);
+      const found = await json<{ id: string }[]>(
+        await call('deleteBridgeClient', 'GET', `/clients?clientId=${encodeURIComponent(clientId)}`),
+      );
+      for (const c of found) await call('deleteBridgeClient', 'DELETE', `/clients/${c.id}`, undefined, [404]);
     },
 
     async deleteIdentityProvider(alias) {

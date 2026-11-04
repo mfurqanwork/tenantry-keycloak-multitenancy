@@ -172,7 +172,13 @@
       "enabled": true,
       "serviceAccountClientId": "tenantry-backend",
       "clientRoles": {
-        "realm-management": ["manage-realm", "view-users", "manage-users", "manage-clients"]
+        "realm-management": [
+          "manage-realm",
+          "view-users",
+          "manage-users",
+          "manage-clients",
+          "view-identity-providers"
+        ]
       }
     },
     {

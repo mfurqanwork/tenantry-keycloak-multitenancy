@@ -16,10 +16,20 @@ runIdentityDirectoryContract('in-memory', () => {
   const dir = new InMemoryIdentityDirectory();
   return Promise.resolve({
     dir,
-    newUser: () => Promise.resolve(randomUUID()),
+    newUser: () => {
+      const id = randomUUID();
+      dir.users.set(id, { email: `${id.slice(0, 8)}@example.com`, displayName: 'New Person' });
+      return Promise.resolve(id);
+    },
     redirectUris: (app) => Promise.resolve([...dir.origins[app]].map((o) => `${o}/*`)),
     companyIssuer: 'http://corp.example/realms/corp-demo',
     orgDomains: (orgId) => Promise.resolve(dir.domainsOf(orgId)),
+    bridgeClient: (slug) => {
+      const found = dir.bridgeClients.get(slug);
+      return Promise.resolve(
+        found ? { count: 1, secret: found.secret, redirectUris: [found.redirectUri] } : { count: 0 },
+      );
+    },
     cleanup: () => Promise.resolve(),
   });
 });
@@ -69,6 +79,7 @@ runRealmMemberContract('in-memory realm', () => {
       members.leaveGroup(kcUserId, group);
       return Promise.resolve();
     },
+    isEmailVerified: (kcUserId) => Promise.resolve(members.users.get(kcUserId)?.emailVerified ?? false),
     cleanup: () => Promise.resolve(),
   });
 });
