@@ -62,14 +62,16 @@ describe('portal app', () => {
     expect(screen.queryByRole('link', { name: 'Branding' })).not.toBeInTheDocument();
   });
 
-  it('shows Security to owners only', () => {
+  it('shows Security and Directory sync to owners only', () => {
     renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER) });
     expect(screen.getAllByRole('link', { name: 'Security' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Directory sync (SCIM)' }).length).toBeGreaterThan(0);
   });
 
-  it('hides Security from admins', () => {
+  it('hides Security and Directory sync from admins', () => {
     renderPortal(<App />, { api: api(), me: makeMe('admin', ADMIN) });
     expect(screen.queryByRole('link', { name: 'Security' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Directory sync (SCIM)' })).not.toBeInTheDocument();
   });
 
   it("switches to another workspace's portal, and to this workspace's web app", async () => {

@@ -8,6 +8,7 @@ import { RegisterAppRoute } from './features/applications/RegisterAppRoute.js';
 import { TestCallbackRoute } from './features/applications/TestCallbackRoute.js';
 import { BrandingRoute } from './features/branding/BrandingRoute.js';
 import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
+import { ScimRoute } from './features/scim/ScimRoute.js';
 import { SecurityRoute } from './features/security/SecurityRoute.js';
 
 // Each page and the permission that shows it; the API checks again on every call.
@@ -16,6 +17,7 @@ const PAGES: (NavItem & { needs?: Permission })[] = [
   { label: 'Applications', href: '/applications', needs: 'apps:read' },
   { label: 'Branding', href: '/branding', needs: 'tenant:settings' },
   { label: 'Security', href: '/security', needs: 'tenant:settings' },
+  { label: 'Directory sync (SCIM)', href: '/scim', needs: 'tenant:settings' },
 ];
 
 // The workspace's admin console, once signed in. Root supplies the theme.
@@ -70,6 +72,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
           <>
             <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
             <Route path="/security" element={<SecurityRoute />} />
+            <Route path="/scim" element={<ScimRoute />} />
           </>
         )}
       </Routes>
