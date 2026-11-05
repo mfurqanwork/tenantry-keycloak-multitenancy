@@ -61,7 +61,8 @@ describe('Admin (ADR-0027)', () => {
   it('a member sees the not-allowed page at /people and no menu entries', () => {
     renderPortal(<App />, { api: api(), me: makeMe('member', MEMBER), path: '/people' });
     expect(screen.getByRole('heading', { level: 1, name: "You can't open Admin" })).toBeInTheDocument();
-    expect(within(menu()).queryAllByRole('link')).toHaveLength(0);
+    // No pages of theirs, so no side nav at all.
+    expect(screen.queryByRole('navigation', { name: 'Side navigation' })).not.toBeInTheDocument();
   });
 
   it('opens on People for an owner', async () => {

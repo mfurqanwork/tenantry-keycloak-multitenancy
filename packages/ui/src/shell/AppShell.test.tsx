@@ -171,7 +171,10 @@ describe('AppShell', () => {
     );
     const mark = () => container.querySelector('.tenantry-header__logo');
     // Vite inlines the small SVG; either way it is the mark, with its one blue tile.
-    expect(decodeURIComponent(mark()?.getAttribute('src') ?? '')).toMatch(/tenantry-mark|#0f62fe/);
+    const src = decodeURIComponent(mark()?.getAttribute('src') ?? '');
+    expect(src).toMatch(/tenantry-mark-dark|#0f62fe/);
+    // The header is always dark: the mark's other tiles are light.
+    if (src.startsWith('data:')) expect(src).toMatch(/#f4f4f4/);
     rerender(
       <AppShell productName="Acme" navItems={[]} currentPath="/" logoUrl="/api/tenants/acme/logo">
         <p>content</p>
@@ -179,5 +182,17 @@ describe('AppShell', () => {
     );
     expect(container.querySelectorAll('.tenantry-header__logo')).toHaveLength(1);
     expect(mark()).toHaveAttribute('src', '/api/tenants/acme/logo');
+  });
+
+  it('has no side nav or menu button when there are no pages (welcome, signup, not found)', () => {
+    render(
+      <AppShell productName="Tenantry" navItems={[]} currentPath="/">
+        <p>content</p>
+      </AppShell>,
+      { wrapper },
+    );
+    expect(screen.queryByRole('navigation', { name: 'Side navigation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveTextContent('content');
   });
 });

@@ -26,7 +26,8 @@ import {
   type CarbonIconType,
 } from '@carbon/icons-react';
 import { useState, type ElementType, type ReactNode } from 'react';
-import tenantryMark from '../../assets/brand/tenantry-mark.svg';
+// The header is always dark (g100), so its mark has light tiles.
+import tenantryMark from '../../assets/brand/tenantry-mark-dark.svg';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
 import { HeaderSwitcherAction, HeaderSwitcherPanel, type SwitcherEntry } from './HeaderSwitcher.js';
@@ -103,6 +104,7 @@ export function AppShell({
   };
   const accountOpen = open === 'account';
   const workspaceEntries = workspaces.map(({ name, href, current }) => ({ label: name, href, current }));
+  const hasNav = navItems.length > 0;
   return (
     <HeaderContainer
       render={({ isSideNavExpanded, onClickSideNavExpand }) => (
@@ -110,12 +112,15 @@ export function AppShell({
           <Theme theme="g100">
             <Header aria-label={productName}>
               <SkipToContent />
-              <HeaderMenuButton
-                aria-label={isSideNavExpanded ? 'Close menu' : 'Open menu'}
-                isActive={isSideNavExpanded}
-                aria-expanded={isSideNavExpanded}
-                onClick={onClickSideNavExpand}
-              />
+              {/* No pages, no menu: an empty side nav would still open on wide screens. */}
+              {hasNav && (
+                <HeaderMenuButton
+                  aria-label={isSideNavExpanded ? 'Close menu' : 'Open menu'}
+                  isActive={isSideNavExpanded}
+                  aria-expanded={isSideNavExpanded}
+                  onClick={onClickSideNavExpand}
+                />
+              )}
               <HeaderName href="/" prefix="" {...(linkAs ? { as: linkAs } : {})}>
                 <img className="tenantry-header__logo" src={logoUrl ?? tenantryMark} alt="" />
                 {productName}
@@ -183,39 +188,41 @@ export function AppShell({
               )}
             </Header>
           </Theme>
-          <SideNav
-            aria-label="Side navigation"
-            expanded={isSideNavExpanded}
-            onSideNavBlur={onClickSideNavExpand}
-            href="/"
-          >
-            <SideNavItems>
-              {navItems.map((item) =>
-                item.children ? (
-                  <SideNavMenu
-                    key={item.label}
-                    title={item.label}
-                    {...(item.icon ? { renderIcon: item.icon } : {})}
-                    defaultExpanded={item.children.some((child) => child.href === currentPath)}
-                  >
-                    {item.children.map((child) => (
-                      <SideNavMenuItem key={child.href} {...navLinkProps(child, currentPath, linkAs)}>
-                        {child.label}
-                      </SideNavMenuItem>
-                    ))}
-                  </SideNavMenu>
-                ) : (
-                  <SideNavLink
-                    key={item.href}
-                    {...navLinkProps(item, currentPath, linkAs)}
-                    {...(item.icon ? { renderIcon: item.icon } : {})}
-                  >
-                    {item.label}
-                  </SideNavLink>
-                ),
-              )}
-            </SideNavItems>
-          </SideNav>
+          {hasNav && (
+            <SideNav
+              aria-label="Side navigation"
+              expanded={isSideNavExpanded}
+              onSideNavBlur={onClickSideNavExpand}
+              href="/"
+            >
+              <SideNavItems>
+                {navItems.map((item) =>
+                  item.children ? (
+                    <SideNavMenu
+                      key={item.label}
+                      title={item.label}
+                      {...(item.icon ? { renderIcon: item.icon } : {})}
+                      defaultExpanded={item.children.some((child) => child.href === currentPath)}
+                    >
+                      {item.children.map((child) => (
+                        <SideNavMenuItem key={child.href} {...navLinkProps(child, currentPath, linkAs)}>
+                          {child.label}
+                        </SideNavMenuItem>
+                      ))}
+                    </SideNavMenu>
+                  ) : (
+                    <SideNavLink
+                      key={item.href}
+                      {...navLinkProps(item, currentPath, linkAs)}
+                      {...(item.icon ? { renderIcon: item.icon } : {})}
+                    >
+                      {item.label}
+                    </SideNavLink>
+                  ),
+                )}
+              </SideNavItems>
+            </SideNav>
+          )}
           <Content id="main-content">
             <LinkContext.Provider value={linkAs ?? null}>{children}</LinkContext.Provider>
           </Content>
