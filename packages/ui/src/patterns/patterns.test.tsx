@@ -165,4 +165,10 @@ describe('page patterns', () => {
     );
     expect(container.querySelector('.cds--progress')).not.toBeNull();
   });
+
+  it('DashboardPage shows a line under its title when given one', () => {
+    render(<DashboardPage title="Tenantry" description="Sign-in, teams and branding." tiles={[]} />);
+    const title = screen.getByRole('heading', { level: 1, name: 'Tenantry' });
+    expect(title.closest('.tenantry-page-header')).toHaveTextContent('Sign-in, teams and branding.');
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apexAuthConfig, hostKind } from './host.js';
+import { apexAuthConfig, apexPage, demoWorkspaces, hostKind } from './host.js';
 
 const base = 'tenantry.localhost';
 
@@ -27,5 +27,29 @@ describe('apexAuthConfig', () => {
       clientId: 'tenantry-web',
       organization: null,
     });
+  });
+});
+
+describe('apexPage', () => {
+  it('shows the welcome page at the root, signed out', () => {
+    expect(apexPage('/')).toBe('welcome');
+    expect(apexPage('/anything-else')).toBe('welcome');
+  });
+
+  it('signs in for signup, and finishes that sign-in on the callback', () => {
+    expect(apexPage('/signup')).toBe('signup');
+    expect(apexPage('/auth/callback')).toBe('signup');
+  });
+});
+
+describe('demoWorkspaces', () => {
+  it('reads a comma-separated list of slugs', () => {
+    expect(demoWorkspaces(' acme, globex ,initech ')).toEqual(['acme', 'globex', 'initech']);
+  });
+
+  it('is empty when unset or blank, and drops what cannot be a slug', () => {
+    expect(demoWorkspaces(undefined)).toEqual([]);
+    expect(demoWorkspaces('')).toEqual([]);
+    expect(demoWorkspaces('acme,<script>,a b')).toEqual(['acme']);
   });
 });

@@ -32,22 +32,39 @@ async function fillDetails(name: string, slug?: string) {
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), slug);
   }
-  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Create workspace' }));
   return user;
 }
 
-describe('SignupRoute', () => {
-  it('suggests an address from the name', async () => {
+describe('SignupRoute (one screen)', () => {
+  it('asks for a name and an address on one screen, with no steps', () => {
     renderSignup(fakeApi());
-    await userEvent.setup().type(screen.getByLabelText('Workspace name'), 'Acme Inc');
-    expect(screen.getByLabelText('Address')).toHaveValue('acme-inc');
+    expect(screen.getByRole('heading', { level: 1, name: 'Create a workspace' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Address')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(document.querySelector('.cds--progress')).toBeNull();
   });
 
-  it('says when the address is taken', async () => {
-    renderSignup(fakeApi({ get: vi.fn().mockResolvedValue({ available: false, reason: 'taken' }) }));
+  it('fills in the address from the name until it is edited', async () => {
+    renderSignup(fakeApi());
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Workspace name'), 'Acme Inc');
+    expect(screen.getByLabelText('Address')).toHaveValue('acme-inc');
+    expect(screen.getByText('acme-inc.tenantry.localhost')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Address'));
+    await user.type(screen.getByLabelText('Address'), 'acme');
+    await user.type(screen.getByLabelText('Workspace name'), ' Ltd');
+    expect(screen.getByLabelText('Address')).toHaveValue('acme');
+  });
+
+  it('says on the address when it is taken, and creates nothing', async () => {
+    const api = fakeApi({ get: vi.fn().mockResolvedValue({ available: false, reason: 'taken' }) });
+    renderSignup(api);
     await fillDetails('Acme');
     expect(await screen.findByText('This address is taken.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Create workspace' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Address')).toHaveAttribute('aria-invalid', 'true');
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it('says when the address is reserved', async () => {
@@ -56,30 +73,28 @@ describe('SignupRoute', () => {
     expect(await screen.findByText('This address is reserved.')).toBeInTheDocument();
   });
 
-  it('creates the workspace and goes to its address', async () => {
+  it('checks the address, creates the workspace and goes to it, in one press', async () => {
     const api = fakeApi();
     const onCreated = renderSignup(api);
-    const user = await fillDetails('Acme', 'acme');
-    expect(await screen.findByText('acme.tenantry.localhost')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create workspace' }));
+    await fillDetails('Acme', 'acme');
     await waitFor(() => {
       expect(onCreated).toHaveBeenCalledWith('http://acme.tenantry.localhost');
     });
+    expect(api.get).toHaveBeenCalledWith('/api/signup/slug-availability?slug=acme');
     expect(api.post).toHaveBeenCalledWith('/api/signup', { name: 'Acme', slug: 'acme' });
   });
 
   it('keeps the form and shows the error when creation fails', async () => {
     const failure = new ApiProblem(502, 'Bad Gateway', 'We could not finish setting up your workspace.');
     const onCreated = renderSignup(fakeApi({ post: vi.fn().mockRejectedValue(failure) }));
-    const user = await fillDetails('Acme', 'acme');
-    await user.click(await screen.findByRole('button', { name: 'Create workspace' }));
+    await fillDetails('Acme', 'acme');
     expect(await screen.findByText('We could not finish setting up your workspace.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create workspace' })).toBeEnabled();
     expect(onCreated).not.toHaveBeenCalled();
   });
 
-  it('needs a name before going on', () => {
+  it('needs a name before creating', () => {
     renderSignup(fakeApi());
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create workspace' })).toBeDisabled();
   });
 });

@@ -24,3 +24,51 @@
 
   margin-block-end: $spacing-05;
 }
+
+// The welcome and not-found pages (Phase 6a): tiles hold a heading, a line and one way in.
+.tenantry-welcome__tile {
+  block-size: 100%;
+}
+
+.tenantry-welcome__heading {
+  @include type.type-style('heading-compact-02');
+}
+
+.tenantry-welcome__demos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-05;
+}
+
+// Home's getting-started checklist.
+.tenantry-checklist__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: $spacing-05;
+}
+
+.tenantry-checklist__title,
+.tenantry-home__heading {
+  @include type.type-style('heading-compact-02');
+}
+
+.tenantry-checklist__steps {
+  display: grid;
+  gap: $spacing-05;
+  grid-template-columns: repeat(auto-fit, minmax($spacing-13 * 3, 1fr));
+}
+
+.tenantry-checklist__done {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.tenantry-checklist__check {
+  fill: theme.$support-success;
+}
+
+.tenantry-checklist__label {
+  @include type.type-style('body-compact-01');
+}

@@ -6,13 +6,15 @@ import { RouterLink, SignedInApi } from '@tenantry/app-kit';
 import { apexAuthConfig } from '../../lib/host.js';
 import { SignupRoute } from './SignupRoute.js';
 
-// The apex host: sign in (or register) in Keycloak, then create a workspace (ADR-0018).
+// The apex host's /signup: register (or sign in) in Keycloak, then create a workspace (ADR-0018).
 export function SignupApp({ baseDomain }: { baseDomain: string }) {
   const client = useMemo(
     () =>
       createAuthClient({
         ...apexAuthConfig(new URL(window.location.href), baseDomain),
         redirectUri: `${window.location.origin}${CALLBACK_PATH}`,
+        // "Create a workspace" opens Keycloak's registration page, which links to sign-in instead.
+        prompt: 'create',
       }),
     [baseDomain],
   );

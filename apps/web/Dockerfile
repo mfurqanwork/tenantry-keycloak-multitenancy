@@ -13,6 +13,9 @@ COPY .npmrc .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 COPY tsconfig.base.json .
+# The welcome page's demo workspaces (empty in production): a build argument, since the image has no .env.
+ARG VITE_DEMO_WORKSPACES=
+ENV VITE_DEMO_WORKSPACES=$VITE_DEMO_WORKSPACES
 RUN pnpm --filter "@tenantry/web..." build
 
 FROM caddy:2.10-alpine

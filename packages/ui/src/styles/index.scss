@@ -48,6 +48,13 @@ body {
   @include type.type-style('productive-heading-05');
 }
 
+.tenantry-page-header__description {
+  @include type.type-style('body-01');
+
+  margin-block-start: $spacing-03;
+  color: theme.$text-secondary;
+}
+
 .tenantry-page-header__actions {
   display: flex;
   gap: $spacing-03;

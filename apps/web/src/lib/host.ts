@@ -1,4 +1,5 @@
 import type { AuthConfig } from '@tenantry/oidc-client';
+import { workspaceFromInput } from './workspace-input.js';
 
 export type HostKind = { kind: 'apex' } | { kind: 'tenant'; slug: string } | { kind: 'unknown' };
 
@@ -24,3 +25,18 @@ export function apexAuthConfig(location: URL, baseDomain: string): AuthConfig {
     organization: null,
   };
 }
+
+// The base domain's pages: the welcome page needs no sign-in; signup (and its sign-in callback) do.
+export function apexPage(pathname: string): 'welcome' | 'signup' {
+  return pathname === '/signup' || pathname === '/auth/callback' ? 'signup' : 'welcome';
+}
+
+// VITE_DEMO_WORKSPACES: slugs the welcome page offers to try (empty in production).
+export function demoWorkspaces(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter((slug) => workspaceFromInput(slug, BASE_DOMAIN) === slug);
+}
+
+export const DEMO_WORKSPACES = demoWorkspaces(import.meta.env['VITE_DEMO_WORKSPACES'] as string | undefined);

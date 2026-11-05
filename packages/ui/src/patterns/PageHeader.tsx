@@ -11,10 +11,12 @@ interface PageHeaderProps {
   breadcrumbs?: Crumb[] | undefined;
   title: string;
   actions?: ReactNode;
+  // One line under the title, saying what the page is for.
+  description?: ReactNode;
 }
 
 // Shared by all five page patterns: breadcrumb, the page's only h1, then its actions at the end.
-export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
+export function PageHeader({ breadcrumbs, title, actions, description }: PageHeaderProps) {
   const RouterLink = useRouterLink();
   return (
     <div className="tenantry-page-header">
@@ -35,6 +37,7 @@ export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
         <h1 className="tenantry-page-header__title">{title}</h1>
         {actions && <div className="tenantry-page-header__actions">{actions}</div>}
       </div>
+      {description && <p className="tenantry-page-header__description">{description}</p>}
     </div>
   );
 }

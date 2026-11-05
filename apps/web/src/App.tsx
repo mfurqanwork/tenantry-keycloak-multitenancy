@@ -1,21 +1,34 @@
 import type { Permission } from '@tenantry/auth';
 import { AppShell, type NavItem } from '@tenantry/ui';
+import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
-import { AuditRoute } from './features/audit/AuditRoute.js';
-import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
-import { MembersRoute } from './features/members/MembersRoute.js';
+import { HomeRoute } from './features/home/HomeRoute.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
 import { ProjectsRoute } from './features/projects/ProjectsRoute.js';
-import { appLinks, canSeeAdmin, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
+import {
+  adminUrl,
+  appLinks,
+  canSeeAdmin,
+  RouterLink,
+  useBranding,
+  useMe,
+  useWorkspaces,
+} from '@tenantry/app-kit';
 
-// Each page and the permission that shows it; the API checks again on every call.
+// Tenantry is the product people use; the workspace itself is managed in Admin (ADR-0027).
 const PAGES: (NavItem & { needs?: Permission })[] = [
-  { label: 'Dashboard', href: '/' },
+  { label: 'Home', href: '/' },
   { label: 'Projects', href: '/projects', needs: 'projects:read' },
-  { label: 'Members', href: '/members', needs: 'members:read' },
-  { label: 'Audit log', href: '/audit', needs: 'audit:read' },
-  { label: 'Patterns', href: '/patterns' },
 ];
+
+// Members and the audit log moved to Admin in Phase 6a; old bookmarks land there.
+function ToAdmin({ path }: { path: string }) {
+  const target = adminUrl(useWorkspaces(), path);
+  useEffect(() => {
+    if (target) window.location.replace(target);
+  }, [target]);
+  return null;
+}
 
 // The tenant app's shell and routes, once signed in. Root supplies the theme.
 export function App({ onSignOut }: { onSignOut?: () => void }) {
@@ -44,11 +57,12 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       {...(onSignOut && me.user.email ? { user: { email: me.user.email, onSignOut } } : {})}
     >
       <Routes>
-        <Route path="/" element={<DashboardRoute />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/projects" element={<ProjectsRoute />} />
-        <Route path="/members" element={<MembersRoute />} />
-        <Route path="/audit" element={<AuditRoute />} />
-        <Route path="/patterns" element={<PatternsRoute />} />
+        <Route path="/members" element={<ToAdmin path="/people" />} />
+        <Route path="/audit" element={<ToAdmin path="/audit" />} />
+        {/* The page-pattern gallery is a developer aid, not part of the product. */}
+        {import.meta.env.DEV && <Route path="/patterns" element={<PatternsRoute />} />}
       </Routes>
     </AppShell>
   );
