@@ -31,7 +31,7 @@ export function ApplicationsRoute() {
     return (
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Applications"
+        title="Customer apps"
         isEmpty
         emptyState={<Tile>Applications are available on Enterprise workspaces.</Tile>}
       >
@@ -50,10 +50,10 @@ function EnterpriseApplications() {
   return (
     <ListPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-      title="Applications"
+      title="Customer apps"
       primaryAction={
         registers ? (
-          <Button as={RouterLink} href="/applications/new" renderIcon={Add}>
+          <Button as={RouterLink} href="/advanced/apps/new" renderIcon={Add}>
             Register an app
           </Button>
         ) : undefined
@@ -94,7 +94,7 @@ function EnterpriseApplications() {
                         {row.cells.map((cell) => (
                           <TableCell key={cell.id}>
                             {cell.info.header === 'name' ? (
-                              <Link as={RouterLink} href={`/applications/${row.id}`}>
+                              <Link as={RouterLink} href={`/advanced/apps/${row.id}`}>
                                 {cell.value as string}
                               </Link>
                             ) : (

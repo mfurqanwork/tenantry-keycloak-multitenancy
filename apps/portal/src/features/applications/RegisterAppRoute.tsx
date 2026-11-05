@@ -76,7 +76,7 @@ export function RegisterAppRoute() {
     try {
       const created = await api.post<{ app: AppView; clientSecret?: string }>('/api/apps', body());
       const state: SecretState = created.clientSecret ? { clientSecret: created.clientSecret } : {};
-      void navigate(`/applications/${created.app.id}`, { state });
+      void navigate(`/advanced/apps/${created.app.id}`, { state });
     } catch (err) {
       setBusy(false);
       if (err instanceof ApiProblem && err.status === 422) {
@@ -98,7 +98,7 @@ export function RegisterAppRoute() {
     <WizardPage
       breadcrumbs={[
         { label: me.tenant.name, href: '/' },
-        { label: 'Applications', href: '/applications' },
+        { label: 'Customer apps', href: '/advanced/apps' },
       ]}
       title="Register an app"
       steps={STEPS}

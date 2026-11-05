@@ -42,7 +42,7 @@ export function AppDetailRoute() {
 
   const crumbs = [
     { label: me.tenant.name, href: '/' },
-    { label: 'Applications', href: '/applications' },
+    { label: 'Customer apps', href: '/advanced/apps' },
   ];
   if (!app.data) {
     return (
@@ -141,7 +141,7 @@ export function AppDetailRoute() {
         <DeleteAppDialog
           app={a}
           onDeleted={() => {
-            void navigate('/applications');
+            void navigate('/advanced/apps');
           }}
           onClose={close}
         />

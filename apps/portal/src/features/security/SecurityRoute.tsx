@@ -69,7 +69,7 @@ export function SecurityRoute() {
     return (
       <SettingsPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Security"
+        title="Sign-in & security"
         dirty={false}
         saving={false}
         onSave={() => undefined}
@@ -121,7 +121,7 @@ function EnterpriseSecurity() {
   return (
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-      title="Security"
+      title="Sign-in & security"
       dirty={changed && valid}
       saving={saving}
       onSave={() => void save()}

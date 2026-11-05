@@ -17,17 +17,17 @@ describe('ApplicationsRoute', () => {
         ],
       },
     });
-    renderPortal(<ApplicationsRoute />, { api, me: ADMIN, path: '/applications' });
+    renderPortal(<ApplicationsRoute />, { api, me: ADMIN, path: '/advanced/apps' });
     expect(await screen.findByRole('link', { name: 'HR portal' })).toHaveAttribute(
       'href',
-      '/applications/a1',
+      '/advanced/apps/a1',
     );
     expect(screen.getByText('Web app')).toBeInTheDocument();
     expect(screen.getByText('Machine to machine')).toBeInTheDocument();
     expect(screen.getByText('app-22222222')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Register an app' })).toHaveAttribute(
       'href',
-      '/applications/new',
+      '/advanced/apps/new',
     );
   });
 
@@ -35,7 +35,7 @@ describe('ApplicationsRoute', () => {
     renderPortal(<ApplicationsRoute />, {
       api: fakeApi({ '/api/apps': { apps: [] } }),
       me: ADMIN,
-      path: '/applications',
+      path: '/advanced/apps',
     });
     expect(
       await screen.findByText('No apps yet. Register one to connect it to your sign-in.'),
@@ -46,7 +46,7 @@ describe('ApplicationsRoute', () => {
     renderPortal(<ApplicationsRoute />, {
       api: fakeApi({ '/api/apps': { apps: [] } }),
       me: MEMBER,
-      path: '/applications',
+      path: '/advanced/apps',
     });
     expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Register an app' })).not.toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('ApplicationsRoute', () => {
     renderPortal(<ApplicationsRoute />, {
       api,
       me: { ...me, tenant: { ...me.tenant, tier: 'standard' } },
-      path: '/applications',
+      path: '/advanced/apps',
     });
     expect(screen.getByText('Applications are available on Enterprise workspaces.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();

@@ -3,7 +3,7 @@ import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ApiProblem } from '@tenantry/app-kit';
 import { ALL, fakeApi, makeMe, MEMBER, renderPage } from '../../test-utils.js';
-import { MembersRoute } from './MembersRoute.js';
+import { PeopleRoute } from './PeopleRoute.js';
 
 const LIST = {
   members: [
@@ -13,16 +13,16 @@ const LIST = {
   invites: [{ id: 'i-1', email: 'carol@example.com', role: 'admin', createdAt: '2026-11-02T10:00:00Z' }],
 };
 
-describe('MembersRoute', () => {
+describe('PeopleRoute', () => {
   it('lists members with their roles and the pending invites', async () => {
-    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
     expect(await screen.findByText('bob@example.com')).toBeInTheDocument();
     expect(screen.getByText('carol@example.com')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Members' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'People' })).toBeInTheDocument();
   });
 
   it('hides invite, role and remove controls from a member', async () => {
-    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('member', MEMBER) });
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('member', MEMBER) });
     await screen.findByText('bob@example.com');
     expect(screen.queryByRole('button', { name: 'Invite member' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /actions for/i })).not.toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('MembersRoute', () => {
 
   it('invites someone and refreshes the list', async () => {
     const api = fakeApi({ '/api/members': LIST, 'POST /api/members/invites': { id: 'i-2' } });
-    renderPage(<MembersRoute />, { api, me: makeMe('owner', ALL) });
+    renderPage(<PeopleRoute />, { api, me: makeMe('owner', ALL) });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Invite member' }));
     const dialog = await screen.findByRole('dialog', { name: 'Invite member' });
@@ -49,7 +49,7 @@ describe('MembersRoute', () => {
 
   it('shows why an invite was refused, inside the dialog', async () => {
     const conflict = new ApiProblem(409, 'Conflict', 'This person already has an open invite.');
-    renderPage(<MembersRoute />, {
+    renderPage(<PeopleRoute />, {
       api: fakeApi({ '/api/members': LIST, 'POST /api/members/invites': conflict }),
       me: makeMe('owner', ALL),
     });
@@ -64,7 +64,7 @@ describe('MembersRoute', () => {
   it('changes a role, and shows the last-owner refusal', async () => {
     const lastOwner = new ApiProblem(409, 'Conflict', 'A workspace needs at least one owner.');
     const api = fakeApi({ '/api/members': LIST, 'PATCH /api/members/u-bob': lastOwner });
-    renderPage(<MembersRoute />, { api, me: makeMe('owner', ALL) });
+    renderPage(<PeopleRoute />, { api, me: makeMe('owner', ALL) });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Actions for bob@example.com' }));
     // jsdom does no layout, so Carbon's floating menu stays visibility: hidden (no accessible names);
@@ -79,16 +79,16 @@ describe('MembersRoute', () => {
 
   it('shows a refused list load inline, not a blank page', async () => {
     const forbidden = new ApiProblem(403, 'Forbidden', 'You do not have permission to do this.');
-    renderPage(<MembersRoute />, {
+    renderPage(<PeopleRoute />, {
       api: fakeApi({ '/api/members': forbidden }),
       me: makeMe('member', MEMBER),
     });
     expect(await screen.findByText('You do not have permission to do this.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Members' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'People' })).toBeInTheDocument();
   });
 });
 
-describe('MembersRoute: console access (enterprise)', () => {
+describe('PeopleRoute: console access (enterprise)', () => {
   const ENT = {
     members: [
       { userId: 'u-me', email: 'me@example.com', displayName: 'Me', role: 'owner', console: false },
@@ -108,7 +108,7 @@ describe('MembersRoute: console access (enterprise)', () => {
   };
 
   it('shows who has console access', async () => {
-    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
     expect(await screen.findByText('Admin · Console access')).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('MembersRoute: console access (enterprise)', () => {
       'POST /api/members/u-me/console': undefined,
       'DELETE /api/members/u-ann/console': undefined,
     });
-    renderPage(<MembersRoute />, { api, me: enterpriseOwner() });
+    renderPage(<PeopleRoute />, { api, me: enterpriseOwner() });
     let user = await menu('me@example.com');
     await user.click(await screen.findByText('Give console access'));
     await waitFor(() => {
@@ -134,7 +134,7 @@ describe('MembersRoute: console access (enterprise)', () => {
   it('turns the item off while its change is on its way', async () => {
     const never = new Promise<undefined>(() => undefined);
     const api = fakeApi({ '/api/members': ENT, 'POST /api/members/u-me/console': never });
-    renderPage(<MembersRoute />, { api, me: enterpriseOwner() });
+    renderPage(<PeopleRoute />, { api, me: enterpriseOwner() });
     let user = await menu('me@example.com');
     await user.click(await screen.findByText('Give console access'));
     user = await menu('me@example.com');
@@ -144,14 +144,14 @@ describe('MembersRoute: console access (enterprise)', () => {
   });
 
   it("offers nothing for a member's row", async () => {
-    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
     await menu('bob@example.com');
     expect(await screen.findByText('Change role')).toBeInTheDocument();
     expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
   });
 
   it('offers nothing on a Standard workspace', async () => {
-    renderPage(<MembersRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
     await menu('bob@example.com');
     expect(await screen.findByText('Change role')).toBeInTheDocument();
     expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
@@ -163,7 +163,7 @@ describe('MembersRoute: console access (enterprise)', () => {
       'Bad Gateway',
       'The identity service is unavailable. Try again shortly.',
     );
-    renderPage(<MembersRoute />, {
+    renderPage(<PeopleRoute />, {
       api: fakeApi({ '/api/members': ENT, 'DELETE /api/members/u-ann/console': refused }),
       me: enterpriseOwner(),
     });

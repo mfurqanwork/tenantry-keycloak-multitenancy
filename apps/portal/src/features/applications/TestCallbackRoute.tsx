@@ -40,7 +40,7 @@ export function TestCallbackRoute() {
       <PageHeader
         breadcrumbs={[
           { label: me.tenant.name, href: '/' },
-          { label: 'Applications', href: '/applications' },
+          { label: 'Customer apps', href: '/advanced/apps' },
         ]}
         title="Test sign-in"
       />
@@ -103,11 +103,11 @@ export function TestCallbackRoute() {
           )}
           {result &&
             (appId ? (
-              <Link as={RouterLink} href={`/applications/${appId}`}>
+              <Link as={RouterLink} href={`/advanced/apps/${appId}`}>
                 Back to the app
               </Link>
             ) : (
-              <Link as={RouterLink} href="/applications">
+              <Link as={RouterLink} href="/advanced/apps">
                 Back to applications
               </Link>
             ))}

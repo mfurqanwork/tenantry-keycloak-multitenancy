@@ -18,6 +18,7 @@ import { Add } from '@carbon/icons-react';
 import type { Role } from '@tenantry/auth';
 import { ListPage } from '@tenantry/ui';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import {
   ApiErrorNotification,
   assignableRoles,
@@ -56,11 +57,15 @@ const INVITE_HEADERS = [
   { key: 'createdAt', header: 'Invited' },
 ];
 
-export function MembersRoute() {
+export function PeopleRoute() {
   const me = useMe();
   const api = useApi();
   const list = useResource<{ members: MemberRow[]; invites: InviteRow[] }>('/api/members');
-  const [dialog, setDialog] = useState<Dialog>(null);
+  // /people?invite=1 (Tenantry's getting-started checklist) opens the invite dialog straight away.
+  const [searchParams] = useSearchParams();
+  const [dialog, setDialog] = useState<Dialog>(() =>
+    searchParams.get('invite') === '1' && me.can('members:invite') ? { kind: 'invite' } : null,
+  );
   const [actionError, setActionError] = useState<unknown>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [consoleBusy, setConsoleBusy] = useState<string | null>(null);
@@ -89,7 +94,7 @@ export function MembersRoute() {
     <>
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Members"
+        title="People"
         primaryAction={
           me.can('members:invite') ? (
             <Button
