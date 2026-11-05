@@ -25,3 +25,10 @@ test('the dev DNS server answers on loopback only', () => {
   assert.match(dns, /image: coredns\/coredns:1\.12\.1/);
   assert.match(dns, /'127\.0\.0\.1:\$\{TENANTRY_DNS_PORT:-1053\}:53\/udp'/);
 });
+
+// Secrets the API writes into the bind-mounted folder belong to the host user, who reads them with
+// `pnpm ops` (Phase 5b); dev-stack sets the ids on Linux and macOS, root stays the default elsewhere.
+test('the API container runs as the host user dev-stack names', () => {
+  const api = /^ {2}api:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(compose)?.[1] ?? '';
+  assert.match(api, /user: '\$\{TENANTRY_UID:-0\}:\$\{TENANTRY_GID:-0\}'/);
+});

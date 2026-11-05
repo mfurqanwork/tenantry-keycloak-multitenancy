@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { ensureEnv, ROOT } from './lib/env.mjs';
 import { ensureBackendRoles, ensureProvisionerClient } from './lib/provisioner.mjs';
 import { busyPorts } from './lib/port.mjs';
+import { prepareSecretsDir } from './lib/secrets-dir.mjs';
 
 const infraOnly = process.argv.includes('--infra');
 const env = ensureEnv();
@@ -52,11 +53,12 @@ const upstreams = infraOnly
       API_UPSTREAM: 'host.docker.internal:3000',
     }
   : {};
+const owner = prepareSecretsDir(fileURLToPath(new URL('../.secrets', import.meta.url)));
 const run = (args) =>
   execFileSync('docker', [...compose, ...args], {
     cwd,
     stdio: 'inherit',
-    env: { ...process.env, ...upstreams },
+    env: { ...process.env, ...owner, ...upstreams },
   });
 
 // The local DNS server (company login, ADR-0022) needs its zone file before it starts; `pnpm ops dns

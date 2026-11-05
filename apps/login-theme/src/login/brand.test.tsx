@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import KcPage from './KcPage.js';
 import { getKcContextMock } from './mock.js';
@@ -34,8 +34,11 @@ describe('the login page brand', () => {
       'http://acme.tenantry.localhost:8080/api/tenants/acme/logo?v=1',
     );
     expect(screen.getByText('Acme', { selector: '.tenantry-login__brand-name' })).toBeInTheDocument();
-    const branded = container.querySelector<HTMLElement>('.tenantry-login__main');
-    expect(branded?.style.getPropertyValue('--cds-button-primary')).toBe('#198038');
+    // The colour is applied in an effect after the render that shows the logo; slow runners see the gap.
+    await waitFor(() => {
+      const branded = container.querySelector<HTMLElement>('.tenantry-login__main');
+      expect(branded?.style.getPropertyValue('--cds-button-primary')).toBe('#198038');
+    });
   });
 
   it('shows Tenantry without a workspace', async () => {
