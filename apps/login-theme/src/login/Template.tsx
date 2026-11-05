@@ -7,6 +7,7 @@ import { applyBrand } from '@tenantry/ui';
 import { useEffect, useRef, useState } from 'react';
 import type { I18n } from './i18n.js';
 import type { KcContext } from './KcContext.js';
+import tenantryLogo from '@tenantry/ui/assets/brand/tenantry-logo.svg';
 import { loadTenantBrand, tenantFromLocation, type TenantBrand } from './tenant-brand.js';
 
 const KIND = { success: 'success', warning: 'warning', error: 'error', info: 'info' } as const;
@@ -67,8 +68,15 @@ export default function Template(props: TemplateProps<KcContext, I18n>) {
     <Theme theme="g10" className="tenantry-login" data-tenantry-theme="">
       <main className="tenantry-login__main" ref={main}>
         <p className="tenantry-login__brand">
-          {brand?.logoUrl && <img className="tenantry-login__logo" src={brand.logoUrl} alt={brand.name} />}
-          <span className="tenantry-login__brand-name">{brand?.name ?? 'Tenantry'}</span>
+          {brand ? (
+            <>
+              {brand.logoUrl && <img className="tenantry-login__logo" src={brand.logoUrl} alt={brand.name} />}
+              <span className="tenantry-login__brand-name">{brand.name}</span>
+            </>
+          ) : (
+            // No workspace applies (the base domain's sign-in and registration): Tenantry's own logo.
+            <img className="tenantry-login__logo" src={tenantryLogo} alt="Tenantry" />
+          )}
         </p>
         <Tile className="tenantry-login__card">
           {auth?.showUsername && !auth.showResetCredentials ? (
