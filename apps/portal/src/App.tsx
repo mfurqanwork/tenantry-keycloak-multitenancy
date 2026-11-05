@@ -1,5 +1,5 @@
 import type { Permission } from '@tenantry/auth';
-import { appLinks, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
+import { appLinks, canSeeAdmin, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
 import { AppShell, type NavItem } from '@tenantry/ui';
 import { Route, Routes, useLocation } from 'react-router';
 import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
@@ -35,7 +35,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
     <AppShell
       productName={me.tenant.name}
       logoUrl={branding?.logoUrl ?? null}
-      apps={appLinks(workspaces, 'portal')}
+      apps={appLinks(workspaces, 'portal', { admin: canSeeAdmin(me.can) })}
       workspaces={workspaces.map(({ slug, name, current, portalUrl }) => ({
         slug,
         name,

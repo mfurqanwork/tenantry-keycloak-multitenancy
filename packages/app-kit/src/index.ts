@@ -1,5 +1,6 @@
 // What both tenant apps share: signing in, the API client, who is signed in, and common pieces.
 export { ApiProblem, ApiProvider, createApi, useApi, type Api } from './api.js';
+export { adminUrl, canSeeAdmin } from './admin.js';
 export { ApiErrorNotification } from './ApiErrorNotification.js';
 export { useBranding, type Branding } from './branding.js';
 export { FormDialog } from './FormDialog.js';

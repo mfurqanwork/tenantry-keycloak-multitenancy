@@ -176,7 +176,6 @@ describe('AppShell', () => {
       <AppShell productName="Acme" navItems={[]} currentPath="/" logoUrl="/api/tenants/acme/logo">
         <p>content</p>
       </AppShell>,
-      { wrapper },
     );
     expect(container.querySelectorAll('.tenantry-header__logo')).toHaveLength(1);
     expect(mark()).toHaveAttribute('src', '/api/tenants/acme/logo');
