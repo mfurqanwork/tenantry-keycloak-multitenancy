@@ -11,9 +11,9 @@ test('makes the secrets folder before Docker can', () => {
   const root = mkdtempSync(join(tmpdir(), 'tenantry-secrets-'));
   try {
     const dir = join(root, '.secrets');
-    prepareSecretsDir(dir, { getuid: undefined, getgid: undefined });
+    prepareSecretsDir(dir, { getuid: null, getgid: null });
     assert.ok(statSync(dir).isDirectory());
-    prepareSecretsDir(dir, { getuid: undefined, getgid: undefined });
+    prepareSecretsDir(dir, { getuid: null, getgid: null });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -32,7 +32,7 @@ test('on Linux and macOS the API container writes the secrets as the host user',
 test('on Windows nothing changes the container user', () => {
   const root = mkdtempSync(join(tmpdir(), 'tenantry-secrets-'));
   try {
-    assert.deepEqual(prepareSecretsDir(join(root, '.secrets'), { getuid: undefined, getgid: undefined }), {});
+    assert.deepEqual(prepareSecretsDir(join(root, '.secrets'), { getuid: null, getgid: null }), {});
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
