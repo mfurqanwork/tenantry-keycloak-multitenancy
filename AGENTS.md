@@ -5,7 +5,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 ## Layout
 
 - `apps/api`: the NestJS API. Every request passes `TenantAuthGuard` (`src/auth/`). Features live in `src/modules/<name>/` (module, controller, service, Zod schemas, tests); a module exports only its service (ADR-0017). `src/infrastructure/` is the only place that binds Postgres and Keycloak.
-- `apps/web`, `apps/portal`: the React + Vite SPAs, built on `@tenantry/ui`. Pages live in `src/features/<name>/` of each app.
+- `apps/web` (Tenantry: the welcome page, signup, Home, Projects) and `apps/portal` (Admin: People, Branding, Sign-in & security, Audit log, Advanced), the React + Vite SPAs built on `@tenantry/ui` (ADR-0027). Pages live in `src/features/<name>/` of each app. Admin pages are for owners and admins (`canSeeAdmin`).
 - `apps/login-theme`: the Keycloakify login theme, built into the Keycloak image (ADR-0021).
 - `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`; `/testing` has the test helpers both apps use (`fakeApi`, `makeMe`, `renderWithApp`).
 - `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, Carbon tokens).
@@ -19,6 +19,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`, and builds enterprise tenants through the API's operator endpoints.
 - `infra/`: Compose, Caddy, the Keycloak realms (`platform`, and the dev-only `corp-demo`), CoreDNS (dev only) and the Postgres init script.
 - `docs/decisions/`: ADRs. A change to a recorded decision needs a new or updated ADR.
+- `docs/SETUP.md`: running, seeding and testing locally. `docs/brand.md` and `packages/ui/assets/brand/`: Tenantry's own logo and icons.
 
 ## Commands
 

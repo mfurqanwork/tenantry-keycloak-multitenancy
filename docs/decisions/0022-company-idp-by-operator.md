@@ -1,6 +1,6 @@
 # ADR-0022: Company login is linked by an operator, after a DNS proof
 
-Status: Accepted · Date: 2026-11-03 · Updated: 2026-11-07 (Phase 5b)
+Status: Accepted · Date: 2026-11-03 · Updated: 2026-11-07 (Phase 5b), 2026-11-08 (Phase 6a)
 
 ## Context
 
@@ -33,3 +33,7 @@ A company wants its people to sign in to its workspace with its own identity pro
 ## Update (Phase 5b)
 
 `idp link` keeps the client secret it is given in the secrets store, as `platform/idp-<alias>` (ADR-0023), never in Postgres, logs or audit, so a workspace that moves to Enterprise takes its company login with it ([ADR-0025](0025-standard-to-enterprise.md)). A rerun keeps the secret already kept, as it keeps Keycloak's settings. The platform `tenantry-backend` may now read identity providers' settings (`view-identity-providers`), never their secrets, to copy them.
+
+## Update (Phase 6a)
+
+`idp link` names the provider's sign-in button: `--display-name`, or `<workspace name> company sign-in` by default, so people no longer see the alias. A rerun with another name renames it; a rerun with the same name changes nothing. A provider linked before this gets the default on its next rerun, and a move to Enterprise copies the name ([ADR-0025](0025-standard-to-enterprise.md)).

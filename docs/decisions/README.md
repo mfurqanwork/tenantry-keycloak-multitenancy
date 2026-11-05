@@ -30,3 +30,4 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0024](0024-scim-gateway.md)                | SCIM through a Tenantry gateway in front of native SCIM      |
 | [0025](0025-standard-to-enterprise.md)      | Moving a Standard workspace into its own realm, via a bridge |
 | [0026](0026-console-access.md)              | Scoped Keycloak console access for a workspace's own admins  |
+| [0027](0027-tenantry-and-admin.md)          | Tenantry and Admin: two apps split by who they are for       |

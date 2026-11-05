@@ -4,7 +4,24 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access.
+Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access. Phase 6a: a simpler Tenantry.
+
+### Added (Phase 6a)
+
+- A welcome page on the base domain, with no sign-in: Create a workspace (registration first), Go to your workspace, and demo workspaces from `VITE_DEMO_WORKSPACES`.
+- Home in Tenantry, with a getting-started checklist for owners and admins (create a project, invite a teammate, add your colour and logo) and the latest projects.
+- Tenantry's own brand: the T-of-tiles mark, the logo, favicons and a social-preview image (`packages/ui/assets/brand`, `docs/brand.md`, `pnpm brand:icons`). The header shows the mark when a workspace has no logo, and the login page shows the logo when no workspace applies.
+- `pnpm ops idp link --display-name`: the company-login button shows a name, not the alias.
+- `docs/SETUP.md`, with everything a developer needs; the README is now a product page.
+- ADR-0027.
+
+### Changed (Phase 6a)
+
+- The portal is now **Admin**, for owners and admins (ADR-0027): People (moved from web's Members), Branding, Sign-in & security, Audit log (moved from web), and a collapsed Advanced group with Directory sync (SCIM), Customer apps (`/advanced/apps`) and the Keycloak console. Old addresses redirect. Members see no Admin and no app switcher.
+- Tenantry (web) has Home and Projects only. The Patterns page is in development builds only.
+- Signup is one screen.
+- `pnpm dev:stack` prints the welcome page's address.
+- `@tenantry/ui`: nav groups and external links in `AppShell`, an optional `description` under a page title, and `WizardPage` without a progress bar for one step.
 
 ### Added (Phase 5b)
 
