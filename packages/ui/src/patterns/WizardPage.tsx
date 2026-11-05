@@ -15,7 +15,7 @@ interface WizardPageProps {
   nextDisabled?: boolean;
 }
 
-// A multi-step flow (signup, app registration): progress, the step's content, then Back and Next.
+// A flow of one or more steps (signup, app registration): progress, the step's content, then Back and Next.
 export function WizardPage({
   breadcrumbs,
   title,
@@ -31,13 +31,16 @@ export function WizardPage({
   return (
     <div className="tenantry-page">
       <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
-      <div className="tenantry-wizard__progress">
-        <ProgressIndicator currentIndex={currentStep} spaceEqually>
-          {steps.map((step) => (
-            <ProgressStep key={step} label={step} />
-          ))}
-        </ProgressIndicator>
-      </div>
+      {/* One step is a plain form: no progress to show. */}
+      {steps.length > 1 && (
+        <div className="tenantry-wizard__progress">
+          <ProgressIndicator currentIndex={currentStep} spaceEqually>
+            {steps.map((step) => (
+              <ProgressStep key={step} label={step} />
+            ))}
+          </ProgressIndicator>
+        </div>
+      )}
       <div className="tenantry-page__body">{children}</div>
       <div className="tenantry-wizard__actions">
         {onBack && (

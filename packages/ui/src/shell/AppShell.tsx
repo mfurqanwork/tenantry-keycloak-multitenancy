@@ -11,6 +11,8 @@ import {
   SideNav,
   SideNavItems,
   SideNavLink,
+  SideNavMenu,
+  SideNavMenuItem,
   SkipToContent,
   Theme,
 } from '@carbon/react';
@@ -24,6 +26,7 @@ import {
   type CarbonIconType,
 } from '@carbon/icons-react';
 import { useState, type ElementType, type ReactNode } from 'react';
+import tenantryMark from '../../assets/brand/tenantry-mark.svg';
 import { useThemePreference } from '../theme/ThemeProvider.js';
 import type { ThemePreference } from '../theme/preference.js';
 import { HeaderSwitcherAction, HeaderSwitcherPanel, type SwitcherEntry } from './HeaderSwitcher.js';
@@ -33,6 +36,21 @@ export interface NavItem {
   label: string;
   href: string;
   icon?: CarbonIconType;
+  // A plain link that opens in a new tab (another site, such as the Keycloak console), not the router link.
+  external?: boolean;
+  // A group: a collapsed menu titled `label`, open while one of its pages is current; its href is unused.
+  children?: NavItem[];
+}
+
+// The link props for one item: the router link for the app's own pages, a new tab for another site.
+function navLinkProps(item: NavItem, currentPath: string, linkAs: ElementType | undefined) {
+  const current = item.href === currentPath;
+  return {
+    href: item.href,
+    isActive: current,
+    'aria-current': current ? ('page' as const) : undefined,
+    ...(item.external ? { target: '_blank', rel: 'noreferrer' } : linkAs ? { as: linkAs } : {}),
+  };
 }
 
 interface AppShellProps {
@@ -99,7 +117,7 @@ export function AppShell({
                 onClick={onClickSideNavExpand}
               />
               <HeaderName href="/" prefix="" {...(linkAs ? { as: linkAs } : {})}>
-                {logoUrl && <img className="tenantry-header__logo" src={logoUrl} alt="" />}
+                <img className="tenantry-header__logo" src={logoUrl ?? tenantryMark} alt="" />
                 {productName}
               </HeaderName>
               <HeaderGlobalBar>
@@ -172,21 +190,30 @@ export function AppShell({
             href="/"
           >
             <SideNavItems>
-              {navItems.map((item) => {
-                const current = item.href === currentPath;
-                return (
+              {navItems.map((item) =>
+                item.children ? (
+                  <SideNavMenu
+                    key={item.label}
+                    title={item.label}
+                    {...(item.icon ? { renderIcon: item.icon } : {})}
+                    defaultExpanded={item.children.some((child) => child.href === currentPath)}
+                  >
+                    {item.children.map((child) => (
+                      <SideNavMenuItem key={child.href} {...navLinkProps(child, currentPath, linkAs)}>
+                        {child.label}
+                      </SideNavMenuItem>
+                    ))}
+                  </SideNavMenu>
+                ) : (
                   <SideNavLink
                     key={item.href}
-                    {...(linkAs ? { as: linkAs } : {})}
-                    href={item.href}
+                    {...navLinkProps(item, currentPath, linkAs)}
                     {...(item.icon ? { renderIcon: item.icon } : {})}
-                    isActive={current}
-                    aria-current={current ? 'page' : undefined}
                   >
                     {item.label}
                   </SideNavLink>
-                );
-              })}
+                ),
+              )}
             </SideNavItems>
           </SideNav>
           <Content id="main-content">
