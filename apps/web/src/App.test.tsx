@@ -96,11 +96,11 @@ describe('web app', () => {
     );
   });
 
-  it('switches to the portal of this workspace', async () => {
+  it('switches to the Admin of this workspace', async () => {
     renderAt('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Switch app' }));
     const panel = screen.getByRole('navigation', { name: 'Switch app' });
-    expect(within(panel).getByRole('link', { name: /Tenantry Portal/ })).toHaveAttribute(
+    expect(within(panel).getByRole('link', { name: /Admin/ })).toHaveAttribute(
       'href',
       'http://acme.portal.tenantry.localhost/',
     );
