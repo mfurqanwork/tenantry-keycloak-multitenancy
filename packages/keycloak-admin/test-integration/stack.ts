@@ -83,16 +83,104 @@ export async function provisionTestRealm(
 }
 
 // A person signing in with only a password through the realm's browser flow (authorization code with
-// PKCE). True when Keycloak sends them back to the app; false when it asks for something more.
+// PKCE). True when Keycloak sends them back to the app; false when it asks for something more. With
+// `via`, they take that identity provider's button (the bridge, ADR-0025) and sign in on the other
+// realm's pages, which may ask for the username first.
 export async function passwordSignIn(o: {
   realm: string;
   clientId: string;
   redirectUri: string;
   username: string;
   password: string;
+  via?: string;
 }): Promise<{ toApp: boolean; status: number }> {
+  const publicAuth = new URL(env('TENANTRY_AUTH_URL')).origin;
+  const local = (u: string) => (u.startsWith(publicAuth) ? baseUrl + u.slice(publicAuth.length) : u);
+  // Cookies by name and path: two realms' session cookies share names.
+  const jar = new Map<string, { value: string; path: string }>();
+  const cookie = (url: string) =>
+    [...jar]
+      .filter(([, c]) => new URL(url).pathname.startsWith(c.path))
+      .map(([k, c]) => `${k.split('|')[0] ?? ''}=${c.value}`)
+      .join('; ');
+  const keep = (res: Response) => {
+    for (const line of res.headers.getSetCookie()) {
+      const [pair = '', ...attrs] = line.split(';');
+      const at = pair.indexOf('=');
+      const path =
+        attrs
+          .map((a) => a.trim())
+          .find((a) => a.toLowerCase().startsWith('path='))
+          ?.slice(5) ?? '/';
+      jar.set(`${pair.slice(0, at)}|${path}`, { value: pair.slice(at + 1), path });
+    }
+  };
+  const challenge = createHash('sha256').update(randomBytes(32).toString('base64url')).digest('base64url');
+  let next = `${baseUrl}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+    client_id: o.clientId,
+    redirect_uri: o.redirectUri,
+    response_type: 'code',
+    scope: 'openid',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    ...(o.via ? { kc_idp_hint: o.via } : {}),
+  }).toString()}`;
+  let method = 'GET';
+  let body: URLSearchParams | undefined;
+  let status = 0;
+  for (let hops = 0; hops < 30; hops++) {
+    if (next.startsWith(o.redirectUri)) return { toApp: true, status };
+    const url = local(next);
+    const res = await fetch(url, {
+      method,
+      redirect: 'manual',
+      headers: {
+        cookie: cookie(url),
+        ...(body ? { 'content-type': 'application/x-www-form-urlencoded' } : {}),
+      },
+      ...(body ? { body } : {}),
+    });
+    keep(res);
+    status = res.status;
+    const location = res.headers.get('location');
+    if (res.status >= 300 && res.status < 400 && location) {
+      next = new URL(location, next).toString();
+      method = 'GET';
+      body = undefined;
+      continue;
+    }
+    // A page: a sign-in form to fill, or anything else (an error, a set-up step) ends the attempt.
+    const html = await res.text();
+    const action = (
+      /"loginAction"\s*:\s*"([^"]+)"/.exec(html)?.[1] ??
+      /<form[^>]*\saction="([^"]+)"/.exec(html)?.[1] ??
+      ''
+    ).replace(/&amp;/g, '&');
+    const asksPassword = /name="password"|"password"/.test(html);
+    const asksUsername = /name="username"|"username"/.test(html);
+    if (!action || (!asksPassword && !asksUsername) || !/login-actions\/authenticate/.test(action)) {
+      return { toApp: false, status };
+    }
+    next = new URL(action, next).toString();
+    method = 'POST';
+    body = new URLSearchParams(
+      asksPassword ? { username: o.username, password: o.password } : { username: o.username },
+    );
+  }
+  return { toApp: false, status };
+}
+
+// A person signing in to their realm's admin console (the security-admin-console client, as the
+// console itself does), returning the console's access token.
+export async function consoleSignIn(o: {
+  realm: string;
+  username: string;
+  password: string;
+}): Promise<string> {
+  const publicAuth = new URL(env('TENANTRY_AUTH_URL')).origin;
+  const local = (u: string) => (u.startsWith(publicAuth) ? baseUrl + u.slice(publicAuth.length) : u);
+  const redirectUri = `${publicAuth}/admin/${o.realm}/console/`;
   const jar = new Map<string, string>();
-  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
   const keep = (res: Response) => {
     for (const line of res.headers.getSetCookie()) {
       const [pair = ''] = line.split(';');
@@ -100,30 +188,41 @@ export async function passwordSignIn(o: {
       jar.set(pair.slice(0, at), pair.slice(at + 1));
     }
   };
-  const challenge = createHash('sha256').update(randomBytes(32).toString('base64url')).digest('base64url');
-  const auth = `${baseUrl}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
-    client_id: o.clientId,
-    redirect_uri: o.redirectUri,
-    response_type: 'code',
-    scope: 'openid',
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-  }).toString()}`;
-  const page = await fetch(auth, { redirect: 'manual' });
+  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  const page = await fetch(
+    `${baseUrl}/realms/${o.realm}/protocol/openid-connect/auth?${new URLSearchParams({
+      client_id: 'security-admin-console',
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid',
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+    }).toString()}`,
+    { redirect: 'manual' },
+  );
   keep(page);
   const html = await page.text();
-  const action = (
-    /"loginAction"\s*:\s*"([^"]+)"/.exec(html)?.[1] ??
-    /<form[^>]*\saction="([^"]+)"/.exec(html)?.[1] ??
-    ''
-  )
-    .replace(/&amp;/g, '&')
-    .replace(new URL(env('TENANTRY_AUTH_URL')).origin, baseUrl);
-  const res = await fetch(action, {
+  const found =
+    /"loginAction"\s*:\s*"([^"]+)"/.exec(html)?.[1] ?? /<form[^>]*\saction="([^"]+)"/.exec(html)?.[1] ?? '';
+  const res = await fetch(local(found.replace(/&amp;/g, '&')), {
     method: 'POST',
     redirect: 'manual',
     headers: { cookie: cookie(), 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ username: o.username, password: o.password }),
   });
-  return { toApp: (res.headers.get('location') ?? '').startsWith(o.redirectUri), status: res.status };
+  const code = new URL(res.headers.get('location') ?? 'http://x/').searchParams.get('code');
+  if (!code) throw new Error(`console sign-in to ${o.realm} did not finish: ${String(res.status)}`);
+  const tok = await fetch(`${baseUrl}/realms/${o.realm}/protocol/openid-connect/token`, {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: 'security-admin-console',
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: verifier,
+    }),
+  });
+  return ((await tok.json()) as { access_token: string }).access_token;
 }

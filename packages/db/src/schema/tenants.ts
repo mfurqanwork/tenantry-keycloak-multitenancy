@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-export type TenantStatus = 'provisioning' | 'active' | 'failed';
+export type TenantStatus = 'provisioning' | 'active' | 'failed' | 'migrating';
 export type TenantTier = 'standard' | 'enterprise';
 
 // What a tenant has set. A key it never set is absent; the repository reads it as null.
@@ -25,6 +25,6 @@ export const tenants = pgTable(
   },
   (t) => [
     check('tenants_tier', sql`${t.tier} in ('standard', 'enterprise')`),
-    check('tenants_status', sql`${t.status} in ('provisioning', 'active', 'failed')`),
+    check('tenants_status', sql`${t.status} in ('provisioning', 'active', 'failed', 'migrating')`),
   ],
 );

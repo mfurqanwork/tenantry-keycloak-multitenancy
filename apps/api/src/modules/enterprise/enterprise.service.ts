@@ -25,7 +25,16 @@ import { ConflictProblem, NotFoundProblem, ValidationProblem } from '../../commo
 import { validateSlug } from '../../common/slug.js';
 import { APP_CONFIG, type AppConfig } from '../../config/config.js';
 import { backendSecretKey } from '../../infrastructure/per-realm.js';
-import { DB, REALM_PROVISIONER, SECRET_STORE } from '../../infrastructure/tokens.js';
+import type { RealmConsoleFactory } from '../../infrastructure/realm-console.js';
+import type { RealmScimFactory } from '../../infrastructure/realm-scim.js';
+import {
+  DB,
+  REALM_CONSOLE,
+  REALM_PROVISIONER,
+  REALM_SCIM,
+  SECRET_STORE,
+} from '../../infrastructure/tokens.js';
+import { ConsoleAccessService } from '../console/console.service.js';
 
 export interface ProvisionedTenant {
   slug: string;
@@ -58,6 +67,9 @@ export class EnterpriseService {
     @Inject(REALM_PROVISIONER) private readonly provisioner: RealmProvisioner,
     @Inject(SECRET_STORE) private readonly secrets: SecretStore,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Inject(REALM_SCIM) private readonly scims: RealmScimFactory,
+    @Inject(REALM_CONSOLE) private readonly consoles: RealmConsoleFactory,
+    private readonly consoleAccess: ConsoleAccessService,
   ) {}
 
   async provision(input: {
@@ -101,28 +113,21 @@ export class EnterpriseService {
     const realm = `ent-${input.slug}`;
     const vars = this.vars(tenant);
 
-    // 2–4. The realm, its template, our product clients and the directory groups (Phase 5a).
-    await this.provisioner.ensureRealm(realm);
-    await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
-    await this.provisioner.ensureClients(realm, loadProductClients(vars));
-    await this.provisioner.ensureGroups(realm);
-    // 5. The backend secret: made once, kept in the secrets store, never in Postgres (ADR-0023).
-    const key = backendSecretKey(realm);
-    let secret = await this.secrets.get(key);
-    if (!secret) {
-      secret = randomBytes(32).toString('base64url');
-      await this.secrets.put(key, secret);
-    }
-    await this.provisioner.setBackendSecret(realm, secret);
+    // 2–5. The realm, its template, our product clients, the directory groups and the backend secret.
+    const secret = await this.buildRealm(tenant, realm);
     // 6. The first owner, with a set-password email.
     await this.provisioner.ensureFirstAdmin(realm, input.adminEmail, vars.webOrigin);
+    const issuer = `${this.config.authUrl}/realms/${realm}`;
+    // 6b. SCIM's client, then console permissions, last (ADR-0026).
+    await this.finishRealm({ ...tenant, realm, issuer });
     // 7. The guard accepts this realm's tokens for this tenant from here on.
     await platform.registerIdentity(tenant.id, {
       realm,
-      issuer: `${this.config.authUrl}/realms/${realm}`,
+      issuer,
       kcOrgId: null,
       templateVersion: TEMPLATE_VERSION,
     });
+    await this.consoleAccess.syncOwners({ ...tenant, realm, issuer });
     // 8–9. Smoke test, then open the doors.
     await this.provisioner.smokeTest(realm, secret);
     await tenantTx(this.db, tenant.id, async (tx) => {
@@ -184,6 +189,8 @@ export class EnterpriseService {
         await this.provisioner.applyTemplate(realm, template);
         await this.provisioner.ensureClients(realm, clients);
         await this.provisioner.ensureGroups(realm);
+        await this.finishRealm({ ...tenant, realm });
+        await this.consoleAccess.syncOwners({ ...tenant, realm });
         await tenantTx(this.db, tenant.id, async (tx) => {
           await platformRepository(tx).setTemplateVersion(tenant.id, TEMPLATE_VERSION);
           await insertAudit(tx, {
@@ -219,6 +226,32 @@ export class EnterpriseService {
       throw new NotFoundProblem('No enterprise workspace at this address.');
     }
     return tenant;
+  }
+
+  // A realm built like every enterprise realm: template, product clients, directory groups, and the
+  // backend secret (made once, kept in the secrets store, never in Postgres, ADR-0023). Every step can
+  // run again. Returns the backend secret.
+  async buildRealm(tenant: TenantRecord, realm: string): Promise<string> {
+    const vars = this.vars(tenant);
+    await this.provisioner.ensureRealm(realm);
+    await this.provisioner.applyTemplate(realm, loadRealmTemplate(TEMPLATE_VERSION, vars));
+    await this.provisioner.ensureClients(realm, loadProductClients(vars));
+    await this.provisioner.ensureGroups(realm);
+    const key = backendSecretKey(realm);
+    let secret = await this.secrets.get(key);
+    if (!secret) {
+      secret = randomBytes(32).toString('base64url');
+      await this.secrets.put(key, secret);
+    }
+    await this.provisioner.setBackendSecret(realm, secret);
+    return secret;
+  }
+
+  // The steps that must come after clients and groups: once admin permissions v2 are on, the provisioner
+  // can no longer map realm-management roles, so SCIM's client is made first (ADR-0026).
+  async finishRealm(tenant: TenantRecord & { realm: string }): Promise<void> {
+    await this.scims.forTenant(tenant).prepare();
+    await this.consoles.forRealm(tenant.realm).ensurePermissions();
   }
 
   // The current template for this tenant's realm, with its owners' security settings applied.

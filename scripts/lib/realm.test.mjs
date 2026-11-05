@@ -48,7 +48,7 @@ test('tenantry-web is a public PKCE client for the apex host', () => {
   assert.equal(groupMapper(web)?.config['access.token.claim'], 'true');
 });
 
-test('tenantry-backend is a service account with exactly the organization roles', () => {
+test('tenantry-backend is a service account with exactly the organization roles, and reads company logins', () => {
   const backend = client('tenantry-backend');
   assert.equal(backend.publicClient, false);
   assert.equal(backend.serviceAccountsEnabled, true);
@@ -61,6 +61,7 @@ test('tenantry-backend is a service account with exactly the organization roles'
     'manage-clients',
     'manage-realm',
     'manage-users',
+    'view-identity-providers',
     'view-users',
   ]);
 });
@@ -126,7 +127,7 @@ test('the corp-demo realm is the stand-in company IdP, with no password in the f
 // Enterprise realms (Phase 3, ADR-0010): one versioned template, our product clients beside it.
 const template = JSON.parse(
   readFileSync(
-    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v3.json', import.meta.url),
+    new URL('../../packages/keycloak-admin/templates/enterprise-realm.v4.json', import.meta.url),
     'utf8',
   ),
 );
@@ -139,7 +140,7 @@ const productClient = (name) =>
   );
 
 test('the enterprise template enforces PKCE on public clients, safe redirect URIs on every client, and no implicit or password grant anywhere', () => {
-  assert.equal(template.templateVersion, 3);
+  assert.equal(template.templateVersion, 4);
   const profile = (name) => template.clientProfiles.profiles.find((p) => p.name === name);
   const policy = (name) => template.clientPolicies.policies.find((p) => p.name === name);
   assert.deepEqual(

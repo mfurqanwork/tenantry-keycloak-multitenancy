@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { isOpen } from '../../common/migrating.js';
 import type { TenantApp } from '@tenantry/auth';
 import { platformRepository, type Db } from '@tenantry/db';
 import { NotFoundProblem } from '../../common/http-errors.js';
@@ -20,7 +21,7 @@ export class TenantsService {
 
   async authConfig(slug: string, app: TenantApp): Promise<AuthConfig> {
     const tenant = await platformRepository(this.db).findTenantBySlug(slug.toLowerCase());
-    if (tenant?.status !== 'active' || !tenant.issuer) {
+    if (!tenant || !isOpen(tenant.status) || !tenant.issuer) {
       throw new NotFoundProblem('No workspace at this address.');
     }
     return {

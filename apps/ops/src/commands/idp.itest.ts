@@ -1,4 +1,5 @@
 import { listAudit, listIdps, tenantTx } from '@tenantry/db';
+import { idpSecretKey } from '@tenantry/keycloak-admin';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestOps } from '../testing/fixtures.js';
 import { claimDomain, verifyDomain } from './domain.js';
@@ -52,6 +53,41 @@ describe('ops idp link', () => {
     expect(actions).toEqual(['idp.linked']);
     // A second run changes nothing and still succeeds.
     expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+  });
+
+  it('link keeps the secret in the secrets store and nowhere else', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `corp-${acme.slug}`;
+    await verified(acme.slug, domain);
+    expect(
+      await linkIdp(t.deps, { ...company(alias, domain, acme.slug), clientSecret: 'first-secret' }),
+    ).toBe(0);
+    expect(t.secrets.get(idpSecretKey(alias))).toBe('first-secret');
+    const rows = await tenantTx(t.db, acme.id, async (tx) => ({
+      idps: await listIdps(tx),
+      audit: await listAudit(tx, { limit: 5 }),
+    }));
+    expect(JSON.stringify(rows)).not.toContain('first-secret');
+    expect([...t.out, ...t.err].join(' ')).not.toContain('first-secret');
+    // A rerun changes nothing in Keycloak, so it keeps the secret Keycloak has.
+    expect(
+      await linkIdp(t.deps, { ...company(alias, domain, acme.slug), clientSecret: 'other-secret' }),
+    ).toBe(0);
+    expect(t.secrets.get(idpSecretKey(alias))).toBe('first-secret');
+  });
+
+  it('keeps the secret of a link made before Phase 5b when it is run again', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `corp-${acme.slug}`;
+    await verified(acme.slug, domain);
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+    t.secrets.delete(idpSecretKey(alias));
+    expect(await linkIdp(t.deps, { ...company(alias, domain, acme.slug), clientSecret: 'given-again' })).toBe(
+      0,
+    );
+    expect(t.secrets.get(idpSecretKey(alias))).toBe('given-again');
   });
 
   it("refuses another workspace's alias", async () => {

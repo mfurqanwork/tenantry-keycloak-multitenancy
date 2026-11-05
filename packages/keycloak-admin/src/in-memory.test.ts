@@ -9,15 +9,27 @@ import { runRealmAppsContract } from './testing/apps-contract.js';
 import { InMemoryRealmApps } from './testing/in-memory-realm-apps.js';
 import { InMemoryRealmScim } from './testing/in-memory-realm-scim.js';
 import { runRealmScimContract } from './testing/scim-contract.js';
+import { InMemoryRealmConsole } from './testing/in-memory-realm-console.js';
+import { runRealmConsoleContract } from './testing/console-contract.js';
 
 runIdentityDirectoryContract('in-memory', () => {
   const dir = new InMemoryIdentityDirectory();
   return Promise.resolve({
     dir,
-    newUser: () => Promise.resolve(randomUUID()),
+    newUser: () => {
+      const id = randomUUID();
+      dir.users.set(id, { email: `${id.slice(0, 8)}@example.com`, displayName: 'New Person' });
+      return Promise.resolve(id);
+    },
     redirectUris: (app) => Promise.resolve([...dir.origins[app]].map((o) => `${o}/*`)),
     companyIssuer: 'http://corp.example/realms/corp-demo',
     orgDomains: (orgId) => Promise.resolve(dir.domainsOf(orgId)),
+    bridgeClient: (slug) => {
+      const found = dir.bridgeClients.get(slug);
+      return Promise.resolve(
+        found ? { count: 1, secret: found.secret, redirectUris: [found.redirectUri] } : { count: 0 },
+      );
+    },
     cleanup: () => Promise.resolve(),
   });
 });
@@ -67,6 +79,7 @@ runRealmMemberContract('in-memory realm', () => {
       members.leaveGroup(kcUserId, group);
       return Promise.resolve();
     },
+    isEmailVerified: (kcUserId) => Promise.resolve(members.users.get(kcUserId)?.emailVerified ?? false),
     cleanup: () => Promise.resolve(),
   });
 });
@@ -114,6 +127,19 @@ runRealmScimContract('in-memory', () => {
       return Promise.resolve();
     },
     isEnabled: (id) => Promise.resolve(scim.people.get(id)?.active ?? false),
+    cleanup: () => Promise.resolve(),
+  });
+});
+
+runRealmConsoleContract('in-memory', () => {
+  const realm = 'ent-fake';
+  const console = new InMemoryRealmConsole(realm);
+  return Promise.resolve({
+    console,
+    realm,
+    createUser: () => Promise.resolve(randomUUID()),
+    hasConsole: (id) => Promise.resolve(console.members.has(id)),
+    protectedOwners: () => Promise.resolve([...console.owners]),
     cleanup: () => Promise.resolve(),
   });
 });

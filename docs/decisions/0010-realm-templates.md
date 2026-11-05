@@ -1,6 +1,6 @@
 # ADR-0010: Versioned realm templates applied by our own code
 
-Status: Accepted · Date: 2026-11-02 · Updated: 2026-11-03 (Phase 3), 2026-11-06 (Phase 5a)
+Status: Accepted · Date: 2026-11-02 · Updated: 2026-11-03 (Phase 3), 2026-11-06 (Phase 5a), 2026-11-07 (Phase 5b)
 
 ## Context
 
@@ -35,3 +35,9 @@ How the decision was built, where it differs from the text above:
 - **Template v3.** It adds the second sign-in step (`twoStep`, default `optional`, set on the built-in browser flow's "Browser - Conditional 2FA" subflow) and the mapped groups `tenantry-members` and `tenantry-admins`, with client-role mappings to `tenantry-api` `member` and `admin`. `ensureGroups` makes them on provision and upgrade.
 - **The tenant's own settings are part of the template.** An owner's security settings (`tenant_security`: two-step sign-in, password policy, session times, lockout) are applied to the realm on save, and merged into the template before an upgrade compares or applies, so they are never reported as drift and never undone. A change made by hand in the Keycloak console still is.
 - **Required two-step is the authenticator app.** Keycloak 26.8.1 refuses a required subflow of alternatives, so "required" sets OTP required and the other methods off.
+
+## Update (Phase 5b)
+
+- **Template v4** turns Keycloak's admin events on (with representations) and adds the group `tenantry-console` and the realm role `tenantry-console-user` ([ADR-0026](0026-console-access.md)).
+- **Fine-grained admin permissions v2 go on last.** Once on, Keycloak refuses the provisioner any realm-management role mapping, even one already held, so they are not a template key: `RealmConsole.ensurePermissions` turns them on after clients, groups and SCIM's client, and every mapping step maps only what is missing. An upgrade does the same.
+- `RealmProvisioner.deleteRealm` removes a half-built realm when a move is aborted ([ADR-0025](0025-standard-to-enterprise.md)).

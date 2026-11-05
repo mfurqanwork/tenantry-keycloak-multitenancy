@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { assertNotMigrating, isOpen } from '../../common/migrating.js';
 import type { TenantContext } from '@tenantry/auth';
 import { darkerUntilContrast, meetsContrast } from '@tenantry/brand';
 import {
@@ -55,6 +56,7 @@ export class BrandingService {
     tenant: TenantRecord,
     primaryColor: string | null,
   ): Promise<TenantBranding> {
+    assertNotMigrating(tenant);
     if (primaryColor !== null && !meetsContrast(primaryColor)) {
       throw new ValidationProblem('This colour is too light for white text (below 4.5:1 contrast).', {
         suggestion: darkerUntilContrast(primaryColor),
@@ -75,6 +77,7 @@ export class BrandingService {
     tenant: TenantRecord,
     bytes: Buffer | undefined,
   ): Promise<TenantBranding> {
+    assertNotMigrating(tenant);
     const contentType = bytes ? sniffImageType(bytes) : null;
     if (!bytes || !contentType) throw new ValidationProblem('Upload a PNG, JPEG or WebP image.');
     return tenantTx(this.db, ctx.tenantId, async (tx) => {
@@ -93,6 +96,7 @@ export class BrandingService {
   }
 
   async removeLogo(ctx: TenantContext, tenant: TenantRecord): Promise<void> {
+    assertNotMigrating(tenant);
     await tenantTx(this.db, ctx.tenantId, async (tx) => {
       await deleteLogo(tx);
       await platformRepository(tx).setBranding(tenant.id, { logoVersion: null });
@@ -102,7 +106,7 @@ export class BrandingService {
 
   private async activeTenant(slug: string): Promise<TenantRecord> {
     const tenant = await platformRepository(this.db).findTenantBySlug(slug.toLowerCase());
-    if (tenant?.status !== 'active') throw new NotFoundProblem('No workspace at this address.');
+    if (!tenant || !isOpen(tenant.status)) throw new NotFoundProblem('No workspace at this address.');
     return tenant;
   }
 }

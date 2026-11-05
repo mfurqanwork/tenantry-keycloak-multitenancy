@@ -3,12 +3,22 @@ import { DirectoryError } from '../errors.js';
 import type { SecuritySettings, TwoStep } from '@tenantry/auth';
 import { secondStepRequirements, securityRealmPatch } from './security.js';
 import { diffTemplate, type TemplateDiff } from './template-diff.js';
-import { MAPPED_GROUPS, type ClientTemplate, type RealmTemplate, type SecondStep } from './templates.js';
+import {
+  CONSOLE_GROUP,
+  CONSOLE_QUERY_ROLES,
+  CONSOLE_ROLE,
+  MAPPED_GROUPS,
+  type ClientTemplate,
+  type RealmTemplate,
+  type SecondStep,
+} from './templates.js';
 
 // Builds and upgrades enterprise realms (ADR-0010) with the master-realm account that may only create
 // realms; Keycloak makes it admin of the realms it creates. Every step can run again without effect.
 export interface RealmProvisioner {
   ensureRealm(realm: string): Promise<{ created: boolean }>;
+  // An aborted move's half-built realm (ADR-0025); a missing realm counts as deleted.
+  deleteRealm(realm: string): Promise<void>;
   applyTemplate(realm: string, template: RealmTemplate): Promise<void>;
   ensureClients(realm: string, clients: ClientTemplate[]): Promise<void>;
   setBackendSecret(realm: string, secret: string): Promise<void>;
@@ -94,13 +104,22 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
     const available = await json<{ id: string; name: string }[]>(
       await call('ensureClients', 'GET', `${r(realm)}/clients/${management.id}/roles`),
     );
-    const wanted = available.filter((role) => roles.includes(role.name));
-    await call(
+    const mappings = `${r(realm)}/users/${user.id}/role-mappings/clients/${management.id}`;
+    await grantMissing(
       'ensureClients',
-      'POST',
-      `${r(realm)}/users/${user.id}/role-mappings/clients/${management.id}`,
-      wanted,
+      mappings,
+      available.filter((role) => roles.includes(role.name)),
     );
+  }
+
+  // Only the roles not held yet: once admin permissions v2 are on, Keycloak refuses the provisioner any
+  // realm-management mapping, even one already held (ADR-0026). A rerun then changes nothing.
+  async function grantMissing(operation: string, mappings: string, wanted: { id: string; name: string }[]) {
+    const held = new Set(
+      (await json<{ name: string }[]>(await call(operation, 'GET', mappings))).map((role) => role.name),
+    );
+    const missing = wanted.filter((role) => !held.has(role.name));
+    if (missing.length > 0) await call(operation, 'POST', mappings, missing);
   }
 
   interface Execution {
@@ -137,6 +156,10 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
   }
 
   return {
+    async deleteRealm(realm) {
+      await call('deleteRealm', 'DELETE', r(realm), undefined, [404]);
+    },
+
     async ensureRealm(realm) {
       const found = await call('ensureRealm', 'GET', r(realm), undefined, [404]);
       if (found.status !== 404) return { created: false };
@@ -175,10 +198,48 @@ export function createHttpRealmProvisioner(o: HttpRealmProvisionerOptions): Real
         const roleRep = await json<{ id: string; name: string }>(
           await call('ensureGroups', 'GET', `${r(realm)}/clients/${api.id}/roles/${role}`),
         );
-        await call('ensureGroups', 'POST', `${r(realm)}/groups/${id}/role-mappings/clients/${api.id}`, [
+        await grantMissing('ensureGroups', `${r(realm)}/groups/${id}/role-mappings/clients/${api.id}`, [
           roleRep,
         ]);
       }
+      // The console group gives no role; the console's two query roles are the composite of a plain realm
+      // role made here, before admin permissions go on (ADR-0026).
+      const consoleGroups = await json<{ id: string; name: string }[]>(
+        await call('ensureGroups', 'GET', `${r(realm)}/groups?search=${CONSOLE_GROUP}&exact=true`),
+      );
+      if (!consoleGroups.some((g) => g.name === CONSOLE_GROUP)) {
+        await call('ensureGroups', 'POST', `${r(realm)}/groups`, { name: CONSOLE_GROUP });
+      }
+      const existing = await call(
+        'ensureGroups',
+        'GET',
+        `${r(realm)}/roles/${CONSOLE_ROLE}`,
+        undefined,
+        [404],
+      );
+      if (existing.status === 404) {
+        await call('ensureGroups', 'POST', `${r(realm)}/roles`, {
+          name: CONSOLE_ROLE,
+          description: 'Opens the realm console; Tenantry grants it with tenantry-console (ADR-0026).',
+        });
+      }
+      const consoleRole = await json<{ id: string }>(
+        await call('ensureGroups', 'GET', `${r(realm)}/roles/${CONSOLE_ROLE}`),
+      );
+      const management = await client('ensureGroups', realm, 'realm-management');
+      const managementRoles = await json<{ id: string; name: string }[]>(
+        await call('ensureGroups', 'GET', `${r(realm)}/clients/${management.id}/roles`),
+      );
+      const composites = `${r(realm)}/roles-by-id/${consoleRole.id}/composites`;
+      const held = new Set(
+        (await json<{ name: string }[]>(await call('ensureGroups', 'GET', composites))).map(
+          (role) => role.name,
+        ),
+      );
+      const missing = managementRoles.filter(
+        (role) => CONSOLE_QUERY_ROLES.includes(role.name) && !held.has(role.name),
+      );
+      if (missing.length > 0) await call('ensureGroups', 'POST', composites, missing);
     },
 
     async ensureClients(realm, clients) {

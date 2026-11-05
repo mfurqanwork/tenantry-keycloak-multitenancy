@@ -12,7 +12,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `packages/ui`: Carbon setup, `AppShell`, the five page patterns, and `StatTile`/`TileGrid` for facts on tiles.
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.
-- `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory`, `RealmProvisioner`, `RealmApps` (customer apps, ADR-0011) and `RealmScim` (the native SCIM behind our gateway, ADR-0024); `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
+- `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory`, `RealmProvisioner`, `RealmApps` (customer apps, ADR-0011), `RealmScim` (the native SCIM behind our gateway, ADR-0024), `RealmConsole` (console access, ADR-0026), and `RealmBridge` and `RealmIdps` (moving a workspace to Enterprise, ADR-0025); `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
 - `packages/oidc-client`: the only code that imports `oidc-client-ts`.
 - `tests/isolation`: the README guarantees, run against the whole stack.
 - `examples/customer-app`: an outside app on an enterprise realm (`pnpm example:customer-app`); `pnpm seed` writes its git-ignored `.env`.
@@ -22,15 +22,15 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 
 ## Commands
 
-| Command                                                     | Does                                                                                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm dev:stack`                                            | The whole stack in Docker                                                                                                            |
-| `pnpm dev`                                                  | Infrastructure in Docker; the API, web and portal on the host with hot reload                                                        |
-| `pnpm smoke`                                                | Checks the running stack                                                                                                             |
-| `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                                                                       |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                                                                         |
-| `pnpm ops <command>`                                        | Operator commands: enterprise tenants and their apps, company domains and identity providers, origins (ADR-0010, ADR-0011, ADR-0022) |
-| `pnpm stack:down`                                           | Stops the stack                                                                                                                      |
+| Command                                                     | Does                                                                                                                                                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev:stack`                                            | The whole stack in Docker                                                                                                                                                        |
+| `pnpm dev`                                                  | Infrastructure in Docker; the API, web and portal on the host with hot reload                                                                                                    |
+| `pnpm smoke`                                                | Checks the running stack                                                                                                                                                         |
+| `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                                                                                                                   |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                                                                                                                     |
+| `pnpm ops <command>`                                        | Operator commands: enterprise tenants and their apps, moving a workspace to Enterprise, company domains and identity providers, origins (ADR-0010, ADR-0011, ADR-0022, ADR-0025) |
+| `pnpm stack:down`                                           | Stops the stack                                                                                                                                                                  |
 
 ## Hard rules
 

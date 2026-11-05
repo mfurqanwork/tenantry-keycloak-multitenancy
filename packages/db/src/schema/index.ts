@@ -11,3 +11,5 @@ export { tenantInvites } from './tenant-invites.js';
 export { tenantLogos } from './tenant-logos.js';
 export { tenants, type TenantBranding, type TenantStatus, type TenantTier } from './tenants.js';
 export { users } from './users.js';
+export { tenantMigrations } from './tenant-migrations.js';
+export { tenantConsoleAccess } from './tenant-console-access.js';

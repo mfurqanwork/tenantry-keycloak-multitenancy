@@ -111,6 +111,9 @@ services:
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
+    # The host user on Linux and macOS (set by scripts/dev-stack.mjs), so secrets it writes stay readable
+    # by `pnpm ops`; root elsewhere.
+    user: '${TENANTRY_UID:-0}:${TENANTRY_GID:-0}'
     environment:
       DATABASE_URL: postgres://tenantry_app:${TENANTRY_APP_PASSWORD}@postgres:5432/tenantry
       TENANTRY_AUTH_URL: ${TENANTRY_AUTH_URL}

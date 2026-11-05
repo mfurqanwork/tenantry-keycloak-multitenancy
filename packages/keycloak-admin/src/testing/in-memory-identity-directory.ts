@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { GroupName, TenantApp } from '@tenantry/auth';
 import { DirectoryError } from '../errors.js';
-import type { CompanyIdentityProvider, DirectoryMember, IdentityDirectory } from '../identity-directory.js';
+import type {
+  CompanyIdentityProvider,
+  DirectoryMember,
+  FederatedIdentity,
+  IdentityDirectory,
+  IdentityProviderSettings,
+  PlatformUser,
+} from '../identity-directory.js';
 
 interface Org {
   alias: string;
@@ -19,6 +26,10 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
   readonly origins: Record<TenantApp, Set<string>> = { web: new Set(), portal: new Set() };
   readonly invites: { orgId: string; email: string }[] = [];
   readonly identityProviders = new Map<string, { issuer: string; clientId: string }>();
+  // Kept apart from the provider, as Keycloak does: never read back.
+  readonly identityProviderSecrets = new Map<string, string>();
+  readonly federated = new Map<string, FederatedIdentity[]>();
+  readonly bridgeClients = new Map<string, { redirectUri: string; secret: string }>();
   // Profiles for listMembers; tests register users they create.
   readonly users = new Map<string, { email: string | null; displayName: string | null }>();
   private readonly failing = new Set<keyof IdentityDirectory>();
@@ -165,6 +176,7 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     return this.run('createOidcIdentityProvider', () => {
       if (this.identityProviders.has(input.alias)) return { created: false };
       this.identityProviders.set(input.alias, { issuer: input.issuer, clientId: input.clientId });
+      this.identityProviderSecrets.set(input.alias, input.clientSecret);
       return { created: true };
     });
   }
@@ -189,6 +201,45 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
         for (const [name, linked] of org.domains) if (linked === alias) org.domains.set(name, null);
       }
       return undefined;
+    });
+  }
+
+  getUser(kcUserId: string): Promise<PlatformUser | null> {
+    return this.run('getUser', () => {
+      const u = this.users.get(kcUserId);
+      if (!u) return null;
+      const [firstName = null, ...rest] = (u.displayName ?? '').split(' ').filter(Boolean);
+      return { username: u.email ?? kcUserId, email: u.email, firstName, lastName: rest.join(' ') || null };
+    });
+  }
+
+  listFederatedIdentities(kcUserId: string): Promise<FederatedIdentity[]> {
+    return this.run('listFederatedIdentities', () => [...(this.federated.get(kcUserId) ?? [])]);
+  }
+
+  getIdentityProvider(alias: string): Promise<IdentityProviderSettings | null> {
+    return this.run('getIdentityProvider', () => {
+      const idp = this.identityProviders.get(alias);
+      if (!idp) return null;
+      return {
+        alias,
+        issuer: idp.issuer,
+        clientId: idp.clientId,
+        config: { issuer: idp.issuer, clientId: idp.clientId },
+        mappers: [],
+      };
+    });
+  }
+
+  ensureBridgeClient(slug: string, redirectUri: string, secret: string): Promise<void> {
+    return this.run('ensureBridgeClient', () => {
+      this.bridgeClients.set(slug, { redirectUri, secret });
+    });
+  }
+
+  deleteBridgeClient(slug: string): Promise<void> {
+    return this.run('deleteBridgeClient', () => {
+      this.bridgeClients.delete(slug);
     });
   }
 

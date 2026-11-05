@@ -4,12 +4,25 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { createDb, platformRepository, type Db, type Pool, type TenantRecord } from '@tenantry/db';
+import {
+  claimDomain,
+  createDb,
+  insertIdp,
+  markDomainVerified,
+  platformRepository,
+  tenantTx,
+  type Db,
+  type Pool,
+  type TenantRecord,
+} from '@tenantry/db';
 import {
   InMemoryIdentityDirectory,
   InMemoryRealmApps,
   InMemoryRealmMembers,
   InMemoryRealmProvisioner,
+  InMemoryRealmBridge,
+  InMemoryRealmConsole,
+  InMemoryRealmIdps,
   InMemoryRealmScim,
 } from '@tenantry/keycloak-admin/testing';
 import type { SecretStore } from '@tenantry/keycloak-admin/secrets';
@@ -24,6 +37,10 @@ import {
   MEMBER_DIRECTORIES,
   REALM_APPS,
   REALM_PROVISIONER,
+  REALM_BRIDGE,
+  REALM_CONSOLE,
+  REALM_IDPS,
+  REALM_MEMBERS,
   REALM_SCIM,
   SECRET_STORE,
 } from '../infrastructure/tokens.js';
@@ -83,6 +100,13 @@ export interface TestApp {
   realmApps(realm: string): InMemoryRealmApps;
   // The in-memory native SCIM of an enterprise realm, behind the gateway.
   realmScim(realm: string): InMemoryRealmScim;
+  // The in-memory console access of an enterprise realm.
+  realmConsole(realm: string): InMemoryRealmConsole;
+  // A move to Enterprise: the new realm's bridge and copied company logins.
+  realmBridge(realm: string): InMemoryRealmBridge;
+  realmIdps(realm: string): InMemoryRealmIdps;
+  // A company login linked to a Standard workspace for a verified domain, as pnpm ops idp link does.
+  linkCompanyLogin(tenant: TestTenant, alias: string, domain: string): Promise<void>;
   // Moves the tenant's SCIM tokens' expiry into the past.
   expireScimTokens(tenantId: string): Promise<void>;
   // Enterprise provisioning against an in-memory Keycloak and secrets store.
@@ -147,6 +171,33 @@ export async function createTestApp(
     }
     return found;
   };
+  const realmConsoles = new Map<string, InMemoryRealmConsole>();
+  const consoleOf = (realm: string) => {
+    let found = realmConsoles.get(realm);
+    if (!found) {
+      found = new InMemoryRealmConsole(realm, issuer.baseUrl);
+      realmConsoles.set(realm, found);
+    }
+    return found;
+  };
+  const bridges = new Map<string, InMemoryRealmBridge>();
+  const bridgeOf = (realm: string) => {
+    let found = bridges.get(realm);
+    if (!found) {
+      found = new InMemoryRealmBridge();
+      bridges.set(realm, found);
+    }
+    return found;
+  };
+  const realmIdpsMap = new Map<string, InMemoryRealmIdps>();
+  const idpsOf = (realm: string) => {
+    let found = realmIdpsMap.get(realm);
+    if (!found) {
+      found = new InMemoryRealmIdps();
+      realmIdpsMap.set(realm, found);
+    }
+    return found;
+  };
   const memberDirectories: MemberDirectories = {
     forTenant: (tenant) =>
       Promise.resolve(
@@ -187,8 +238,24 @@ export async function createTestApp(
     .useValue(secrets)
     .overrideProvider(REALM_APPS)
     .useValue({ forTenant: (tenant: TenantRecord) => Promise.resolve(appsOf(tenant.realm ?? '')) })
+    .overrideProvider(REALM_MEMBERS)
+    .useValue({ forRealm: (realm: string) => Promise.resolve(realmOf(realm)) })
+    .overrideProvider(REALM_BRIDGE)
+    .useValue({ forRealm: bridgeOf })
+    .overrideProvider(REALM_IDPS)
+    .useValue({ forRealm: idpsOf })
+    .overrideProvider(REALM_CONSOLE)
+    .useValue({ forRealm: consoleOf })
     .overrideProvider(REALM_SCIM)
-    .useValue({ forTenant: (tenant: TenantRecord) => scimOf(tenant.realm ?? '', tenant.issuer ?? undefined) })
+    .useValue({
+      // As the real factory: only an enterprise tenant with a realm and an issuer has native SCIM.
+      forTenant: (tenant: TenantRecord) => {
+        if (tenant.tier !== 'enterprise' || !tenant.realm || !tenant.issuer) {
+          throw new Error(`tenant ${tenant.slug} has no realm of its own`);
+        }
+        return scimOf(tenant.realm, tenant.issuer);
+      },
+    })
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   setUpHttp(app);
@@ -288,6 +355,22 @@ export async function createTestApp(
     realmMembers: realmOf,
     realmApps: appsOf,
     realmScim: scimOf,
+    realmConsole: consoleOf,
+    realmBridge: bridgeOf,
+    realmIdps: idpsOf,
+    async linkCompanyLogin(tenant, alias, domain) {
+      await tenantTx(db, tenant.id, async (tx) => {
+        const claimed = await claimDomain(tx, domain);
+        await markDomainVerified(tx, claimed.id);
+        await insertIdp(tx, { alias, domainId: claimed.id });
+      });
+      await directory.createOidcIdentityProvider({
+        alias,
+        issuer: 'http://corp.test/realms/corp',
+        clientId: 'tenantry-platform',
+        clientSecret: 'company-secret',
+      });
+    },
     async expireScimTokens(tenantId) {
       const client = await pool.connect();
       try {

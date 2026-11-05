@@ -16,6 +16,7 @@ import { EnterpriseModule } from './modules/enterprise/enterprise.module.js';
 import { MembersModule } from './modules/members/members.module.js';
 import { AppsModule } from './modules/apps/apps.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
+import { ConsoleModule } from './modules/console/console.module.js';
 import { ScimModule } from './modules/scim/scim.module.js';
 import { SecurityModule } from './modules/security/security.module.js';
 import { SignupModule } from './modules/signup/signup.module.js';
@@ -43,6 +44,7 @@ export class AppModule {
         EnterpriseModule,
         SecurityModule,
         ScimModule,
+        ConsoleModule,
       ],
       controllers: [HealthController],
       providers: [

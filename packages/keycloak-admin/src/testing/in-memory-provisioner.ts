@@ -4,6 +4,7 @@ import { diffTemplate, type TemplateDiff } from '../realms/template-diff.js';
 import type { SecuritySettings, TwoStep } from '@tenantry/auth';
 import { securityRealmPatch } from '../realms/security.js';
 import {
+  CONSOLE_GROUP,
   MAPPED_GROUPS,
   type ClientTemplate,
   type RealmTemplate,
@@ -20,7 +21,7 @@ interface FakeRealm {
   // First admins who have set a password.
   activated: Set<string>;
   twoStep: TwoStep | null;
-  groups: Map<string, string>;
+  groups: Map<string, string | null>;
 }
 
 // A Keycloak stand-in for the provisioning saga's tests. Counts what each step really did.
@@ -50,6 +51,12 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
     const found = this.realms.get(name);
     if (!found) throw new DirectoryError(step, 404, `realm ${name}`);
     return found;
+  }
+
+  deleteRealm(realm: string) {
+    return this.run('deleteRealm', () => {
+      this.realms.delete(realm);
+    });
   }
 
   ensureRealm(realm: string) {
@@ -92,6 +99,7 @@ export class InMemoryRealmProvisioner implements RealmProvisioner {
     return this.run('ensureGroups', () => {
       const r = this.realm('ensureGroups', realm);
       for (const [name, role] of Object.entries(MAPPED_GROUPS)) r.groups.set(name, role);
+      r.groups.set(CONSOLE_GROUP, null);
     });
   }
 

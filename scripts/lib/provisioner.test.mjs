@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureProvisionerClient } from './provisioner.mjs';
+import { ensureBackendRoles, ensureProvisionerClient } from './provisioner.mjs';
 
 // A Keycloak stand-in for the few admin calls the setup makes.
 function fakeKeycloak({ exists = false } = {}) {
@@ -56,4 +56,45 @@ test('changes nothing the second time', async () => {
   assert.deepEqual(await ensureProvisionerClient(options(kc.fetchFn)), { created: false });
   assert.ok(!kc.calls.some((c) => c.startsWith('POST /admin/realms/master/clients')));
   assert.ok(!kc.calls.some((c) => c.startsWith('POST') && c.endsWith('/role-mappings/realm')));
+});
+
+// Phase 5b: the API reads company logins' settings (never their secrets) to copy them on a move.
+function fakePlatform(held) {
+  const calls = [];
+  const json = (body) => new Response(JSON.stringify(body), { status: 200 });
+  const fetchFn = async (url, init = {}) => {
+    const u = new URL(url);
+    const method = init.method ?? 'GET';
+    calls.push(`${method} ${u.pathname}`);
+    if (u.pathname.endsWith('/token')) return json({ access_token: 'admin' });
+    if (
+      u.pathname === '/admin/realms/platform/clients' &&
+      u.searchParams.get('clientId') === 'tenantry-backend'
+    )
+      return json([{ id: 'b1' }]);
+    if (
+      u.pathname === '/admin/realms/platform/clients' &&
+      u.searchParams.get('clientId') === 'realm-management'
+    )
+      return json([{ id: 'rm' }]);
+    if (u.pathname.endsWith('/clients/b1/service-account-user')) return json({ id: 'sa' });
+    if (u.pathname.endsWith('/clients/rm/roles'))
+      return json(['view-identity-providers', 'manage-users'].map((name) => ({ id: name, name })));
+    if (u.pathname.endsWith('/users/sa/role-mappings/clients/rm') && method === 'GET')
+      return json(held.map((name) => ({ name })));
+    if (u.pathname.endsWith('/users/sa/role-mappings/clients/rm') && method === 'POST') {
+      for (const r of JSON.parse(init.body)) held.push(r.name);
+      return new Response(null, { status: 204 });
+    }
+    return new Response('unexpected', { status: 500 });
+  };
+  return { fetchFn, calls, held };
+}
+
+test('gives the platform backend view-identity-providers once', async () => {
+  const kc = fakePlatform(['manage-users']);
+  const opts = { baseUrl: 'http://kc', adminUser: 'admin', adminPassword: 'pw', fetch: kc.fetchFn };
+  assert.deepEqual(await ensureBackendRoles(opts), { added: ['view-identity-providers'] });
+  assert.deepEqual(await ensureBackendRoles(opts), { added: [] });
+  assert.equal(kc.calls.filter((c) => c.startsWith('POST') && c.includes('role-mappings')).length, 1);
 });

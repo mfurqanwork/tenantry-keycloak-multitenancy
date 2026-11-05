@@ -38,6 +38,13 @@ export class InMemoryRealmScim implements RealmScim {
     return [...this.groups].find(([, g]) => g.name === name)?.[0] ?? '';
   }
 
+  prepared = false;
+
+  prepare(): Promise<void> {
+    this.prepared = true;
+    return Promise.resolve();
+  }
+
   enable(): Promise<void> {
     this.enabled = true;
     return Promise.resolve();

@@ -4,7 +4,21 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings.
+Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access.
+
+### Added (Phase 5b)
+
+- Moving a Standard workspace into a realm of its own (ADR-0025): `pnpm ops enterprise migrate --tenant <slug> [--dry-run | --finish | --abort]` and the operator routes behind it. People keep their Tenantry accounts through a second identity, their roles, projects and audit log; open invites are sent again; company logins move with the secret kept at link time. The first sign-in uses "Continue with your Tenantry account", a bridge that refuses anyone not moved. `pnpm ops enterprise idp-secret` for a company login linked before 5b. `tenant_migrations` (migration 0005).
+- Console access (ADR-0026): owners let owners and admins into their realm's Keycloak console for people and groups, from the Members page; the portal dashboard links console users to it. Owners cannot be changed from the console, and nobody can hand out console access there. `POST`/`DELETE /api/members/:userId/console`, `tenant_console_access` (migration 0005), `consoleUrl` on `/api/me`.
+- Realm template v4: admin events on, fine-grained admin permissions v2 turned on after set-up, the `tenantry-console` group and role.
+- `docs/guides/move-to-enterprise.md`.
+- Guarantee tests: a moved person signs in through the bridge as the same user, a stranger is refused there, the shared realm's token stops working, and a console user cannot change an owner, hand out console access, or reach clients, the realm or another realm.
+
+### Changed (Phase 5b)
+
+- `pnpm ops idp link` keeps the company login's secret in the secrets store.
+- The platform `tenantry-backend` may read identity providers' settings (`view-identity-providers`); `pnpm dev:stack` gives it to stacks set up before.
+- Realm set-up maps only the roles a realm does not hold yet; SCIM's client is made before admin permissions go on.
 
 ### Added (Phase 5a)
 

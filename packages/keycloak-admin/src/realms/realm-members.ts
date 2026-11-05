@@ -23,7 +23,19 @@ interface KcUser {
 const PAGE = 1000;
 
 // An enterprise realm's members: its users holding a tenantry-api client role (ADR-0004).
-export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
+// An enterprise realm's member directory, plus the import a move to Enterprise uses (ADR-0025).
+export interface RealmMembers extends MemberDirectory {
+  // The account for this address (found ignoring case, or made), email verified and no email sent, with
+  // this role or none.
+  importMember(input: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    role: Role | null;
+  }): Promise<{ kcUserId: string; created: boolean }>;
+}
+
+export function createRealmMembers(o: RealmMembersOptions): RealmMembers {
   const doFetch = o.fetch ?? fetch;
   const token = createAdminTokenSource({
     baseUrl: o.baseUrl,
@@ -156,6 +168,28 @@ export function createRealmMembers(o: RealmMembersOptions): MemberDirectory {
         ]);
       }
       return { kcUserId };
+    },
+
+    async importMember(input) {
+      const address = input.email.toLowerCase();
+      const [found] = await json<KcUser[]>(
+        await call('importMember', 'GET', `/users?email=${encodeURIComponent(address)}&exact=true`),
+      );
+      let kcUserId = found?.id;
+      if (!kcUserId) {
+        const res = await call('importMember', 'POST', '/users', {
+          username: address,
+          email: address,
+          enabled: true,
+          emailVerified: true,
+          ...(input.firstName ? { firstName: input.firstName } : {}),
+          ...(input.lastName ? { lastName: input.lastName } : {}),
+        });
+        kcUserId = res.headers.get('location')?.split('/').pop();
+        if (!kcUserId) throw new DirectoryError('importMember', res.status, 'no Location header');
+      }
+      if (input.role) await moveRole('importMember', kcUserId, input.role);
+      return { kcUserId, created: !found };
     },
 
     setRole: (kcUserId, role) => moveRole('setRole', kcUserId, role),

@@ -25,6 +25,10 @@ runRealmScimContract('Keycloak realm', async () => {
     (await get<{ id: string; name: string }[]>(`/groups?search=${name}&exact=true`)).find(
       (g) => g.name === name,
     )?.id ?? '';
+  // As provisioning does it (ADR-0026): the SCIM client is made, then admin permissions go on, and SCIM
+  // is turned on later, by the first token.
+  await scim.prepare();
+  await bootstrap('PUT', `/${realm}`, { adminPermissionsEnabled: true });
   return {
     scim,
     async roleOf(kcUserId) {

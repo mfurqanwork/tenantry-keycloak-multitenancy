@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { MemberDirectory } from '../member-directory.js';
+import type { RealmMembers } from '../realms/realm-members.js';
 
 export interface MemberContractSubject {
-  members: MemberDirectory;
+  members: RealmMembers;
   // Marks a user as having signed in (set a password), as a real person would.
   completeSignUp(kcUserId: string): Promise<void>;
   // How many set-password emails went to this address.
@@ -11,6 +11,7 @@ export interface MemberContractSubject {
   // Puts the person in, or takes them out of, a directory group that gives a role (SCIM, Phase 5a).
   joinGroup(kcUserId: string, group: 'tenantry-members' | 'tenantry-admins'): Promise<void>;
   leaveGroup(kcUserId: string, group: 'tenantry-members' | 'tenantry-admins'): Promise<void>;
+  isEmailVerified(kcUserId: string): Promise<boolean>;
   cleanup(): Promise<void>;
 }
 
@@ -78,6 +79,38 @@ export function runRealmMemberContract(name: string, make: () => Promise<MemberC
       await s.completeSignUp(used.kcUserId ?? '');
       expect(await s.members.deleteUnusedUser(used.kcUserId ?? '')).toBe(false);
       expect((await s.members.listMembers()).some((m) => m.kcUserId === used.kcUserId)).toBe(true);
+    });
+
+    it('importMember reuses an account by email, ignoring case', async () => {
+      const id = randomUUID().slice(0, 8);
+      const first = await s.members.importMember({
+        email: `Alice-${id}@Globex.test`,
+        firstName: 'Alice',
+        lastName: 'Globex',
+        role: 'member',
+      });
+      expect(first.created).toBe(true);
+      const again = await s.members.importMember({
+        email: `alice-${id}@globex.test`,
+        firstName: 'Alice',
+        lastName: 'Globex',
+        role: 'admin',
+      });
+      expect(again).toEqual({ kcUserId: first.kcUserId, created: false });
+      expect((await s.members.listMembers()).find((m) => m.kcUserId === first.kcUserId)?.role).toBe('admin');
+    });
+
+    it('importMember sends no email, and gives no role when given none', async () => {
+      const address = email();
+      const { kcUserId } = await s.members.importMember({
+        email: address,
+        firstName: 'No',
+        lastName: 'Role',
+        role: null,
+      });
+      expect(await s.emailsTo(address)).toBe(0);
+      expect((await s.members.listMembers()).some((m) => m.kcUserId === kcUserId)).toBe(false);
+      expect(await s.isEmailVerified(kcUserId)).toBe(true);
     });
 
     it('lists people who hold a role through a mapped group, the higher role winning', async () => {

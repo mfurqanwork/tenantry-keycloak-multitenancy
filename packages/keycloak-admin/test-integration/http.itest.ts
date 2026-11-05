@@ -48,6 +48,21 @@ runIdentityDirectoryContract('Keycloak over HTTP', async () => {
         identityProviderAlias: d.identityProviderAlias ?? null,
       }));
     },
+    async bridgeClient(slug) {
+      const res = await fetch(
+        `${baseUrl}/admin/realms/platform/clients?clientId=${encodeURIComponent(`tenantry-bridge-${slug}`)}`,
+        { headers: { authorization: `Bearer ${token}` } },
+      );
+      const found = (await res.json()) as { id: string; secret?: string; redirectUris?: string[] }[];
+      const [one] = found;
+      if (!one) return { count: 0 };
+      const secret = (await (
+        await fetch(`${baseUrl}/admin/realms/platform/clients/${one.id}/client-secret`, {
+          headers: { authorization: `Bearer ${token}` },
+        })
+      ).json()) as { value: string };
+      return { count: found.length, secret: secret.value, redirectUris: one.redirectUris ?? [] };
+    },
     async cleanup() {
       for (const id of created) {
         await fetch(`${users}/${id}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });

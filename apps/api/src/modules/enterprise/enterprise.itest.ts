@@ -84,7 +84,11 @@ describe('POST /api/platform/enterprise-tenants', () => {
     expect(Object.fromEntries(realm?.groups ?? [])).toEqual({
       'tenantry-members': 'member',
       'tenantry-admins': 'admin',
+      'tenantry-console': null,
     });
+    // SCIM's client is made, then console permissions go on last (ADR-0026).
+    expect(t.realmScim(`ent-${s}`).prepared).toBe(true);
+    expect(t.realmConsole(`ent-${s}`).permissionsEnsured).toBeGreaterThanOrEqual(1);
     const audit = await auditOf(tenant?.id ?? '');
     expect(audit.map((e) => e.action)).toEqual(
       expect.arrayContaining(['tenant.provisioning', 'tenant.created']),
@@ -175,8 +179,10 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
     ]);
     expect(realm?.settings['accessTokenLifespan']).toBe(900);
 
+    const before = t.realmConsole(`ent-${s}`).permissionsEnsured;
     const real = await upgrade({ slug: s, dryRun: false });
     expect(real.body[0]?.applied).toBe(true);
+    expect(t.realmConsole(`ent-${s}`).permissionsEnsured).toBe(before + 1);
     expect(realm?.settings['accessTokenLifespan']).toBe(300);
     const tenant = await platformRepository(t.db).findTenantBySlug(s);
     const upgraded = (await auditOf(tenant?.id ?? '')).find((e) => e.action === 'tenant.upgraded');
@@ -184,7 +190,9 @@ describe('POST /api/platform/enterprise-tenants/upgrade', () => {
     expect((await upgrade({ slug: s, dryRun: true })).body[0]?.differences).toEqual([]);
   });
 
-  it('reports a realm it cannot reach and still upgrades the others', async () => {
+  // It upgrades every enterprise tenant in the database, and a local test database keeps those of every
+  // earlier run: allow it the time that takes.
+  it('reports a realm it cannot reach and still upgrades the others', { timeout: 120_000 }, async () => {
     const broken = await t.seedEnterpriseTenant();
     const s = slug();
     await provision({ slug: s, name: 'Healthy', adminEmail: `owner@${s}.test` });

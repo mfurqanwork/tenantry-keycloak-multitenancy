@@ -12,7 +12,7 @@ const vars = {
 describe('realm templates', () => {
   it('fills in the realm settings and keeps the policies typed', () => {
     const t = loadRealmTemplate(TEMPLATE_VERSION, vars);
-    expect(t.version).toBe(3);
+    expect(t.version).toBe(4);
     expect(t.realm['displayName']).toBe('Initech');
     expect(t.realm['smtpServer']).toEqual({
       host: 'mailpit',

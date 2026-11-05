@@ -157,6 +157,19 @@ export function platformRepository(ex: Executor) {
       await ex.update(tenantIdentity).set({ templateVersion }).where(eq(tenantIdentity.tenantId, id));
     },
 
+    async setTenantStatus(id: string, status: TenantStatus): Promise<void> {
+      await ex.update(tenants).set({ status }).where(eq(tenants.id, id));
+    },
+
+    // The cut-over of a move to Enterprise (ADR-0025): the tenant's own realm is now the only issuer.
+    async cutOverToEnterprise(
+      id: string,
+      identity: { realm: string; issuer: string; templateVersion: number },
+    ): Promise<void> {
+      await registerIdentity(id, { ...identity, kcOrgId: null });
+      await ex.update(tenants).set({ tier: 'enterprise', status: 'active' }).where(eq(tenants.id, id));
+    },
+
     async markTenantFailed(id: string): Promise<void> {
       await ex.update(tenants).set({ status: 'failed' }).where(eq(tenants.id, id));
     },
@@ -203,6 +216,17 @@ export function platformRepository(ex: Executor) {
         await tx.delete(users).where(eq(users.id, user.id));
         return winner;
       });
+    },
+
+    // A second identity for a person we know already: a move to Enterprise (ADR-0007). Idempotent; false
+    // when the identity belongs to someone else.
+    async addIdentity(input: { userId: string; issuer: string; subject: string }): Promise<boolean> {
+      await ex.insert(identities).values(input).onConflictDoNothing();
+      const [row] = await ex
+        .select({ userId: identities.userId })
+        .from(identities)
+        .where(and(eq(identities.issuer, input.issuer), eq(identities.subject, input.subject)));
+      return row?.userId === input.userId;
     },
 
     async userIdsForSubjects(issuer: string, subjects: string[]): Promise<Map<string, string>> {

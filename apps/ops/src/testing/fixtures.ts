@@ -10,6 +10,8 @@ export interface TestOps {
   deps: OpsDeps;
   db: Db;
   directory: InMemoryIdentityDirectory;
+  // The secrets store, in memory.
+  secrets: Map<string, string>;
   // TXT records the fake resolver answers with, by name.
   dns: Map<string, string[]>;
   out: string[];
@@ -23,11 +25,13 @@ export function createTestOps(): TestOps {
   const db = createDb(pool);
   const directory = new InMemoryIdentityDirectory();
   const dns = new Map<string, string[]>();
+  const secrets = new Map<string, string>();
   const out: string[] = [];
   const err: string[] = [];
   return {
     db,
     directory,
+    secrets,
     dns,
     out,
     err,
@@ -35,6 +39,13 @@ export function createTestOps(): TestOps {
       db,
       directory,
       resolveTxt: (name) => Promise.resolve(dns.get(name) ?? []),
+      secrets: {
+        get: (key) => Promise.resolve(secrets.get(key) ?? null),
+        put: (key, value) => {
+          secrets.set(key, value);
+          return Promise.resolve();
+        },
+      },
       origins: {
         authUrl: 'http://auth.tenantry.localhost',
         baseDomain: 'tenantry.localhost',

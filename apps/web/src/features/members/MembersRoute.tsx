@@ -33,6 +33,8 @@ interface MemberRow {
   email: string | null;
   displayName: string | null;
   role: Role | null;
+  // Enterprise workspaces: may open the realm's Keycloak console (ADR-0026).
+  console?: boolean;
 }
 interface InviteRow {
   id: string;
@@ -61,8 +63,20 @@ export function MembersRoute() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [actionError, setActionError] = useState<unknown>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [consoleBusy, setConsoleBusy] = useState<string | null>(null);
   const roles = assignableRoles(me.role);
   const manages = me.can('members:change-role') || me.can('members:remove');
+  // Owners of an enterprise workspace let owners and admins into the realm's console.
+  const grantsConsole = me.tenant.tier === 'enterprise' && me.can('tenant:settings');
+  const mayHaveConsole = (m: MemberRow | undefined) => m?.role === 'owner' || m?.role === 'admin';
+  const setConsole = (member: MemberRow, on: boolean) => {
+    setActionError(null);
+    setConsoleBusy(member.userId);
+    const path = `/api/members/${encodeURIComponent(member.userId)}/console`;
+    void (on ? api.post(path, {}) : api.del(path)).then(list.reload, setActionError).finally(() => {
+      setConsoleBusy(null);
+    });
+  };
   const close = () => {
     setDialog(null);
   };
@@ -100,7 +114,7 @@ export function MembersRoute() {
                 id: m.userId,
                 name: m.displayName ?? '',
                 email: m.email ?? '',
-                role: m.role ? ROLE_LABELS[m.role] : 'No role yet',
+                role: `${m.role ? ROLE_LABELS[m.role] : 'No role yet'}${m.console ? ' · Console access' : ''}`,
               }))}
               headers={MEMBER_HEADERS}
             >
@@ -114,28 +128,40 @@ export function MembersRoute() {
                             {header.header}
                           </TableHeader>
                         ))}
-                        {manages && <TableHeader aria-label="Actions" />}
+                        {(manages || grantsConsole) && <TableHeader aria-label="Actions" />}
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {rows.map((row) => {
                         const member = members.find((m) => m.userId === row.id);
                         const canManage = manages && member && member.userId !== me.user.id;
+                        const consoleItem = grantsConsole && member && mayHaveConsole(member);
                         return (
                           <TableRow {...getRowProps({ row })} key={row.id}>
                             {row.cells.map((cell) => (
                               <TableCell key={cell.id}>{cell.value as string}</TableCell>
                             ))}
-                            {manages && (
+                            {(manages || grantsConsole) && (
                               <TableCell className="cds--table-column-menu">
-                                {canManage && (
+                                {member && (canManage || consoleItem) && (
                                   <OverflowMenu
                                     aria-label={`Actions for ${member.email ?? 'member'}`}
                                     iconDescription={`Actions for ${member.email ?? 'member'}`}
                                     flipped
                                     size="sm"
                                   >
-                                    {me.can('members:change-role') && (
+                                    {consoleItem && (
+                                      <OverflowMenuItem
+                                        itemText={
+                                          member.console ? 'Take console access away' : 'Give console access'
+                                        }
+                                        disabled={consoleBusy === member.userId}
+                                        onClick={() => {
+                                          setConsole(member, !member.console);
+                                        }}
+                                      />
+                                    )}
+                                    {canManage && me.can('members:change-role') && (
                                       <OverflowMenuItem
                                         itemText="Change role"
                                         onClick={() => {
@@ -143,7 +169,7 @@ export function MembersRoute() {
                                         }}
                                       />
                                     )}
-                                    {me.can('members:remove') && (
+                                    {canManage && me.can('members:remove') && (
                                       <OverflowMenuItem
                                         itemText="Remove"
                                         isDelete

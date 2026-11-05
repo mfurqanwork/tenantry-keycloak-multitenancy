@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { TwoStep } from '@tenantry/auth';
 
 // The realm template version this code ships and provisions (ADR-0010). Upgrades move realms to it.
-export const TEMPLATE_VERSION = 3;
+export const TEMPLATE_VERSION = 4;
 
 export interface TemplateVars {
   displayName: string;
@@ -35,6 +35,14 @@ export interface SecondStep {
 
 // Directory groups (SCIM) and the tenantry-api role each gives. Owners are never managed by SCIM.
 export const MAPPED_GROUPS = { 'tenantry-members': 'member', 'tenantry-admins': 'admin' } as const;
+// Its members may open the realm's Keycloak console, for people and groups only (ADR-0026). It gives no
+// role; only Tenantry changes who is in it.
+export const CONSOLE_GROUP = 'tenantry-console';
+// The console only starts for someone holding these (probed on 26.8.1). They are the composite of
+// CONSOLE_ROLE, a plain realm role the provisioner may still grant once admin permissions are on (it may
+// grant no realm-management role then, directly or through a group).
+export const CONSOLE_ROLE = 'tenantry-console-user';
+export const CONSOLE_QUERY_ROLES = ['query-users', 'query-groups'];
 
 export interface ClientTemplate {
   representation: Record<string, unknown>;
