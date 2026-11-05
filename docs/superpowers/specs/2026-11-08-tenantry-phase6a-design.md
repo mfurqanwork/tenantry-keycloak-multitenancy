@@ -212,7 +212,7 @@ Tenantry gets a logo and a small brand of its own, used wherever no workspace's 
 
 ### The mark and the logo
 
-- **The mark:** a square made of four tiles with clear gaps between them, one tile in the brand colour and three in the neutral. Separate spaces under one roof is what Tenantry does.
+- **The mark:** five square tiles forming a **T**, each with clear space around it, and the tile where the bar meets the stem in the brand colour. Separate workspaces, one platform. (A first draft of four tiles in a square was dropped: it looked like the Windows logo.)
 - **The logo:** the mark followed by the word "Tenantry" in IBM Plex Sans, semibold.
 - **Colours:**
   - brand: Carbon Blue 60, `#0f62fe` (already the default workspace colour);

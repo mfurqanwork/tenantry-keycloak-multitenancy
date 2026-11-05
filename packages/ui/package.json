@@ -10,7 +10,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./styles.scss": "./src/styles/index.scss"
+    "./styles.scss": "./src/styles/index.scss",
+    "./assets/*": "./assets/*"
   },
   "sideEffects": [
     "*.scss"

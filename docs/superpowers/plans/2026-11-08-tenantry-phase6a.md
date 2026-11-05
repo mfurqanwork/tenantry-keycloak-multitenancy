@@ -52,7 +52,7 @@
 - **Checklist steps:** "Create a project", "Invite a teammate", "Add your colour and logo". The Hide key is `tenantry.checklist.hidden.<userId>.<slug>`.
 - **Brand:**
   - colours `#0f62fe` (Blue 60), `#161616` (Gray 100) and `#f4f4f4` (Gray 10);
-  - the mark is four tiles with one in blue;
+  - the mark is five tiles forming a T, with the junction tile in blue;
   - each SVG has a `<title>` and is at most 4 KB.
 - **Conventions:**
   - ESM with `.js` import specifiers;

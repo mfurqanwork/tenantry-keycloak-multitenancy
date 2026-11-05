@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Tenantry</title>
+  <style>.n{fill:#161616}@media (prefers-color-scheme:dark){.n{fill:#f4f4f4}}</style>
+  <rect x="11.5" y="0.5" width="9" height="9" fill="#0f62fe"/>
+  <rect class="n" x="0.5" y="0.5" width="9" height="9"/>
+  <rect class="n" x="22.5" y="0.5" width="9" height="9"/>
+  <rect class="n" x="11.5" y="11.5" width="9" height="9"/>
+  <rect class="n" x="11.5" y="22.5" width="9" height="9"/>
+</svg>
