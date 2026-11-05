@@ -139,12 +139,33 @@ export function runIdentityDirectoryContract(name: string, make: () => Promise<C
         issuer: s.companyIssuer,
         clientId: 'tenantry-platform',
         clientSecret: 'contract-secret',
+        displayName: 'Contract Corp',
       });
       const found = await s.dir.getIdentityProvider(alias);
-      expect(found).toMatchObject({ alias, issuer: s.companyIssuer, clientId: 'tenantry-platform' });
+      expect(found).toMatchObject({
+        alias,
+        issuer: s.companyIssuer,
+        clientId: 'tenantry-platform',
+        displayName: 'Contract Corp',
+      });
       expect(JSON.stringify(found)).not.toContain('contract-secret');
       expect(found?.config['clientSecret']).toBeUndefined();
       expect(await s.dir.getIdentityProvider(`missing${randomUUID().slice(0, 8)}`)).toBeNull();
+      await s.dir.deleteIdentityProvider(alias);
+    });
+
+    it("names a company identity provider's sign-in button, changing it only when it differs", async () => {
+      const alias = `idn${randomUUID().slice(0, 8)}`;
+      await s.dir.createOidcIdentityProvider({
+        alias,
+        issuer: s.companyIssuer,
+        clientId: 'tenantry-platform',
+        clientSecret: 'contract-secret',
+      });
+      expect((await s.dir.getIdentityProvider(alias))?.displayName).toBeNull();
+      expect(await s.dir.setIdentityProviderDisplayName(alias, 'Acme Corp')).toEqual({ changed: true });
+      expect(await s.dir.setIdentityProviderDisplayName(alias, 'Acme Corp')).toEqual({ changed: false });
+      expect((await s.dir.getIdentityProvider(alias))?.displayName).toBe('Acme Corp');
       await s.dir.deleteIdentityProvider(alias);
     });
 

@@ -22,6 +22,7 @@ export function createRealmIdps(o: ProvisionerAccess): RealmIdps {
       const enabled = secret !== null;
       const representation = {
         alias: provider.alias,
+        ...(provider.displayName ? { displayName: provider.displayName } : {}),
         providerId: 'oidc',
         enabled,
         trustEmail: true,

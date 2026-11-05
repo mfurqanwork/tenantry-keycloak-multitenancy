@@ -25,7 +25,10 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
   readonly orgs = new Map<string, Org>();
   readonly origins: Record<TenantApp, Set<string>> = { web: new Set(), portal: new Set() };
   readonly invites: { orgId: string; email: string }[] = [];
-  readonly identityProviders = new Map<string, { issuer: string; clientId: string }>();
+  readonly identityProviders = new Map<
+    string,
+    { issuer: string; clientId: string; displayName: string | null }
+  >();
   // Kept apart from the provider, as Keycloak does: never read back.
   readonly identityProviderSecrets = new Map<string, string>();
   readonly federated = new Map<string, FederatedIdentity[]>();
@@ -175,7 +178,11 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
   createOidcIdentityProvider(input: CompanyIdentityProvider): Promise<{ created: boolean }> {
     return this.run('createOidcIdentityProvider', () => {
       if (this.identityProviders.has(input.alias)) return { created: false };
-      this.identityProviders.set(input.alias, { issuer: input.issuer, clientId: input.clientId });
+      this.identityProviders.set(input.alias, {
+        issuer: input.issuer,
+        clientId: input.clientId,
+        displayName: input.displayName ?? null,
+      });
       this.identityProviderSecrets.set(input.alias, input.clientSecret);
       return { created: true };
     });
@@ -217,6 +224,16 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
     return this.run('listFederatedIdentities', () => [...(this.federated.get(kcUserId) ?? [])]);
   }
 
+  setIdentityProviderDisplayName(alias: string, displayName: string): Promise<{ changed: boolean }> {
+    return this.run('setIdentityProviderDisplayName', () => {
+      const idp = this.identityProviders.get(alias);
+      if (!idp) throw new DirectoryError('setIdentityProviderDisplayName', 404, alias);
+      if (idp.displayName === displayName) return { changed: false };
+      idp.displayName = displayName;
+      return { changed: true };
+    });
+  }
+
   getIdentityProvider(alias: string): Promise<IdentityProviderSettings | null> {
     return this.run('getIdentityProvider', () => {
       const idp = this.identityProviders.get(alias);
@@ -225,6 +242,7 @@ export class InMemoryIdentityDirectory implements IdentityDirectory {
         alias,
         issuer: idp.issuer,
         clientId: idp.clientId,
+        displayName: idp.displayName,
         config: { issuer: idp.issuer, clientId: idp.clientId },
         mappers: [],
       };

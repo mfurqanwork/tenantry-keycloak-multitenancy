@@ -34,6 +34,7 @@ const USAGE = `Usage: pnpm ops <command>
   domain verify --tenant <slug> --domain <domain>
   idp link      --tenant <slug> --domain <domain> --alias <alias> --issuer <url> --client-id <id>
                 [--client-secret-env <NAME>]   (the secret is read from that variable or .env; default IDP_CLIENT_SECRET)
+                [--display-name <text>]        (its sign-in button; default "<workspace name> company sign-in")
   tenants sync-origins
   dns set-txt <name> <value>     (dev only: writes the local DNS zone)
   enterprise provision --slug <slug> --name <name> --admin-email <email>
@@ -188,6 +189,7 @@ async function main(argv: string[]): Promise<number> {
       'client-id': { type: 'string' },
       'client-secret': { type: 'string' },
       'client-secret-env': { type: 'string' },
+      'display-name': { type: 'string' },
       slug: { type: 'string' },
       name: { type: 'string' },
       'admin-email': { type: 'string' },
@@ -246,6 +248,7 @@ async function main(argv: string[]): Promise<number> {
           issuer: need('issuer'),
           clientId: need('client-id'),
           clientSecret: secretFrom(values['client-secret-env'], (key) => stackEnv(key, '') || undefined),
+          ...(values['display-name'] ? { displayName: values['display-name'] } : {}),
         }),
       );
     case 'enterprise provision':

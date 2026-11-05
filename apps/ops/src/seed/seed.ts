@@ -57,7 +57,14 @@ export const ENTERPRISE = {
 } as const;
 
 // Company login for acme: people at acme.test sign in through the corp-demo realm (ADR-0022).
-export const COMPANY = { tenant: 'acme', domain: 'acme.test', alias: 'acme-corp', person: 'alice@acme.test' };
+export const COMPANY = {
+  tenant: 'acme',
+  domain: 'acme.test',
+  alias: 'acme-corp',
+  person: 'alice@acme.test',
+  // The name on the sign-in button (Phase 6a), instead of the alias.
+  displayName: 'Acme Corp',
+};
 
 export interface SeedDeps extends OpsDeps {
   users: DevUsers;
@@ -189,9 +196,13 @@ async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, acme: TenantRe
       issuer: deps.company.issuer,
       clientId: 'tenantry-platform',
       clientSecret: deps.company.clientSecret,
+      displayName: COMPANY.displayName,
     });
     if (code !== 0) throw new Error(`could not link ${alias} to ${domain}`);
     changes.push(`company login for ${domain}`);
+  } else if ((await quiet.directory.setIdentityProviderDisplayName(alias, COMPANY.displayName)).changed) {
+    // A stack seeded before Phase 6a: its button showed the alias.
+    changes.push(`company login button for ${domain}`);
   }
   // Alice gets the member role through an invite, claimed the first time she signs in (ADR-0019).
   const members = await deps.directory.listMembers(acme.kcOrgId ?? '');

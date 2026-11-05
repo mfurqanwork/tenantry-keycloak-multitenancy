@@ -49,6 +49,8 @@ export interface IdentityDirectory {
   listFederatedIdentities(kcUserId: string): Promise<FederatedIdentity[]>;
   // A company login's settings, without its secret: Keycloak never returns one.
   getIdentityProvider(alias: string): Promise<IdentityProviderSettings | null>;
+  // The name on the provider's sign-in button; changes it only when it differs.
+  setIdentityProviderDisplayName(alias: string, displayName: string): Promise<{ changed: boolean }>;
   // The confidential client tenantry-bridge-<slug> that the new realm's bridge signs in through.
   ensureBridgeClient(slug: string, redirectUri: string, secret: string): Promise<void>;
   // A missing client counts as deleted.
@@ -72,6 +74,8 @@ export interface IdentityProviderSettings {
   alias: string;
   issuer: string;
   clientId: string;
+  // The name on its sign-in button; null when Keycloak shows the alias.
+  displayName: string | null;
   // Keycloak's provider config with the secret taken out.
   config: Record<string, string>;
   mappers: { name: string; identityProviderMapper: string; config: Record<string, string> }[];
@@ -84,4 +88,6 @@ export interface CompanyIdentityProvider {
   issuer: string;
   clientId: string;
   clientSecret: string;
+  // The name on its sign-in button (Phase 6a); without one, Keycloak shows the alias.
+  displayName?: string;
 }

@@ -126,6 +126,7 @@ describe('bridge from the shared realm', () => {
           alias,
           issuer: `${publicAuthUrl}/realms/corp-demo`,
           clientId: 'tenantry-platform',
+          displayName: 'Acme Corp',
           config: {
             authorizationUrl: `${publicAuthUrl}/realms/corp-demo/protocol/openid-connect/auth`,
             tokenUrl: `${publicAuthUrl}/realms/corp-demo/protocol/openid-connect/token`,
@@ -139,10 +140,13 @@ describe('bridge from the shared realm', () => {
     const read = async (alias: string) =>
       (await (await bootstrap('GET', `/${realm}/identity-provider/instances/${alias}`)).json()) as {
         enabled: boolean;
+        displayName?: string;
       };
     expect(await copy('with-secret', 'kept-secret')).toEqual({ enabled: true });
     expect(await copy('with-secret', 'kept-secret')).toEqual({ enabled: true });
     expect((await read('with-secret')).enabled).toBe(true);
+    // The sign-in button keeps its name in the new realm.
+    expect((await read('with-secret')).displayName).toBe('Acme Corp');
     expect(await copy('no-secret', null)).toEqual({ enabled: false });
     expect((await read('no-secret')).enabled).toBe(false);
     await idps().setSecret('no-secret', 'given-later');

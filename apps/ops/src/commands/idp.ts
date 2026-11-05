@@ -20,14 +20,17 @@ export async function linkIdp(
     deps.err(`${input.domain} is not a domain name.`);
     return 1;
   }
+  // The name on the sign-in button (Phase 6a): the operator's, or the workspace's own.
+  const displayName = input.displayName ?? `${tenant.name} company sign-in`;
   const provider = {
     alias: input.alias,
     issuer: input.issuer,
     clientId: input.clientId,
     clientSecret: input.clientSecret,
+    displayName,
   };
   // An object, so the flags set inside the transaction are not narrowed to their first values.
-  const state = { created: false, alreadyLinked: false };
+  const state = { created: false, alreadyLinked: false, renamed: false };
   try {
     // One transaction: the row is written first (the alias is unique across workspaces), Keycloak is
     // changed inside it, and a Keycloak failure rolls the row back.
@@ -57,6 +60,16 @@ export async function linkIdp(
           `An identity provider ${input.alias} already exists in Keycloak and is not this workspace's. Choose another alias.`,
         );
       }
+      // A provider linked before it had a name, or renamed by the operator; a rerun with the same name
+      // changes nothing.
+      if (
+        !created &&
+        (input.displayName || !(await deps.directory.getIdentityProvider(input.alias))?.displayName)
+      ) {
+        state.renamed = (
+          await deps.directory.setIdentityProviderDisplayName(input.alias, displayName)
+        ).changed;
+      }
       await deps.directory.addOrganizationDomain(orgId, domain);
       await deps.directory.linkIdentityProvider(orgId, input.alias, domain);
       if (!state.alreadyLinked) {
@@ -83,9 +96,11 @@ export async function linkIdp(
   const key = idpSecretKey(input.alias);
   if (state.created || !(await deps.secrets.get(key))) await deps.secrets.put(key, input.clientSecret);
   deps.out(
-    state.alreadyLinked
-      ? `${input.alias} is already linked to ${domain} for ${tenant.slug}; nothing changed, and its settings stay as they were.`
-      : `${input.alias} signs in ${domain} for ${tenant.slug}.`,
+    !state.alreadyLinked
+      ? `${input.alias} signs in ${domain} for ${tenant.slug}, as "${displayName}".`
+      : state.renamed
+        ? `${input.alias} is already linked to ${domain} for ${tenant.slug}; its sign-in button now shows "${displayName}".`
+        : `${input.alias} is already linked to ${domain} for ${tenant.slug}; nothing changed, and its settings stay as they were.`,
   );
   return 0;
 }
