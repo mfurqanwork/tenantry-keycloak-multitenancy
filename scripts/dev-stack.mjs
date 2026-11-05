@@ -7,6 +7,7 @@ import { ensureEnv, ROOT } from './lib/env.mjs';
 import { ensureBackendRoles, ensureProvisionerClient } from './lib/provisioner.mjs';
 import { busyPorts } from './lib/port.mjs';
 import { prepareSecretsDir } from './lib/secrets-dir.mjs';
+import { welcomeUrl } from './lib/urls.mjs';
 
 const infraOnly = process.argv.includes('--infra');
 const env = ensureEnv();
@@ -101,4 +102,4 @@ await ensureBackendRoles({
 });
 // Caddy reads its bind-mounted Caddyfile only at start; a restart picks up edits since the last run.
 run(['restart', 'caddy']);
-console.log(`\nTenantry is up: http://demo.tenantry.localhost${port === 80 ? '' : `:${port}`}`);
+console.log(`\nTenantry is up: ${welcomeUrl(port)}`);
