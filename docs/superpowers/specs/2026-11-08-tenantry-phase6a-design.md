@@ -150,9 +150,60 @@ Shown to people with `members:invite` or `tenant:settings`.
 - **ADR-0022:** an update for `--display-name`.
 - **Docs:**
   - `docs/demo-script.md` is rewritten around the new flow (welcome page → demo workspace → checklist → Admin);
-  - README text is updated where it names pages;
+  - the README and `docs/SETUP.md` (§7);
   - CHANGELOG;
   - `docs/known-issues.md` gets its date bumped.
+
+## 7. A product README, and setup in its own file
+
+The README becomes the product page a visitor reads on GitHub. Developer set-up moves to `docs/SETUP.md`, linked from it.
+
+### `README.md`, in this order
+
+1. **Header** (centred):
+   - the name, and a one-line tagline: "Multi-tenant sign-in, teams and branding for SaaS, built on Keycloak";
+   - badges: CI status, licence (MIT), Keycloak 26.8, Node 22, TypeScript.
+2. **A hero screenshot** of the welcome page or a branded workspace (light theme).
+3. **The problem it solves**, in three or four sentences: every B2B SaaS needs per-customer sign-in, teams, roles, branding, company login and directory sync, and the big customers want a realm of their own. Tenantry shows one way to do all of it on Keycloak without leaking one tenant into another.
+4. **Features**, grouped, each a short line with a screenshot where it helps:
+   - **Workspaces:** signup, invites, roles, audit log.
+   - **One sign-in, two apps:** SSO and single logout.
+   - **Branding:** colour with a contrast check, logo, a branded login page.
+   - **Company login:** an identity provider per verified domain.
+   - **Enterprise:** a realm per customer, customer apps, SCIM, Keycloak console access, moving from Standard to Enterprise.
+   - **Security settings:** two-step sign-in, passwords, sessions, lockout.
+5. **How it keeps tenants apart:** the guarantees table, kept and shortened to the rows a reader cares about, with a link to the full list in `tests/isolation`.
+6. **Architecture:** a Mermaid diagram (GitHub renders it): browser → Caddy → web, Admin and API → Keycloak and Postgres, with Standard (shared realm, organizations) and Enterprise (a realm each) shown side by side.
+7. **Built with:** a row of technology badges with logos (shields.io and Simple Icons):
+   - TypeScript, Node.js, NestJS, React, Vite;
+   - IBM Carbon, Keycloak, Keycloakify, PostgreSQL, Drizzle;
+   - Docker, Caddy, Turborepo, pnpm, Vitest.
+
+   Each badge links to the project's site.
+
+8. **Try it in five minutes:** three commands (`pnpm install`, `pnpm dev:stack`, `pnpm seed`), then "open the welcome page". The details and troubleshooting live in `docs/SETUP.md`.
+9. **Documentation:** links to `docs/SETUP.md`, the guides, the ADRs, the demo script, known issues, CONTRIBUTING and AGENTS.
+10. **Roadmap:** phases done and next, short. Then the **licence**.
+
+### `docs/SETUP.md`
+
+Everything a developer needs, moved from the README and expanded:
+
+- prerequisites;
+- the quick start;
+- the addresses and ports, and changing them (`TENANTRY_HTTP_PORT`);
+- the demo accounts (the password stays in `.env`, never in the file);
+- the command table (from AGENTS.md);
+- `pnpm dev` versus `pnpm dev:stack`;
+- running the tests and isolation suite;
+- resetting the stack;
+- common problems (port taken, Docker not running, `.secrets` ownership on Linux).
+
+### Screenshots
+
+- Saved in `docs/images/` as PNG, light theme, desktop width, from the seeded stack.
+- Each is under 300 KB, with alt text.
+- They're taken during the 6a browser walkthrough, so they show the new UI. Signed-in shots need you to sign in in the browser pane.
 
 ## 6. Testing
 
