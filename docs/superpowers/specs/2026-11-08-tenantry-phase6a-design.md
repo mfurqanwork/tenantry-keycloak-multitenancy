@@ -56,17 +56,18 @@ The two SPAs keep their own origins, which keeps the single-sign-on demo and the
 
 ### Admin (`apps/portal`, `<slug>.portal.tenantry.localhost`): the workspace
 
-| Menu                            | Path                                                              | Page                                                                                           | Shown when                 |
-| ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------- |
-| People                          | `/people`                                                         | today's web Members page, moved unchanged (members, invites, the row menu with console access) | `members:read`             |
-| Branding                        | `/branding`                                                       | unchanged                                                                                      | `tenant:settings`          |
-| Sign-in & security              | `/security`                                                       | today's Security page, retitled                                                                | `tenant:settings`          |
-| Audit log                       | `/audit`                                                          | today's web Audit log, moved unchanged                                                         | `audit:read`               |
-| **Advanced** (group, collapsed) |                                                                   |                                                                                                | any child shown            |
-| · Directory sync (SCIM)         | `/advanced/scim`                                                  | today's SCIM page                                                                              | `tenant:settings`          |
-| · Customer apps                 | `/advanced/apps` (and `/advanced/apps/new`, `/advanced/apps/:id`) | today's Applications pages, retitled                                                           | `apps:read` and Enterprise |
-| · Keycloak console              | external link                                                     | `me.consoleUrl`                                                                                | `me.consoleUrl` is set     |
+| Menu                            | Path                                                              | Page                                                                                           | Shown when                     |
+| ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------ |
+| People                          | `/people`                                                         | today's web Members page, moved unchanged (members, invites, the row menu with console access) | `members:invite`               |
+| Branding                        | `/branding`                                                       | unchanged                                                                                      | `tenant:settings`              |
+| Sign-in & security              | `/security`                                                       | today's Security page, retitled                                                                | `tenant:settings`              |
+| Audit log                       | `/audit`                                                          | today's web Audit log, moved unchanged                                                         | `audit:read`                   |
+| **Advanced** (group, collapsed) |                                                                   |                                                                                                | any child shown                |
+| · Directory sync (SCIM)         | `/advanced/scim`                                                  | today's SCIM page                                                                              | `tenant:settings`              |
+| · Customer apps                 | `/advanced/apps` (and `/advanced/apps/new`, `/advanced/apps/:id`) | today's Applications pages, retitled                                                           | `apps:register` and Enterprise |
+| · Keycloak console              | external link                                                     | `me.consoleUrl`                                                                                | `me.consoleUrl` is set         |
 
+- **Admin is for owners and admins.** A member holds `members:read` and `apps:read` (`packages/auth/src/roles.ts`), but no Admin page is shown for them: People needs `members:invite`, and Customer apps needs `apps:register`. The API's permissions don't change, so a member can still read the member list through the API.
 - Admin opens on the first page the person may see, in menu order.
 - The portal's tile dashboard is removed.
 - The test sign-in callback for customer apps keeps its current path, because registered redirect URIs name it.
@@ -150,11 +151,11 @@ Shown to people with `members:invite` or `tenant:settings`.
 - **ADR-0022:** an update for `--display-name`.
 - **Docs:**
   - `docs/demo-script.md` is rewritten around the new flow (welcome page → demo workspace → checklist → Admin);
-  - the README and `docs/SETUP.md` (§7);
+  - the README and `docs/SETUP.md` (§6);
   - CHANGELOG;
   - `docs/known-issues.md` gets its date bumped.
 
-## 7. A product README, and setup in its own file
+## 6. A product README, and setup in its own file
 
 The README becomes the product page a visitor reads on GitHub. Developer set-up moves to `docs/SETUP.md`, linked from it.
 
@@ -205,7 +206,39 @@ Everything a developer needs, moved from the README and expanded:
 - Each is under 300 KB, with alt text.
 - They're taken during the 6a browser walkthrough, so they show the new UI. Signed-in shots need you to sign in in the browser pane.
 
-## 6. Testing
+## 7. Tenantry's own brand
+
+Tenantry gets a logo and a small brand of its own, used wherever no workspace's brand applies.
+
+### The mark and the logo
+
+- **The mark:** a square made of four tiles with clear gaps between them, one tile in the brand colour and three in the neutral. Separate spaces under one roof is what Tenantry does.
+- **The logo:** the mark followed by the word "Tenantry" in IBM Plex Sans, semibold.
+- **Colours:**
+  - brand: Carbon Blue 60, `#0f62fe` (already the default workspace colour);
+  - neutral: Gray 100, `#161616` on light and Gray 10, `#f4f4f4` on dark.
+- **Hand-written SVG**, no raster sources. Every file has a `<title>` and is under 4 KB.
+
+### Files (`packages/ui/assets/brand/`)
+
+- `tenantry-mark.svg`
+- `tenantry-logo.svg` and `tenantry-logo-dark.svg`
+- `favicon.svg`, plus `favicon-32.png`, `apple-touch-icon.png` (180) and `icon-512.png`, rendered from the SVG by a script and committed
+- `social-preview.png` (1280×640) for the GitHub repository's social preview. You upload it in the repository settings; it can't be set from the repository.
+
+### Where it's used
+
+- **The favicon and title** of web, Admin and the login theme. A workspace's own logo still replaces it in the header.
+- **The header** of web and Admin when the workspace has no logo of its own: the mark before the workspace name.
+- **The welcome page and the signup page:** the logo above the heading.
+- **The login page with no workspace** (the apex sign-in and registration): the logo in place of the plain "Tenantry" text.
+- **The README header:** the logo, as `<picture>` with light and dark sources.
+
+### Brand notes
+
+`docs/brand.md`: the mark's meaning, the two colours, the clear space (a quarter of the mark's width), minimum size (16 px), and what not to do (stretch, recolour, add effects).
+
+## 8. Testing
 
 Test-first, Vitest, next to the code.
 
@@ -224,6 +257,7 @@ Test-first, Vitest, next to the code.
 - **app-kit:** `appLinks` leaves out Admin for someone who may see no Admin page.
 - **ops and keycloak-admin:** `idp link --display-name` default and update; the seed's second run changes nothing; the move copies the display name.
 - **Unchanged:** the isolation suite, smoke, and the seed check run as in CI.
+- **Brand:** the SVGs parse, have a `<title>` and stay under 4 KB; each app's `index.html` links the favicon; the header shows the mark only when the workspace has no logo; the login theme shows the logo without a workspace.
 - **UI:**
   - ui-consistency finding-patterns runs before the first UI task;
   - a separate agent verifies the pages;
