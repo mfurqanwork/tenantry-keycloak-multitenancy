@@ -73,3 +73,30 @@
   padding: 0;
   list-style: none;
 }
+
+// "Or sign in with" and the company and identity-provider buttons, from Keycloakify's own markup
+// (spec 8.2): the heading at the card's label size, a quiet divider, and the buttons stacked.
+#kc-social-providers {
+  display: grid;
+  gap: $spacing-04;
+  margin-block-start: $spacing-06;
+
+  hr {
+    margin: 0;
+    border: 0;
+    border-block-start: 1px solid theme.$border-subtle-01;
+  }
+
+  h2 {
+    @include type.type-style('label-01');
+
+    color: theme.$text-secondary;
+  }
+
+  ul {
+    display: grid;
+    gap: $spacing-03;
+    padding: 0;
+    list-style: none;
+  }
+}
