@@ -287,7 +287,7 @@ body {
 .tenantry-setup__steps {
   display: grid;
   gap: $spacing-04;
-  grid-template-columns: repeat(auto-fit, minmax(calc(#{$spacing-13} + #{$spacing-10}), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(#{$spacing-13} + #{$spacing-10})), 1fr));
   margin-block-start: $spacing-05;
 }
 
@@ -438,4 +438,21 @@ li[data-unread='true'] > .tenantry-notifications__item {
   @include type.type-style('body-compact-01');
 
   color: theme.$text-secondary;
+}
+
+// The workspace's logo or letter, name and app stay on one line; the app's name goes on small screens.
+.cds--header__name {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+@include breakpoint-down(md) {
+  .tenantry-header__app {
+    display: none;
+  }
+}
+
+// A closed header panel (switchers, account, notifications) must not spill its contents past the screen.
+.cds--header-panel:not(.cds--header-panel--expanded) {
+  overflow: hidden;
 }

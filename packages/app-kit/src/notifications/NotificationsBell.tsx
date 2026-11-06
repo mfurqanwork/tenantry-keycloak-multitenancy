@@ -140,39 +140,42 @@ export function NotificationsBell({
         )}
       </HeaderGlobalAction>
       <HeaderPanel aria-label="Notifications" expanded={open} className="tenantry-notifications">
-        <section aria-label="Notifications" className="tenantry-notifications__body">
-          <div className="tenantry-notifications__header">
-            <h2 className="tenantry-notifications__title">Notifications</h2>
-            {unread > 0 && (
-              <Button kind="ghost" size="sm" onClick={markAllRead}>
-                Mark all as read
-              </Button>
+        {/* Only while open: a collapsed panel would still take up width on small screens. */}
+        {open && (
+          <section aria-label="Notifications" className="tenantry-notifications__body">
+            <div className="tenantry-notifications__header">
+              <h2 className="tenantry-notifications__title">Notifications</h2>
+              {unread > 0 && (
+                <Button kind="ghost" size="sm" onClick={markAllRead}>
+                  Mark all as read
+                </Button>
+              )}
+            </div>
+            <ApiErrorNotification error={error} />
+            {!feed && !error && <InlineLoading description="Loading notifications" />}
+            {feed?.items.length === 0 && (
+              <p className="tenantry-notifications__empty">You&apos;re all caught up.</p>
             )}
-          </div>
-          <ApiErrorNotification error={error} />
-          {!feed && !error && <InlineLoading description="Loading notifications" />}
-          {feed?.items.length === 0 && (
-            <p className="tenantry-notifications__empty">You&apos;re all caught up.</p>
-          )}
-          <ul className="tenantry-notifications__list">
-            {feed?.items.map((item) => {
-              const Icon = ICONS[item.kind];
-              const href = linkHref(item.link, workspaces);
-              return (
-                <li key={item.id} data-unread={item.unread ? 'true' : 'false'}>
-                  <a className="tenantry-notifications__item" href={href ?? '#'}>
-                    <Icon size={20} aria-hidden="true" className="tenantry-notifications__icon" />
-                    <span className="tenantry-notifications__text">
-                      <span className="tenantry-notifications__item-title">{item.title}</span>
-                      {item.body && <span className="tenantry-notifications__item-body">{item.body}</span>}
-                      <span className="tenantry-notifications__time">{timeAgo(item.createdAt, now())}</span>
-                    </span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+            <ul className="tenantry-notifications__list">
+              {feed?.items.map((item) => {
+                const Icon = ICONS[item.kind];
+                const href = linkHref(item.link, workspaces);
+                return (
+                  <li key={item.id} data-unread={item.unread ? 'true' : 'false'}>
+                    <a className="tenantry-notifications__item" href={href ?? '#'}>
+                      <Icon size={20} aria-hidden="true" className="tenantry-notifications__icon" />
+                      <span className="tenantry-notifications__text">
+                        <span className="tenantry-notifications__item-title">{item.title}</span>
+                        {item.body && <span className="tenantry-notifications__item-body">{item.body}</span>}
+                        <span className="tenantry-notifications__time">{timeAgo(item.createdAt, now())}</span>
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </HeaderPanel>
     </>
   );
