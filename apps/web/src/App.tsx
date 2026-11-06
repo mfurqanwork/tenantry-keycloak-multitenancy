@@ -1,6 +1,5 @@
-import type { Permission } from '@tenantry/auth';
-import { AppShell, type NavItem } from '@tenantry/ui';
-import { useEffect } from 'react';
+import { AppShell } from '@tenantry/ui';
+import { useEffect, type ReactNode } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { HomeRoute } from './features/home/HomeRoute.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
@@ -13,13 +12,8 @@ import {
   useBranding,
   useMe,
   useWorkspaces,
+  workspaceMenu,
 } from '@tenantry/app-kit';
-
-// Tenantry is the product people use; the workspace itself is managed in Admin (ADR-0027).
-const PAGES: (NavItem & { needs?: Permission })[] = [
-  { label: 'Home', href: '/' },
-  { label: 'Projects', href: '/projects', needs: 'projects:read' },
-];
 
 // Members and the audit log moved to Admin in Phase 6a; old bookmarks land there.
 function ToAdmin({ path }: { path: string }) {
@@ -31,18 +25,26 @@ function ToAdmin({ path }: { path: string }) {
 }
 
 // The tenant app's shell and routes, once signed in. Root supplies the theme.
-export function App({ onSignOut }: { onSignOut?: () => void }) {
+export function App({
+  onSignOut,
+  headerActions,
+}: {
+  onSignOut?: () => void;
+  // Search and notifications (spec 8.3, 8.4).
+  headerActions?: ReactNode;
+}) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
   const { branding } = useBranding(me.tenant.slug);
-  const nav = PAGES.filter((page) => !page.needs || me.can(page.needs)).map(({ label, href }) => ({
-    label,
-    href,
-  }));
+  // One menu for Tenantry and Admin (spec 8.1); Admin's pages open there.
+  const nav = workspaceMenu(me, workspaces, 'web');
   return (
     <AppShell
       productName={me.tenant.name}
+      appName="Tenantry"
+      brandColor={branding?.primaryColor ?? null}
+      headerActions={headerActions}
       logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'web', { admin: canSeeAdmin(me.can) })}
       workspaces={workspaces.map(({ slug, name, current, webUrl }) => ({
@@ -54,7 +56,9 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       navItems={nav}
       currentPath={pathname}
       linkAs={RouterLink}
-      {...(onSignOut && me.user.email ? { user: { email: me.user.email, onSignOut } } : {})}
+      {...(onSignOut && me.user.email
+        ? { user: { email: me.user.email, name: me.user.displayName ?? undefined, onSignOut } }
+        : {})}
     >
       <Routes>
         <Route path="/" element={<HomeRoute />} />

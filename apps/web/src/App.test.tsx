@@ -53,8 +53,24 @@ describe('web app (Tenantry, ADR-0027)', () => {
     });
   });
 
-  it('has Home and Projects in its menu, and nothing that moved to Admin', () => {
+  it("shares one menu with Admin: an owner's Workspace pages open Admin (spec 8.1)", async () => {
     renderAt('/');
+    const menu = () => within(screen.getByRole('navigation', { name: 'Side navigation' }));
+    await waitFor(() => {
+      expect(menu().getByRole('link', { name: 'People' })).toHaveAttribute(
+        'href',
+        'http://acme.portal.tenantry.localhost/people',
+      );
+    });
+    expect(menu().getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(menu().getByText('Workspace')).toBeInTheDocument();
+  });
+
+  it('gives a member Home and Projects only', async () => {
+    renderAt('/', makeMe('member', MEMBER));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+    });
     const menu = within(screen.getByRole('navigation', { name: 'Side navigation' }));
     expect(menu.getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Projects']);
   });

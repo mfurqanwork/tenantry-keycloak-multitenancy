@@ -1,6 +1,14 @@
-import type { Permission } from '@tenantry/auth';
-import { appLinks, canSeeAdmin, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
+import {
+  appLinks,
+  canSeeAdmin,
+  RouterLink,
+  useBranding,
+  useMe,
+  useWorkspaces,
+  workspaceMenu,
+} from '@tenantry/app-kit';
 import { AppShell, type NavItem } from '@tenantry/ui';
+import type { ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
 import { AppDetailRoute } from './features/applications/AppDetailRoute.js';
@@ -14,31 +22,19 @@ import { ScimRoute } from './features/scim/ScimRoute.js';
 import { SecurityRoute } from './features/security/SecurityRoute.js';
 
 type Person = ReturnType<typeof useMe>;
-type Page = NavItem & { shown: (me: Person) => boolean };
-
-const can = (permission: Permission) => (me: Person) => me.can(permission);
 const enterpriseApps = (me: Person) => me.tenant.tier === 'enterprise' && me.can('apps:register');
 
-// Admin's menu, in order (ADR-0027). The API checks every call again; this only decides what is shown.
-const PAGES: Page[] = [
-  { label: 'People', href: '/people', shown: can('members:invite') },
-  { label: 'Branding', href: '/branding', shown: can('tenant:settings') },
-  { label: 'Sign-in & security', href: '/security', shown: can('tenant:settings') },
-  { label: 'Audit log', href: '/audit', shown: can('audit:read') },
-];
-const ADVANCED: Page[] = [
-  { label: 'Directory sync (SCIM)', href: '/advanced/scim', shown: can('tenant:settings') },
-  { label: 'Customer apps', href: '/advanced/apps', shown: enterpriseApps },
-];
-
-function menuFor(me: Person): NavItem[] {
-  const visible = (pages: Page[]): NavItem[] =>
-    pages.filter((p) => p.shown(me)).map(({ label, href }) => ({ label, href }));
-  const advanced = visible(ADVANCED);
-  if (me.consoleUrl) advanced.push({ label: 'Keycloak console', href: me.consoleUrl, external: true });
-  const menu = visible(PAGES);
-  if (advanced.length) menu.push({ label: 'Advanced', href: '#advanced', children: advanced });
-  return menu;
+// The first of Admin's own pages in the menu: where Admin opens.
+function firstHere(items: NavItem[]): string | undefined {
+  for (const item of items) {
+    const found = item.children
+      ? firstHere(item.children)
+      : !item.crossApp && !item.external
+        ? item.href
+        : undefined;
+    if (found) return found;
+  }
+  return undefined;
 }
 
 // An app address from before Phase 6a: /applications/<id> lives at /advanced/apps/<id> now.
@@ -48,19 +44,30 @@ function OldAppAddress() {
 }
 
 // The workspace's Admin, once signed in: people, settings and the advanced tools. Root supplies the theme.
-export function App({ onSignOut }: { onSignOut?: () => void }) {
+export function App({
+  onSignOut,
+  headerActions,
+}: {
+  onSignOut?: () => void;
+  // Search and notifications (spec 8.3, 8.4).
+  headerActions?: ReactNode;
+}) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
   const { branding, reload } = useBranding(me.tenant.slug);
   const admin = canSeeAdmin(me.can);
-  const nav = admin ? menuFor(me) : [];
-  const first = nav[0]?.children?.[0]?.href ?? nav[0]?.href;
+  // The same menu as Tenantry's (spec 8.1); a member, who has no Admin pages, gets none here.
+  const nav = admin ? workspaceMenu(me, workspaces, 'portal') : [];
+  const first = firstHere(nav);
   const settings = me.can('tenant:settings');
   const apps = enterpriseApps(me);
   return (
     <AppShell
       productName={me.tenant.name}
+      appName="Admin"
+      brandColor={branding?.primaryColor ?? null}
+      headerActions={headerActions}
       logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'portal', { admin })}
       workspaces={workspaces.map(({ slug, name, current, portalUrl }) => ({
@@ -72,7 +79,9 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       navItems={nav}
       currentPath={pathname}
       linkAs={RouterLink}
-      {...(onSignOut && me.user.email ? { user: { email: me.user.email, onSignOut } } : {})}
+      {...(onSignOut && me.user.email
+        ? { user: { email: me.user.email, name: me.user.displayName ?? undefined, onSignOut } }
+        : {})}
     >
       {!admin ? (
         <NotAllowedPage />
