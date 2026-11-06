@@ -13,3 +13,4 @@ export { tenants, type TenantBranding, type TenantStatus, type TenantTier } from
 export { users } from './users.js';
 export { tenantMigrations } from './tenant-migrations.js';
 export { tenantConsoleAccess } from './tenant-console-access.js';
+export { notificationReads } from './notification-reads.js';
