@@ -8,6 +8,7 @@ import {
   adminUrl,
   appLinks,
   canSeeAdmin,
+  NotificationsBell,
   RouterLink,
   useBranding,
   useMe,
@@ -38,7 +39,12 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       productName={me.tenant.name}
       appName="Tenantry"
       brandColor={branding?.primaryColor ?? null}
-      headerActions={<WorkspaceSearch pages={nav} />}
+      headerActions={
+        <>
+          <WorkspaceSearch pages={nav} />
+          <NotificationsBell workspaces={workspaces} />
+        </>
+      }
       logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'web', { admin: canSeeAdmin(me.can) })}
       workspaces={workspaces.map(({ slug, name, current, webUrl }) => ({

@@ -3,6 +3,12 @@ export { ApiProblem, ApiProvider, createApi, useApi, type Api } from './api.js';
 export { adminUrl, canSeeAdmin } from './admin.js';
 export { searchResults, type Hit, type SearchSources } from './search/search.js';
 export { WorkspaceSearch } from './search/WorkspaceSearch.js';
+export {
+  linkHref,
+  NotificationsBell,
+  timeAgo,
+  type NotificationItem,
+} from './notifications/NotificationsBell.js';
 export { workspaceMenu, type App as AppName, type MenuPerson } from './menu.js';
 export { ApiErrorNotification } from './ApiErrorNotification.js';
 export { useBranding, type Branding } from './branding.js';

@@ -359,3 +359,83 @@ body {
 .tenantry-search__none {
   margin-block-start: $spacing-05;
 }
+
+// The notifications bell and its panel (spec 8.4).
+.tenantry-bell {
+  position: relative;
+  display: inline-flex;
+}
+
+.tenantry-bell__count {
+  @include type.type-style('label-01');
+
+  position: absolute;
+  inset-block-start: calc(-1 * #{$spacing-02});
+  inset-inline-end: calc(-1 * #{$spacing-03});
+  min-inline-size: $spacing-05;
+  padding-inline: $spacing-01;
+  background: theme.$support-error;
+  color: theme.$text-on-color;
+  text-align: center;
+}
+
+.tenantry-notifications.cds--header-panel--expanded {
+  inline-size: calc(#{$spacing-13} * 2 + #{$spacing-09});
+}
+
+.tenantry-notifications__body {
+  padding: $spacing-05;
+}
+
+.tenantry-notifications__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: $spacing-04;
+}
+
+.tenantry-notifications__title {
+  @include type.type-style('heading-compact-02');
+}
+
+.tenantry-notifications__empty {
+  color: theme.$text-secondary;
+}
+
+.tenantry-notifications__item {
+  display: flex;
+  gap: $spacing-04;
+  padding: $spacing-04 $spacing-03;
+  color: theme.$text-primary;
+  text-decoration: none;
+}
+
+.tenantry-notifications__item:hover {
+  background: theme.$layer-hover-01;
+}
+
+li[data-unread='true'] > .tenantry-notifications__item {
+  border-inline-start: $spacing-01 solid theme.$border-interactive;
+}
+
+.tenantry-notifications__icon {
+  flex-shrink: 0;
+  fill: theme.$icon-secondary;
+}
+
+.tenantry-notifications__text {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.tenantry-notifications__item-title {
+  @include type.type-style('heading-compact-01');
+}
+
+.tenantry-notifications__item-body,
+.tenantry-notifications__time {
+  @include type.type-style('body-compact-01');
+
+  color: theme.$text-secondary;
+}
