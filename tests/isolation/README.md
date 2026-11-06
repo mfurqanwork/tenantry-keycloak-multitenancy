@@ -40,3 +40,6 @@ It needs the stack running (`pnpm dev:stack`; see [docs/SETUP.md](../../docs/SET
 | Console user edits, resets or deletes an owner                         | 403                                                              | 5b    | tested |
 | Console user grants console access, or opens clients or realm settings | 403                                                              | 5b    | tested |
 | Console user reads another realm                                       | Refused                                                          | 5b    | tested |
+| A person in two workspaces reads notifications in one                  | Only that workspace's events                                     | 6a    | tested |
+| A member reads notifications                                           | No team, workspace or security events                            | 6a    | tested |
+| Another workspace invites a person                                     | Only that verified address is told                               | 6a    | tested |

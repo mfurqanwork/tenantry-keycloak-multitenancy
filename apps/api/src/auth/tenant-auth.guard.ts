@@ -129,7 +129,14 @@ export class TenantAuthGuard implements CanActivate {
       email,
       displayName,
     });
-    return { userId, kcUserId: subject, email, displayName, issuer };
+    return {
+      userId,
+      kcUserId: subject,
+      email,
+      displayName,
+      issuer,
+      emailVerified: payload['email_verified'] === true,
+    };
   }
 
   // Keys are fetched from the internal address; the issuer string is only compared, never resolved.

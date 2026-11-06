@@ -8,6 +8,8 @@ export interface SignedInUser {
   email: string | null;
   displayName: string | null;
   issuer: string;
+  // The token's email_verified claim; only a verified email reads invites across workspaces (ADR-0028).
+  emailVerified?: boolean;
 }
 
 // What the guard attaches. Only the guard writes these fields.
