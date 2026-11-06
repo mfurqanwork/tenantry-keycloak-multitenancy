@@ -1,6 +1,6 @@
 # ADR-0027: Tenantry and Admin, two apps split by who they are for
 
-Status: Accepted · Date: 2026-11-08
+Status: Accepted · Date: 2026-11-08 · Updated: 2026-11-08 (one menu)
 
 ## Context
 
@@ -45,3 +45,7 @@ There was also a developer page in the main menu, and IT-admin features sat on t
 - Members no longer have a page that lists their teammates; the API still lets them read the list.
 - Bookmarks to the old addresses keep working through redirects.
 - The demo's single-sign-on step becomes "open Admin" from the checklist, which a new owner does in their first minute.
+
+## Update: one menu
+
+Both apps now show the same side menu (`workspaceMenu` in `@tenantry/app-kit`): Home and Projects, then a **Workspace** section with People, Branding, Sign-in & security and Audit log, then **Advanced**. Each item has an icon. Items that live in the other app link to its address; sign-in carries over (ADR-0020). Members see Home and Projects only. Both headers also carry search (Ctrl+K) and the notifications bell ([ADR-0028](0028-notifications.md)).

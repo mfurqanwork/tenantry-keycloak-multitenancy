@@ -8,6 +8,11 @@ Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and 
 
 ### Added (Phase 6a)
 
+- One menu for Tenantry and Admin, with icons and a Workspace section; Admin's pages open in Admin from Tenantry's menu.
+- Search in the header (Ctrl+K) across pages, people and projects, limited to what the person may see.
+- Notifications (ADR-0028): a bell with an unread count, read from the audit log by role, a 14-day warning for a directory sync token, and invites from other workspaces to a verified email. `GET /api/notifications`, `POST /api/notifications/read`, `notification_reads` and `open_invites_for_email` (migration 0006).
+- A redesigned look on Carbon: a workspace badge and initials avatar in the header, the theme choice in the account menu, page icons and descriptions, a greeting and setup card on Home, number tiles, search in every list, role tags, avatars and empty states.
+
 - A welcome page on the base domain, with no sign-in: Create a workspace (registration first), Go to your workspace, and demo workspaces from `VITE_DEMO_WORKSPACES`.
 - Home in Tenantry, with a getting-started checklist for owners and admins (create a project, invite a teammate, add your colour and logo) and the latest projects.
 - Tenantry's own brand: the T-of-tiles mark, the logo, favicons and a social-preview image (`packages/ui/assets/brand`, `docs/brand.md`, `pnpm brand:icons`). The header shows the mark when a workspace has no logo, and the login page shows the logo when no workspace applies.

@@ -13,6 +13,24 @@
 [![Node 22](https://img.shields.io/badge/Node-22-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
+<sub><b>Built with</b></sub><br>
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![React](https://img.shields.io/badge/React-087ea4?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
+[![IBM Carbon](https://img.shields.io/badge/IBM_Carbon-0f62fe?logo=ibm&logoColor=white)](https://carbondesignsystem.com/)
+[![Keycloak](https://img.shields.io/badge/Keycloak-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![Keycloakify](https://img.shields.io/badge/Keycloakify-1a1a1a)](https://www.keycloakify.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Drizzle](https://img.shields.io/badge/Drizzle-1a1a1a?logo=drizzle&logoColor=c5f74f)](https://orm.drizzle.team/)
+[![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Caddy](https://img.shields.io/badge/Caddy-1f88c0?logo=caddy&logoColor=white)](https://caddyserver.com/)
+[![Turborepo](https://img.shields.io/badge/Turborepo-ef4444?logo=turborepo&logoColor=white)](https://turborepo.com/)
+[![pnpm](https://img.shields.io/badge/pnpm-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Vitest](https://img.shields.io/badge/Vitest-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
+
 </div>
 
 ![The Tenantry welcome page](docs/images/welcome.png)
@@ -28,19 +46,51 @@ Doing that by hand on Keycloak means one realm per customer from day one (expens
 - **Standard** workspaces are organizations in one shared realm: cheap, instant, single sign-on across every workspace a person belongs to.
 - **Enterprise** workspaces get a realm of their own, built and upgraded from a versioned template, with their own security rules, apps and directory sync. A Standard workspace can move to Enterprise without anyone losing their account.
 
+```mermaid
+flowchart TB
+  people([People in many workspaces]) --> guard
+
+  subgraph kc[Keycloak]
+    direction LR
+    subgraph platform["platform realm: Standard"]
+      direction TB
+      acme["acme<br/>organization"]
+      globex["globex<br/>organization"]
+      more["…thousands more"]
+    end
+    subgraph enterprise["Enterprise: a realm each"]
+      direction TB
+      initech["ent-initech<br/>realm"]
+      umbrella["ent-umbrella<br/>realm"]
+    end
+  end
+
+  kc -- tokens --> guard
+  guard["One guard<br/>subdomain picks the workspace,<br/>the token must prove it"] --> api[One API]
+  api --> pg[("Postgres<br/>row-level security per workspace")]
+```
+
 The application code never needs to know which tier a workspace is on.
 
 ## Features
 
 ### Workspaces and teams
 
-Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. A getting-started checklist walks a new owner through the first minute.
+Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. Home greets you with a setup card that walks a new owner through the first minute, the workspace's numbers, and the latest projects.
 
-![Home with its getting-started checklist](docs/images/home-checklist.png)
+![Home with its setup card](docs/images/home.png)
+
+### Search and notifications
+
+Search pages, people and projects from the header, or press Ctrl+K. The bell tells you what changed: who joined, your role, security settings, a directory token about to expire, and invites from other workspaces. Each person sees only what their role allows.
+
+![Search across the workspace](docs/images/search.png)
+
+![Notifications](docs/images/notifications.png)
 
 ### One sign-in, two apps
 
-**Tenantry** is the product people use; **Admin** is where owners and admins manage the workspace. They live on separate addresses and share one sign-in, and signing out of one signs you out of both.
+**Tenantry** is the product people use; **Admin** is where owners and admins manage the workspace. They share one menu and one sign-in, live on separate addresses, and signing out of one signs you out of both.
 
 ![Admin › People](docs/images/admin-people.png)
 
@@ -76,7 +126,7 @@ Every promise is an automated test that runs in CI against real Keycloak and Pos
 | A token issued to a customer's app, used on Tenantry's API | 401                                               |
 | A console user tries to change an owner                    | 403                                               |
 
-All 30 guarantees are in [tests/isolation](tests/isolation/README.md).
+All 33 guarantees are in [tests/isolation](tests/isolation/README.md).
 
 ## Architecture
 
@@ -98,24 +148,6 @@ flowchart LR
 ```
 
 The subdomain picks the workspace and the token must prove it. One guard turns every token, from either tier, into the same tenant context. Postgres row-level security is the second layer, so one missing filter cannot leak data. The [decision records](docs/decisions/README.md) explain each choice.
-
-## Built with
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![NestJS](https://img.shields.io/badge/NestJS-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![React](https://img.shields.io/badge/React-087ea4?logo=react&logoColor=white)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
-[![IBM Carbon](https://img.shields.io/badge/IBM_Carbon-0f62fe?logo=ibm&logoColor=white)](https://carbondesignsystem.com/)
-[![Keycloak](https://img.shields.io/badge/Keycloak-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
-[![Keycloakify](https://img.shields.io/badge/Keycloakify-1a1a1a)](https://www.keycloakify.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Drizzle](https://img.shields.io/badge/Drizzle-1a1a1a?logo=drizzle&logoColor=c5f74f)](https://orm.drizzle.team/)
-[![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Caddy](https://img.shields.io/badge/Caddy-1f88c0?logo=caddy&logoColor=white)](https://caddyserver.com/)
-[![Turborepo](https://img.shields.io/badge/Turborepo-ef4444?logo=turborepo&logoColor=white)](https://turborepo.com/)
-[![pnpm](https://img.shields.io/badge/pnpm-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
-[![Vitest](https://img.shields.io/badge/Vitest-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
 ## Try it in five minutes
 
