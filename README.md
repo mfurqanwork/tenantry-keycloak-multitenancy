@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="packages/ui/assets/brand/tenantry-logo-dark.svg">
-  <img src="packages/ui/assets/brand/tenantry-logo.svg" alt="Tenantry" width="336">
-</picture>
+<img src="packages/ui/assets/brand/tenantry-logo-card.svg" alt="Tenantry" width="336">
 
 **Multi-tenant sign-in, teams and branding for SaaS, built on Keycloak.**
 

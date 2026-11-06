@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 64" width="216" height="64" role="img" aria-labelledby="t">
+  <title id="t">Tenantry</title>
+  <rect width="216" height="64" rx="8" fill="#161616"/>
+  <g transform="translate(24 16)">
+    <rect x="11.5" y="0.5" width="9" height="9" fill="#0f62fe"/>
+    <g fill="#ffffff">
+      <rect x="0.5" y="0.5" width="9" height="9"/>
+      <rect x="22.5" y="0.5" width="9" height="9"/>
+      <rect x="11.5" y="11.5" width="9" height="9"/>
+      <rect x="11.5" y="22.5" width="9" height="9"/>
+      <text x="42" y="24.5" font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.2">Tenantry</text>
+    </g>
+  </g>
+</svg>

@@ -30,12 +30,13 @@ The word "Tenantry" is set in IBM Plex Sans, semibold (600). Where Plex isn't in
 
 In `packages/ui/assets/brand/`:
 
-| File                                                     | What                                                                    |
-| -------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `tenantry-mark.svg`, `tenantry-mark-dark.svg`            | the mark alone, for light and dark backgrounds (the app header is dark) |
-| `tenantry-logo.svg`, `tenantry-logo-dark.svg`            | mark and word, for light and dark backgrounds                           |
-| `favicon.svg`                                            | the mark, following the browser's light or dark scheme                  |
-| `favicon-32.png`, `apple-touch-icon.png`, `icon-512.png` | rendered icons                                                          |
-| `social-preview.png`                                     | 1280×640, for the GitHub repository's social preview                    |
+| File                                                     | What                                                                     |
+| -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `tenantry-mark.svg`, `tenantry-mark-dark.svg`            | the mark alone, for light and dark backgrounds (the app header is dark)  |
+| `tenantry-logo.svg`, `tenantry-logo-dark.svg`            | mark and word, for light and dark backgrounds                            |
+| `tenantry-logo-card.svg`                                 | the dark logo on its own black card; the README's, readable in any theme |
+| `favicon.svg`                                            | the mark, following the browser's light or dark scheme                   |
+| `favicon-32.png`, `apple-touch-icon.png`, `icon-512.png` | rendered icons                                                           |
+| `social-preview.png`                                     | 1280×640, for the GitHub repository's social preview                     |
 
 The SVGs are written by hand. After changing one, run `pnpm brand:icons` to render the PNGs again, and commit them.
