@@ -379,3 +379,202 @@ Needs the user to sign in in the browser pane as `ada@example.test` (owner) and 
   - `pnpm test:isolation`.
 
   Commit `docs: screenshots for the README`.
+
+---
+
+## Part 2: redesign, one menu, search and notifications (spec §8)
+
+Added after the first signed-in walkthrough. Global Constraints above still apply; these add to them:
+
+- **Icons:** `@carbon/icons-react` only, at 16 in the menu and 20 in page headers. Menu icons: Home `Home`, Projects `Folder`, People `UserMultiple`, Branding `ColorPalette`, Sign-in & security `Security`, Audit log `RecentlyViewed`, Advanced `Settings`, Directory sync `DataShare`, Customer apps `Application`, Keycloak console `Launch`.
+- **Notifications:** rules exactly as the spec §8.4 table; 30 items, 30 days, 14-day token warning, 60-second refresh while visible.
+- **New tenant table** `notification_reads (tenant_id, user_id, read_until)` with forced RLS; the `security definer` function `open_invites_for_email(text)` is the only cross-workspace read added (ADR-0028).
+
+### Review Focus (Part 2)
+
+1. **A member's notifications** never include team, workspace or security events, even when the member is the target of one (for example `member.removed` of someone else).
+2. **Another workspace's events** never appear, even when the same person belongs to both workspaces.
+3. **An unverified email** never sees another workspace's invite, and a revoked or accepted invite never shows.
+4. **Search for a member** never lists Admin pages, and an item from the other app opens the other app's address, not a router path that 404s.
+5. **The menu on a medium screen** collapses to icons and nothing overlaps the page (the bug from the first walkthrough).
+
+### Task 12: Shared UI pieces and the redesigned shell
+
+**Files:**
+
+- Create in `packages/ui/src/patterns/`: `EmptyState.tsx`, `SetupCard.tsx`, `Avatar.tsx`, with tests.
+- Modify: `tiles.tsx` (`StatTile` takes `icon?: CarbonIconType`), `PageHeader.tsx` and every pattern (`icon?: CarbonIconType`), `shell/AppShell.tsx`, `styles/index.scss`, `index.ts`.
+- Test: `shell/AppShell.test.tsx`, `patterns/patterns.test.tsx`.
+
+**Interfaces (produces):**
+
+```ts
+export interface NavItem {
+  label: string;
+  href: string;
+  icon?: CarbonIconType;
+  external?: boolean;
+  children?: NavItem[];
+  section?: string;
+}
+export function EmptyState(p: {
+  icon: CarbonIconType;
+  title: string;
+  body: string;
+  action?: ReactNode;
+}): JSX.Element;
+export function SetupCard(p: {
+  title: string;
+  steps: { label: string; done: boolean; content: ReactNode }[];
+  onHide?: () => void;
+}): JSX.Element | null;
+export function Avatar(p: { name: string; size?: 'sm' | 'md' }): JSX.Element; // initials of the first two words, or the first two letters
+// AppShell gains: appName?: string ("Tenantry" | "Admin"), brandColor?: string | null, headerActions?: ReactNode (search, bell), userName?: string
+```
+
+- [ ] **Step 1: Failing tests:**
+  - `EmptyState` renders its icon (aria-hidden), heading level 2, body and action;
+  - `SetupCard` shows "2 of 3 done" and a progress bar at 67 %, renders nothing when every step is done, and calls `onHide`;
+  - `Avatar('Ada Acme')` shows "AA" and `Avatar('ada@example.test')` shows "AD";
+  - `PageHeader` with an icon puts it before the title, aria-hidden;
+  - `AppShell`:
+    - the header badge shows the workspace logo, or the workspace's first letter on `brandColor`, then the workspace name and `appName`;
+    - `headerActions` render in the global bar before the switchers;
+    - the account button shows the initials;
+    - nav items render their icons, and items with the same `section` sit under one heading.
+- [ ] **Step 2:** `pnpm --filter @tenantry/ui test` → FAIL.
+- [ ] **Step 3: Implement** with Carbon `Tile`, `ProgressBar`, `Tag`, `SideNavDivider` and a section label. The side nav uses `isRail` below `lg` (icons, expands on hover); the `lg` offset rule from the first walkthrough stays.
+- [ ] **Step 4:** test, lint and build ui → PASS. Commit `feat(ui): empty states, setup card, avatars, icons and a redesigned shell`.
+
+### Task 13: One menu for both apps
+
+**Files:** Create `packages/app-kit/src/menu.ts` and its test. Modify `apps/web/src/App.tsx` and `apps/portal/src/App.tsx` to use it; delete their own page lists.
+
+**Interfaces:** `export function workspaceMenu(me: Person, workspaces: Workspace[], app: 'web' | 'portal'): NavItem[]`. Items in this app get the path; items in the other app get `adminUrl`/`webUrl` + path as a full URL (no `external`: same tab).
+
+- [ ] **Step 1: Failing tests:**
+  - an owner on Enterprise gets Home, Projects, a Workspace section (People, Branding, Sign-in & security, Audit log) and Advanced (Directory sync, Customer apps, and Keycloak console when `consoleUrl` is set), each with the constraint's icon;
+  - from `web`, People's href is `http://acme.portal.tenantry.localhost/people`; from `portal`, Home's href is `http://acme.tenantry.localhost/` (Review Focus 4);
+  - an admin of a Standard workspace gets Home, Projects, People and Audit log;
+  - a member gets Home and Projects;
+  - with workspaces not loaded yet, other-app items are left out rather than given a bad link.
+- [ ] **Step 2–4:** RED, implement, GREEN. The existing web and portal App tests keep passing, with the menu assertions moved to the new names. Commit `feat(app-kit): one menu for Tenantry and Admin`.
+
+### Task 14: Search
+
+**Files:** Create `packages/app-kit/src/search/SearchDialog.tsx`, `search.ts` (pure matching) and tests. Wire it into both apps' `headerActions`.
+
+**Interfaces:** `export function searchResults(q: string, sources: { pages: NavItem[]; people: { userId; email; displayName }[]; projects: { id; name }[] }): { pages: Hit[]; people: Hit[]; projects: Hit[] }`, where a `Hit` is `{ label, detail?, href }`, case-insensitive substring matching on label, detail and email, and at most 5 per group.
+
+- [ ] **Step 1: Failing tests:**
+  - `searchResults('ad', …)` finds Ada by name and Admin pages by label;
+  - an empty query returns no hits;
+  - a group never holds more than 5;
+  - the dialog opens on Ctrl+K and on the header button, Esc closes it, Enter opens the first hit, and the arrow keys move between hits;
+  - a member's dialog has no Admin pages (Review Focus 4);
+  - people come from `/api/members` only for `members:read`, and projects from `/api/projects` only for `projects:read`.
+- [ ] **Step 2–4:** RED, implement (Carbon `ComposedModal`, `Search`), GREEN. Commit `feat: search across pages, people and projects`.
+
+### Task 15: Notifications in the database
+
+**Files:**
+
+- Create: migration `packages/db/migrations/0006_phase6a.sql`, schema `notification-reads.ts`, repository `repositories/notifications.ts`, and `test-integration/phase6a.itest.ts`.
+- Modify: schema index, exports.
+
+**Interfaces:**
+
+- `getReadUntil(tx, userId): Promise<Date | null>` and `markRead(tx, userId, at: Date): Promise<void>` (upsert).
+- `listAuditSince(tx, since: Date, actions: string[], limit: number): Promise<AuditEntry[]>`.
+- `openInvitesForEmail(db, email: string): Promise<{ slug: string; name: string; role: Role }[]>`, which calls the SQL function.
+
+- [ ] **Step 1: Failing itests:**
+  - `notification_reads` rows are invisible across tenants (RLS forced, the app role is not the owner);
+  - `markRead` twice keeps the later time;
+  - `open_invites_for_email('Dora@x.test')`:
+    - finds an open invite to `dora@x.test` in workspace B;
+    - leaves out revoked and accepted invites, and workspaces that aren't active;
+    - returns nothing for `other@x.test`;
+  - the function returns only slug, name and role (no ids or emails).
+- [ ] **Step 2–4:** RED, write the migration (table, RLS policy, `security definer` function with `set search_path = public`, `revoke all … from public`, `grant execute … to tenantry_app`), GREEN against the stack. Commit `feat(db): notification reads and open invites by email`.
+
+### Task 16: Notifications API
+
+**Files:**
+
+- Create: `apps/api/src/modules/notifications/` (module, controller, service, rules, tests, itest).
+- Modify: `app.module.ts`, `tests/isolation/src/phase6a.test.ts` (new), and the guarantees table in `tests/isolation/README.md`.
+
+**Interfaces:** `GET /api/notifications` → `{ items: Notification[]; unread: number }`; `POST /api/notifications/read` → 204. Both are for any signed-in member of the workspace. `Notification = { id; kind: 'you' | 'team' | 'workspace' | 'security' | 'expiring' | 'invite'; title; body; href; createdAt; unread }`.
+
+- [ ] **Step 1: Failing tests:**
+  - **rules (unit):** each audit action in spec §8.4 maps to its kind and audience;
+    - your own actions are left out;
+    - a member gets only "you" items, including `member.role_changed` about them, and never `member.removed` about someone else (Review Focus 1);
+    - titles read like "Ben joined Acme" and "Your role is now Admin";
+  - **itest:** an owner sees team, workspace and security items;
+    - an admin sees no security items;
+    - a token expiring in 10 days gives one "expiring" item, and one in 20 days none;
+    - mark-read zeroes `unread`, and a newer event counts again;
+    - with `email_verified: false`, no invite items appear;
+  - **isolation (Review Focus 2 and 3):** a person in workspaces A and B sees only A's events on A's address; another workspace's invite shows only to its verified address.
+- [ ] **Step 2–4:** RED, implement, GREEN. Commit `feat(api): notifications from the audit log`.
+
+### Task 17: The bell
+
+**Files:** Create `packages/app-kit/src/notifications/NotificationsBell.tsx` and its test; wire it into both apps' `headerActions`.
+
+- [ ] **Step 1: Failing tests:**
+  - the badge shows the unread count, with none at 0;
+  - opening it lists items with their kind icon, title, body and relative time ("5 min ago");
+  - "Mark all as read" posts and clears the badge;
+  - an item links to its `href`;
+  - it refreshes every 60 s, using fake timers, and not while `document.hidden`;
+  - an API error shows inline and keeps the bell working.
+- [ ] **Step 2–4:** RED, implement (Carbon `HeaderGlobalAction`, `HeaderPanel`, the `Notification` icon), GREEN. Commit `feat: the notifications bell`.
+
+### Task 18: Redesign the pages
+
+**Files:** every page in `apps/web/src/features/` and `apps/portal/src/features/`, and their tests.
+
+- [ ] **Step 1: Failing tests, per page:**
+  - **Home:**
+    - the greeting by time of day with the first name;
+    - the `SetupCard` with "N of 3 done";
+    - stat tiles (People, Projects and Open invites for owners and admins; Projects only for members);
+    - recent projects, or `EmptyState` "Start your first project".
+  - **People, Projects, Audit log, Customer apps:**
+    - a toolbar search filters the rows;
+    - people show an `Avatar` and a role `Tag`;
+    - the empty state is an `EmptyState`.
+  - **Every page:** its page header has its icon and a description.
+- [ ] **Step 2–4:** RED, implement page by page, GREEN. Run `ui-consistency:verifying` against the updated checklist (Task 1's file, extended with the new shared pieces). Commit per app: `feat(web): redesigned pages`, `feat(portal): redesigned pages`.
+
+### Task 19: Login pages
+
+**Files:** `apps/login-theme/src/login/` styles and `Template.tsx`; test `KcPage.test.tsx`.
+
+- [ ] **Step 1: Failing test:** the "Or sign in with" heading is the same element and size as the page's other section headings (an `h2` with the shared class), and the provider buttons sit in a list.
+- [ ] **Step 2–4:** RED, implement, GREEN. Commit `fix(login-theme): tidy spacing and the sign-in-with heading`.
+
+### Task 20: README and records
+
+**Files:**
+
+- Modify: `README.md` (Built with under the badges; the two-tier Mermaid diagram in The problem; new screenshots), `docs/decisions/0027-tenantry-and-admin.md` (update: one menu), CHANGELOG, `docs/known-issues.md`.
+- Create: `docs/decisions/0028-notifications.md` and its row in the ADR index.
+
+- [ ] **Step 1:** ADR-0028:
+  - notifications from the audit log at read time, the audiences, `notification_reads`;
+  - the one `security definer` function and why (an invite lives in another workspace's rows; only the verified email reads it; it returns only slug, name and role);
+  - alternatives (a notifications table written on every action; Keycloak organization invitations).
+- [ ] **Step 2:** README changes per spec §8.5. `scripts/lib/readme-links.test.mjs` keeps passing.
+- [ ] **Step 3:** Commit `docs: one menu, notifications, and a clearer README`.
+
+### Task 21: Walkthrough, screenshots, final gate
+
+Needs a signed-in session in the browser pane (owner `ada@example.test`, member `cy@example.test`).
+
+- [ ] **Step 1:** Rebuild the stack and seed. Walk through: welcome → acme → Home → search → bell → People (Admin, same menu) → Branding → Advanced; then as the member. Check light and dark themes, 1280 and 768 px wide.
+- [ ] **Step 2:** Screenshots at 1280 px in the light theme into `docs/images/`: `welcome.png`, `home.png`, `admin-people.png`, `search.png`, `notifications.png`, `login-branded.png`. Remove the README-links exception.
+- [ ] **Step 3:** The full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build`, smoke, seed twice, `pnpm test:isolation`. Then the final review (self-review, as the user asked for no subagents) and the deferred-minors list.
