@@ -1,3 +1,4 @@
+import type { CarbonIconType } from '@carbon/icons-react';
 import { Button, ProgressIndicator, ProgressStep } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { PageHeader, type Crumb } from './PageHeader.js';
@@ -5,6 +6,8 @@ import { PageHeader, type Crumb } from './PageHeader.js';
 interface WizardPageProps {
   breadcrumbs?: Crumb[];
   title: string;
+  icon?: CarbonIconType;
+  description?: ReactNode;
   actions?: ReactNode;
   steps: string[];
   currentStep: number;
@@ -19,6 +22,8 @@ interface WizardPageProps {
 export function WizardPage({
   breadcrumbs,
   title,
+  icon,
+  description,
   actions,
   steps,
   currentStep,
@@ -30,7 +35,13 @@ export function WizardPage({
 }: WizardPageProps) {
   return (
     <div className="tenantry-page">
-      <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
+      <PageHeader
+        breadcrumbs={breadcrumbs}
+        title={title}
+        icon={icon}
+        description={description}
+        actions={actions}
+      />
       {/* One step is a plain form: no progress to show. */}
       {steps.length > 1 && (
         <div className="tenantry-wizard__progress">

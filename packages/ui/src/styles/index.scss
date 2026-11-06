@@ -145,3 +145,168 @@ body {
   block-size: $spacing-07;
   margin-inline-end: $spacing-03;
 }
+
+// --- Phase 6a redesign (spec 8.2) ---
+
+// The workspace in the header: its logo, or its first letter on its colour, then its name and the app.
+.tenantry-header__badge {
+  @include type.type-style('heading-compact-01');
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: $spacing-07;
+  block-size: $spacing-07;
+  margin-inline-end: $spacing-03;
+  color: theme.$text-on-color;
+}
+
+.tenantry-header__name {
+  @include type.type-style('heading-compact-01');
+}
+
+.tenantry-header__app {
+  @include type.type-style('body-compact-01');
+
+  margin-inline-start: $spacing-03;
+  color: theme.$text-secondary;
+}
+
+// A person's initials on a neutral circle (the account button, the people list).
+.tenantry-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  background: theme.$layer-accent-01;
+  color: theme.$text-primary;
+  clip-path: circle(50%);
+}
+
+.tenantry-avatar--sm {
+  @include type.type-style('label-01');
+
+  inline-size: $spacing-07;
+  block-size: $spacing-07;
+}
+
+.tenantry-avatar--md {
+  @include type.type-style('heading-compact-01');
+
+  inline-size: $spacing-08;
+  block-size: $spacing-08;
+}
+
+.tenantry-account__who {
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+}
+
+.tenantry-account__name {
+  @include type.type-style('heading-compact-01');
+}
+
+// A heading over a group of menu items ("Workspace").
+.tenantry-nav__section {
+  @include type.type-style('label-01');
+
+  padding: $spacing-03 $spacing-05;
+  color: theme.$text-secondary;
+}
+
+.tenantry-page-header__title {
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+}
+
+.tenantry-page-header__icon {
+  flex-shrink: 0;
+  fill: theme.$icon-secondary;
+}
+
+.tenantry-stat__icon {
+  margin-block-end: $spacing-03;
+  fill: theme.$icon-secondary;
+}
+
+// An empty list as an invitation.
+.tenantry-empty {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+  align-items: center;
+  padding: $spacing-09 $spacing-05;
+  background: theme.$layer-01;
+  text-align: center;
+}
+
+.tenantry-empty__icon {
+  fill: theme.$icon-secondary;
+}
+
+.tenantry-empty__title {
+  @include type.type-style('heading-compact-02');
+}
+
+.tenantry-empty__body {
+  @include type.type-style('body-01');
+
+  max-inline-size: 40ch;
+  color: theme.$text-secondary;
+}
+
+.tenantry-empty__action {
+  margin-block-start: $spacing-04;
+}
+
+// First steps with their progress.
+.tenantry-setup__header {
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+  margin-block-end: $spacing-04;
+}
+
+.tenantry-setup__icon {
+  fill: theme.$interactive;
+}
+
+.tenantry-setup__title {
+  @include type.type-style('heading-compact-02');
+}
+
+.tenantry-setup__count {
+  @include type.type-style('body-compact-01');
+
+  margin-inline-start: auto;
+  color: theme.$text-secondary;
+}
+
+.tenantry-setup__steps {
+  display: grid;
+  gap: $spacing-04;
+  grid-template-columns: repeat(auto-fit, minmax(calc(#{$spacing-13} + #{$spacing-10}), 1fr));
+  margin-block-start: $spacing-05;
+}
+
+.tenantry-setup__step {
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle-01;
+}
+
+.tenantry-setup__step[data-done='false'] {
+  border-color: theme.$border-interactive;
+}
+
+.tenantry-setup__done {
+  display: flex;
+  gap: $spacing-03;
+  align-items: center;
+  color: theme.$text-secondary;
+}
+
+.tenantry-setup__check {
+  fill: theme.$support-success;
+}

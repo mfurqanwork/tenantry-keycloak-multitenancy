@@ -1,3 +1,4 @@
+import type { CarbonIconType } from '@carbon/icons-react';
 import { Button, InlineLoading } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { PageHeader, type Crumb } from './PageHeader.js';
@@ -5,6 +6,8 @@ import { PageHeader, type Crumb } from './PageHeader.js';
 interface SettingsPageProps {
   breadcrumbs?: Crumb[];
   title: string;
+  icon?: CarbonIconType;
+  description?: ReactNode;
   children: ReactNode;
   dirty: boolean;
   saving: boolean;
@@ -16,6 +19,8 @@ interface SettingsPageProps {
 export function SettingsPage({
   breadcrumbs,
   title,
+  icon,
+  description,
   children,
   dirty,
   saving,
@@ -24,7 +29,7 @@ export function SettingsPage({
 }: SettingsPageProps) {
   return (
     <div className="tenantry-page">
-      <PageHeader breadcrumbs={breadcrumbs} title={title} />
+      <PageHeader breadcrumbs={breadcrumbs} title={title} icon={icon} description={description} />
       <div className="tenantry-page__body">{children}</div>
       <div className="tenantry-save-bar">
         <Button kind="secondary" disabled={!dirty || saving} onClick={onDiscard}>
