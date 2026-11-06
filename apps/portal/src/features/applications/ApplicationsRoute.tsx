@@ -13,9 +13,9 @@ import {
   TableRow,
   Tile,
 } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
+import { Add, Application } from '@carbon/icons-react';
 import { ApiErrorNotification, RouterLink, useMe, useResource } from '@tenantry/app-kit';
-import { ListPage } from '@tenantry/ui';
+import { EmptyState, ListPage } from '@tenantry/ui';
 import { TYPE_LABELS, type AppView } from './api.js';
 
 const HEADERS = [
@@ -32,6 +32,8 @@ export function ApplicationsRoute() {
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="Customer apps"
+        icon={Application}
+        description="Your own apps that sign people in through this workspace."
         isEmpty
         emptyState={<Tile>Applications are available on Enterprise workspaces.</Tile>}
       >
@@ -51,6 +53,8 @@ function EnterpriseApplications() {
     <ListPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Customer apps"
+      icon={Application}
+      description="Your own apps that sign people in through this workspace."
       primaryAction={
         registers ? (
           <Button as={RouterLink} href="/advanced/apps/new" renderIcon={Add}>
@@ -60,7 +64,15 @@ function EnterpriseApplications() {
       }
       isEmpty={list.data !== undefined && apps.length === 0}
       emptyState={
-        <Tile>{registers ? 'No apps yet. Register one to connect it to your sign-in.' : 'No apps yet.'}</Tile>
+        <EmptyState
+          icon={Application}
+          title="Connect your first app"
+          body={
+            registers
+              ? 'Register one to connect it to your sign-in.'
+              : 'Owners and admins register apps here.'
+          }
+        />
       }
     >
       <Stack gap={6}>

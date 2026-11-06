@@ -45,7 +45,7 @@ describe('the getting-started checklist', () => {
 
   it('renders nothing once every step is done', () => {
     show({ done: { project: true, invite: true, brand: true } });
-    expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
   });
 
   it('creates a project from its name', async () => {
@@ -58,14 +58,14 @@ describe('the getting-started checklist', () => {
   it('Hide puts it away and remembers that in this browser', async () => {
     show();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hide' }));
-    expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
     expect(localStorage.getItem(KEY)).toBe('1');
   });
 
   it('stays hidden on the next visit', () => {
     localStorage.setItem(KEY, '1');
     show();
-    expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
   });
 
   it('still works when storage is blocked', async () => {
@@ -76,8 +76,8 @@ describe('the getting-started checklist', () => {
       throw new Error('blocked');
     });
     show();
-    expect(screen.getByRole('region', { name: 'Get started' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Finish setting up' })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hide' }));
-    expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
   });
 });

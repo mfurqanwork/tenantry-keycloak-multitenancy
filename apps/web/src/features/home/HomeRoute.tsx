@@ -1,4 +1,5 @@
 import {
+  Button,
   Link,
   Stack,
   StructuredListBody,
@@ -7,6 +8,7 @@ import {
   StructuredListWrapper,
   Tile,
 } from '@carbon/react';
+import { ArrowRight, Email, Folder, FolderOpen, UserMultiple } from '@carbon/icons-react';
 import {
   adminUrl,
   ApiErrorNotification,
@@ -17,7 +19,7 @@ import {
   useResource,
   useWorkspaces,
 } from '@tenantry/app-kit';
-import { DashboardPage } from '@tenantry/ui';
+import { DashboardPage, EmptyState, StatTile } from '@tenantry/ui';
 import { Checklist } from './Checklist.js';
 
 interface Project {
@@ -28,7 +30,15 @@ interface Project {
 
 const RECENT = 5;
 
-// Tenantry's front page: the getting-started checklist for owners and admins, then the latest projects.
+// "Good morning" before noon, "Good afternoon" before six, "Good evening" after, by the browser's clock.
+function greeting(firstName: string | null, at = new Date()): string {
+  const hour = at.getHours();
+  const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  return firstName ? `Good ${part}, ${firstName}` : `Good ${part}`;
+}
+
+// Tenantry's front page (spec 8.2): a greeting, the setup card for owners and admins, the numbers, and the
+// latest projects.
 export function HomeRoute() {
   const me = useMe();
   const api = useApi();
@@ -39,53 +49,84 @@ export function HomeRoute() {
   const { branding } = useBranding(me.tenant.slug);
   const list = projects.data?.projects ?? [];
   const recent = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, RECENT);
+  const firstName = me.user.displayName?.trim().split(/\s+/)[0] ?? null;
 
-  const checklist =
-    guides && projects.data && members.data ? (
-      <Checklist
-        key="checklist"
-        done={{
-          project: list.length > 0,
-          invite: members.data.members.length > 1 || members.data.invites.length > 0,
-          brand: Boolean(branding?.primaryColor ?? branding?.logoUrl),
-        }}
-        inviteUrl={adminUrl(workspaces, '/people?invite=1')}
-        brandingUrl={adminUrl(workspaces, '/branding')}
-        onCreateProject={async (name) => {
-          await api.post('/api/projects', { name });
-          projects.reload();
-        }}
-      />
-    ) : null;
+  const tiles = [
+    ...(guides && members.data
+      ? [
+          <StatTile key="people" icon={UserMultiple} label="People" value={members.data.members.length} />,
+          <StatTile key="invites" icon={Email} label="Open invites" value={members.data.invites.length} />,
+        ]
+      : []),
+    ...(projects.data
+      ? [<StatTile key="projects" icon={Folder} label="Projects" value={list.length} />]
+      : []),
+  ];
 
   return (
     <DashboardPage
-      title="Home"
+      title={greeting(firstName)}
+      description={`Here's what's happening in ${me.tenant.name}.`}
       tiles={[]}
       activity={
-        <Stack gap={6}>
+        <Stack gap={7}>
           <ApiErrorNotification error={projects.error ?? members.error} />
-          {checklist}
+          {guides && projects.data && members.data && (
+            <Checklist
+              done={{
+                project: list.length > 0,
+                invite: members.data.members.length > 1 || members.data.invites.length > 0,
+                brand: Boolean(branding?.primaryColor ?? branding?.logoUrl),
+              }}
+              inviteUrl={adminUrl(workspaces, '/people?invite=1')}
+              brandingUrl={adminUrl(workspaces, '/branding')}
+              onCreateProject={async (name) => {
+                await api.post('/api/projects', { name });
+                projects.reload();
+              }}
+            />
+          )}
+          {tiles.length > 0 && <div className="tenantry-home__stats">{tiles}</div>}
           <section aria-label="Recent projects">
-            <Stack gap={4}>
-              <h2 className="tenantry-home__heading">Recent projects</h2>
-              {projects.data && recent.length === 0 && <Tile>No projects yet.</Tile>}
+            <Tile>
+              <div className="tenantry-home__section-header">
+                <h2 className="tenantry-home__heading">Recent projects</h2>
+                <Link as={RouterLink} href="/projects" renderIcon={ArrowRight}>
+                  All projects
+                </Link>
+              </div>
+              {projects.data && recent.length === 0 && (
+                <EmptyState
+                  icon={FolderOpen}
+                  title="Start your first project"
+                  body="Projects keep your team's work in one place."
+                  action={
+                    me.can('projects:write') ? (
+                      <Button as={RouterLink} href="/projects" kind="tertiary" size="sm">
+                        Go to Projects
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              )}
               {recent.length > 0 && (
                 <StructuredListWrapper aria-label="Recent projects">
                   <StructuredListBody>
                     {recent.map((p) => (
                       <StructuredListRow key={p.id}>
-                        <StructuredListCell>{p.name}</StructuredListCell>
+                        <StructuredListCell>
+                          <span className="tenantry-home__project">
+                            <Folder size={16} aria-hidden="true" />
+                            {p.name}
+                          </span>
+                        </StructuredListCell>
                         <StructuredListCell>{new Date(p.createdAt).toLocaleDateString()}</StructuredListCell>
                       </StructuredListRow>
                     ))}
                   </StructuredListBody>
                 </StructuredListWrapper>
               )}
-              <Link as={RouterLink} href="/projects">
-                All projects
-              </Link>
-            </Stack>
+            </Tile>
           </section>
         </Stack>
       }

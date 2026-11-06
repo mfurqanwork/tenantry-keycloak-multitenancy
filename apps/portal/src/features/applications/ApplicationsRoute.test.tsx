@@ -37,9 +37,7 @@ describe('ApplicationsRoute', () => {
       me: ADMIN,
       path: '/advanced/apps',
     });
-    expect(
-      await screen.findByText('No apps yet. Register one to connect it to your sign-in.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Register one to connect it to your sign-in.')).toBeInTheDocument();
   });
 
   it('shows members the list without the register action', async () => {
@@ -48,7 +46,7 @@ describe('ApplicationsRoute', () => {
       me: MEMBER,
       path: '/advanced/apps',
     });
-    expect(await screen.findByText('No apps yet.')).toBeInTheDocument();
+    expect(await screen.findByText('Owners and admins register apps here.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Register an app' })).not.toBeInTheDocument();
   });
 

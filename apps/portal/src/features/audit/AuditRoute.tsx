@@ -1,3 +1,4 @@
+import { RecentlyViewed } from '@carbon/icons-react';
 import {
   Button,
   DataTable,
@@ -11,9 +12,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Tile,
+  TableToolbar,
+  TableToolbarContent,
+  TableToolbarSearch,
 } from '@carbon/react';
-import { ListPage } from '@tenantry/ui';
+import { EmptyState, ListPage } from '@tenantry/ui';
+import { useSearchParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
 
@@ -44,13 +48,20 @@ export function AuditRoute() {
   const [more, setMore] = useState<AuditPage[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
+  // Search results open this page filtered (?q=); the box filters what is loaded.
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
 
   useEffect(() => {
     setMore([]);
   }, [first.data]);
 
   const pages = first.data ? [first.data, ...more] : [];
-  const entries = pages.flatMap((p) => p.entries);
+  const all = pages.flatMap((p) => p.entries);
+  const q = query.trim().toLowerCase();
+  const entries = all.filter(
+    (e) => !q || [e.action, e.actor.email, e.targetLabel, e.target].some((v) => v?.toLowerCase().includes(q)),
+  );
   const next = pages.at(-1)?.nextBefore ?? null;
 
   async function loadMore(before: string) {
@@ -70,8 +81,16 @@ export function AuditRoute() {
     <ListPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Audit log"
-      isEmpty={first.data !== undefined && entries.length === 0}
-      emptyState={<Tile>Nothing has happened in this workspace yet.</Tile>}
+      icon={RecentlyViewed}
+      description="Every change to people, sign-in and settings, newest first."
+      isEmpty={first.data !== undefined && all.length === 0}
+      emptyState={
+        <EmptyState
+          icon={RecentlyViewed}
+          title="Nothing has happened yet"
+          body="Changes to people, sign-in and settings show up here as they happen."
+        />
+      }
     >
       <Stack gap={6}>
         <ApiErrorNotification error={first.error ?? error} />
@@ -89,6 +108,20 @@ export function AuditRoute() {
           >
             {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
               <TableContainer>
+                <TableToolbar aria-label="Audit log toolbar">
+                  <TableToolbarContent>
+                    <TableToolbarSearch
+                      persistent
+                      labelText="Search the audit log"
+                      placeholder="Search by person, action or target"
+                      defaultValue={query}
+                      onChange={(_event, value) => {
+                        // Carbon reports the starting value as onChange('', value) on load.
+                        setQuery(value ?? '');
+                      }}
+                    />
+                  </TableToolbarContent>
+                </TableToolbar>
                 <Table {...getTableProps()} aria-label="Audit log">
                   <TableHead>
                     <TableRow>

@@ -1,3 +1,4 @@
+import { Security } from '@carbon/icons-react';
 import {
   FormGroup,
   InlineLoading,
@@ -70,6 +71,8 @@ export function SecurityRoute() {
       <SettingsPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="Sign-in & security"
+        icon={Security}
+        description="Two-step sign-in, passwords, sessions and lockout."
         dirty={false}
         saving={false}
         onSave={() => undefined}
@@ -122,6 +125,8 @@ function EnterpriseSecurity() {
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Sign-in & security"
+      icon={Security}
+      description="Two-step sign-in, passwords, sessions and lockout."
       dirty={changed && valid}
       saving={saving}
       onSave={() => void save()}

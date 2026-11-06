@@ -1,3 +1,4 @@
+import { DataShare } from '@carbon/icons-react';
 import {
   Button,
   CodeSnippet,
@@ -60,6 +61,8 @@ export function ScimRoute() {
       <SettingsPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="Directory sync (SCIM)"
+        icon={DataShare}
+        description="Keep people in step with Entra ID or Okta."
         dirty={false}
         saving={false}
         onSave={() => undefined}
@@ -109,6 +112,8 @@ function EnterpriseScim() {
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Directory sync (SCIM)"
+      icon={DataShare}
+      description="Keep people in step with Entra ID or Okta."
       dirty={view !== undefined && roleValue !== view.defaultRole}
       saving={saving}
       onSave={() =>

@@ -109,7 +109,13 @@ describe('PeopleRoute: console access (enterprise)', () => {
 
   it('shows who has console access', async () => {
     renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
-    expect(await screen.findByText('Admin · Console access')).toBeInTheDocument();
+    const tag = await screen.findByText('Console access');
+    expect(tag.closest('.cds--tag')).not.toBeNull();
+    expect(
+      within(tag.closest('td') as HTMLElement)
+        .getByText('Admin')
+        .closest('.cds--tag'),
+    ).not.toBeNull();
   });
 
   it('owners give an admin, or themselves, console access and take it back', async () => {
@@ -170,5 +176,37 @@ describe('PeopleRoute: console access (enterprise)', () => {
     const user = await menu('ann@example.com');
     await user.click(await screen.findByText('Take console access away'));
     expect(await screen.findByText(/The identity service is unavailable/)).toBeInTheDocument();
+  });
+});
+
+describe('PeopleRoute, redesigned (spec 8.2)', () => {
+  it('has its icon and a line on what it is for', async () => {
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
+    const title = await screen.findByRole('heading', { level: 1, name: 'People' });
+    expect(title.querySelector('svg')).not.toBeNull();
+    expect(screen.getByText('Who is in this workspace, their roles, and open invites.')).toBeInTheDocument();
+  });
+
+  it('shows each person with their initials and their role as a tag', async () => {
+    renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
+    const bob = (await screen.findByText('Bob')).closest('tr') as HTMLElement;
+    expect(within(bob).getByText('BO')).toBeInTheDocument();
+    expect(within(bob).getByText('Member').closest('.cds--tag')).not.toBeNull();
+  });
+
+  it('filters people by name or email, starting from the address (search results)', async () => {
+    renderPage(<PeopleRoute />, {
+      api: fakeApi({ '/api/members': LIST }),
+      me: makeMe('owner', ALL),
+      path: '/people?q=bob%40',
+    });
+    expect(await screen.findByText('bob@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('me@example.com')).toBeNull();
+    const user = userEvent.setup();
+    const search = screen.getByRole('searchbox', { name: 'Search people' });
+    await user.clear(search);
+    await user.type(search, 'Me');
+    expect(screen.getByText('me@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('bob@example.com')).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
-import { Button, InlineLoading, Link, Stack, TextInput, Tile } from '@carbon/react';
-import { CheckmarkFilled } from '@carbon/icons-react';
+import { Button, InlineLoading, Link, Stack, TextInput } from '@carbon/react';
+import { Rocket } from '@carbon/icons-react';
+import { SetupCard } from '@tenantry/ui';
 import { useMe } from '@tenantry/app-kit';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 
 export interface ChecklistProps {
   done: { project: boolean; invite: boolean; brand: boolean };
@@ -25,25 +26,6 @@ function writeHidden(key: string) {
   } catch {
     // Hidden for this visit only.
   }
-}
-
-function Step({ label, done, children }: { label: string; done: boolean; children: ReactNode }) {
-  return (
-    <li className="tenantry-checklist__step" data-done={done ? 'true' : 'false'}>
-      <Tile>
-        <Stack gap={4}>
-          {done ? (
-            <p className="tenantry-checklist__done">
-              <CheckmarkFilled aria-label="Done" className="tenantry-checklist__check" />
-              {label}
-            </p>
-          ) : (
-            children
-          )}
-        </Stack>
-      </Tile>
-    </li>
-  );
 }
 
 function CreateProject({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
@@ -83,40 +65,50 @@ function CreateProject({ onCreate }: { onCreate: (name: string) => Promise<void>
   );
 }
 
-// Three steps that show a new owner what Tenantry does; gone once all are done, or hidden.
+// Three steps that show a new owner what Tenantry does, on the shared setup card; gone once all are done,
+// or hidden.
 export function Checklist({ done, inviteUrl, brandingUrl, onCreateProject }: ChecklistProps) {
   const me = useMe();
   const key = `tenantry.checklist.hidden.${me.user.id}.${me.tenant.slug}`;
   const [hidden, setHidden] = useState(() => readHidden(key));
-  if (hidden || (done.project && done.invite && done.brand)) return null;
+  if (hidden) return null;
   return (
-    <section aria-label="Get started" className="tenantry-checklist">
-      <div className="tenantry-checklist__header">
-        <h2 className="tenantry-checklist__title">Get started</h2>
-        <Button
-          kind="ghost"
-          size="sm"
-          onClick={() => {
-            writeHidden(key);
-            setHidden(true);
-          }}
-        >
-          Hide
-        </Button>
-      </div>
-      <ol className="tenantry-checklist__steps">
-        <Step label="Create a project" done={done.project}>
-          <CreateProject onCreate={onCreateProject} />
-        </Step>
-        <Step label="Invite a teammate" done={done.invite}>
-          <p className="tenantry-checklist__label">Bring someone into the workspace.</p>
-          {inviteUrl && <Link href={inviteUrl}>Invite a teammate</Link>}
-        </Step>
-        <Step label="Add your colour and logo" done={done.brand}>
-          <p className="tenantry-checklist__label">Make the sign-in page and the apps look like yours.</p>
-          {brandingUrl && <Link href={brandingUrl}>Add your colour and logo</Link>}
-        </Step>
-      </ol>
-    </section>
+    <SetupCard
+      title="Finish setting up"
+      icon={Rocket}
+      onHide={() => {
+        writeHidden(key);
+        setHidden(true);
+      }}
+      steps={[
+        {
+          label: 'Create a project',
+          done: done.project,
+          content: <CreateProject onCreate={onCreateProject} />,
+        },
+        {
+          label: 'Invite a teammate',
+          done: done.invite,
+          content: (
+            <Stack gap={3}>
+              <p className="tenantry-checklist__label">Invite a teammate</p>
+              <p className="tenantry-checklist__hint">Bring someone into the workspace.</p>
+              {inviteUrl && <Link href={inviteUrl}>Invite a teammate</Link>}
+            </Stack>
+          ),
+        },
+        {
+          label: 'Add your colour and logo',
+          done: done.brand,
+          content: (
+            <Stack gap={3}>
+              <p className="tenantry-checklist__label">Add your colour and logo</p>
+              <p className="tenantry-checklist__hint">Make the sign-in page and the apps look like yours.</p>
+              {brandingUrl && <Link href={brandingUrl}>Add your colour and logo</Link>}
+            </Stack>
+          ),
+        },
+      ]}
+    />
   );
 }
