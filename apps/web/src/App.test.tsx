@@ -46,10 +46,12 @@ function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
 }
 
 describe('web app (Tenantry, ADR-0027)', () => {
-  it('opens on Home', async () => {
+  it('opens on Home, with its greeting', async () => {
     renderAt('/');
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -69,7 +71,9 @@ describe('web app (Tenantry, ADR-0027)', () => {
   it('gives a member Home and Projects only', async () => {
     renderAt('/', makeMe('member', MEMBER));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
     });
     const menu = within(screen.getByRole('navigation', { name: 'Side navigation' }));
     expect(menu.getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Projects']);
@@ -122,7 +126,9 @@ describe('web app (Tenantry, ADR-0027)', () => {
   it('shows a member no app switcher, since Admin is not theirs', async () => {
     renderAt('/', makeMe('member', MEMBER));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: 'Switch app' })).not.toBeInTheDocument();
   });
