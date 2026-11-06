@@ -37,7 +37,7 @@ all without reading anything. Everything a company's IT team needs stays reachab
 - Each app's menu has at most four everyday entries. IT-admin features sit under a collapsed **Advanced** group.
 - Every page's title matches its menu entry.
 - A member, who can't open any Admin page, never sees Admin.
-- No API route, permission, table or isolation test changes. The one Keycloak-facing change is the identity provider's display name.
+- Permissions and existing API routes stay as they are. The new pieces are the notifications endpoints and the `notification_reads` table (section 8.4), each with isolation tests. The one Keycloak-facing change is the identity provider's display name.
 
 ## 1. Tenantry and Admin (ADR-0027)
 
@@ -139,9 +139,8 @@ Shown to people with `members:invite` or `tenant:settings`.
 
 ## 4. Not changing
 
-- API routes, permissions, database, RLS and isolation tests.
-- The login theme, apart from showing the display name, which it already does.
-- How each moved page works inside. People, Audit log, SCIM and Customer apps move as they are, keeping their tests.
+- Existing API routes, permissions, tables and RLS policies (section 8 adds two endpoints and one table).
+- What each moved page does. Section 8 restyles them; their behaviour and tests stay. People, Audit log, SCIM and Customer apps move as they are, keeping their tests.
 - Production, deployment, load and docs-site work: 6b and 6c.
 
 ## 5. Decisions recorded
@@ -238,7 +237,79 @@ Tenantry gets a logo and a small brand of its own, used wherever no workspace's 
 
 `docs/brand.md`: the mark's meaning, the two colours, the clear space (a quarter of the mark's width), minimum size (16 px), and what not to do (stretch, recolour, add effects).
 
-## 8. Testing
+## 8. Redesign, one menu, search and notifications (added after the first walkthrough)
+
+The first signed-in walkthrough showed pages that read as bare: no icons in the menu, plain text headers, lists with no way to find anything, empty states that only say "No … yet". You asked for a modern, user-friendly redesign, one menu for both apps, search, and in-app notifications, all in 6a.
+
+### 8.1 One menu (updates ADR-0027)
+
+Both apps render the same side menu, built by `workspaceMenu(me, workspaces, app)` in `@tenantry/app-kit`:
+
+| Section   | Items (Carbon icon)                                                                                               | Shown when                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| (top)     | Home (`Home`), Projects (`Folder`)                                                                                | `projects:read` for Projects |
+| Workspace | People (`UserMultiple`), Branding (`ColorPalette`), Sign-in & security (`Security`), Audit log (`RecentlyViewed`) | as in §1                     |
+| Advanced  | collapsed: Directory sync (`DataShare`), Customer apps (`Application`), Keycloak console (`Launch`, new tab)      | as in §1                     |
+
+- An item that lives in the other app links to that app's address; the person stays signed in (ADR-0020). An item in this app uses the router.
+- `NavItem` gains `section?: string` for the headings. The menu shows icons, and collapses to an icon rail at Carbon's `md` breakpoint.
+- Members see Home and Projects only.
+
+### 8.2 Redesign (Carbon components and tokens only)
+
+- **Header:** a workspace badge (the workspace logo, or its first letter on the workspace colour) with the workspace name and the app's name ("Tenantry" or "Admin"); the search box; the notifications bell with an unread count; the app and workspace switchers; an account avatar with the person's initials.
+- **Page header:** an optional Carbon icon before the title, a one-line description under it (§2's `description`), and the primary action on the right. Every page gets an icon and a description.
+- **Shared pieces in `@tenantry/ui`:**
+  - `EmptyState`: an icon, a headline ("Start your first project"), one line, and an action;
+  - `StatTile` takes an optional icon;
+  - `SetupCard`: a title, "N of M done", a Carbon `ProgressBar`, and one tile per step;
+  - `Avatar`: initials on a neutral circle;
+  - roles and statuses shown with Carbon `Tag`.
+- **Lists** (People, Projects, Audit log, Customer apps): a `TableToolbarSearch` that filters the loaded rows; people with an avatar and their role as a tag; empty states through `EmptyState`.
+- **Home:** "Good morning, <first name>" (by the browser's local time), "Here's what's happening in <workspace>.", the `SetupCard` (the §2.3 steps), stat tiles for People, Projects and Open invites (owners and admins; members see Projects only), and Recent projects.
+- **Buttons and copy:** one primary button per view; sentence case; verbs first.
+- **Login pages:** consistent spacing; the "Or sign in with" heading at the size of the page's other headings.
+
+### 8.3 Search
+
+- A search box in the header, also opened with Ctrl+K (Cmd+K on macOS), opens a Carbon modal with a text field and results in three groups: **Pages** (the menu items the person may see), **People** (from `/api/members`, by name or email) and **Projects** (from `/api/projects`, by name).
+- Up to five results per group. The arrow keys move, Enter opens, Esc closes.
+- No new endpoint: it filters what the person's own token can already read. A member finds people and projects, and no Admin pages.
+
+### 8.4 Notifications (ADR-0028)
+
+Built from the audit log when they are read; nothing new is written when something happens.
+
+| Kind           | From                                                                                                             | Who sees it                          |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| About you      | `member.role_changed`, `console.granted`, `console.revoked` with you as the target                               | you                                  |
+| Team           | `member.joined`, `member.removed`, `member.left`, `invite.revoked`, `scim.user_created`, `scim.user_deactivated` | owners and admins (`members:invite`) |
+| Workspace      | `branding.updated`, `branding.logo_updated`, `app.registered`, `app.secret_rotated`, `tenant.migrated`           | owners and admins                    |
+| Security       | `security.updated`, `scim.token_created`, `scim.token_revoked`, `idp.linked`                                     | owners (`tenant:settings`)           |
+| Token expiring | the workspace's active SCIM token expires within 14 days (worked out when read)                                  | owners                               |
+| Your invites   | open invites to your verified email address in other workspaces                                                  | you                                  |
+
+- Your own actions are not shown to you.
+- `GET /api/notifications` returns `{ items: [{ id, kind, title, body, href, createdAt, unread }], unread }`, newest first: the latest 30 matching audit entries from the last 30 days, plus the expiry and invite items.
+- `POST /api/notifications/read` sets "read up to now" for this person in this workspace, in `notification_reads`: a new tenant table with forced RLS (migration 0006).
+- **Other workspaces' invites:** a `security definer` SQL function, `open_invites_for_email(email)`, returns only the slug, name and role of active workspaces with an open invite to exactly that email (compared lower-cased). The API calls it only with the verified email from the token, and never when the email is unverified. It is the one read across workspaces outside the platform repository, and ADR-0028 records it.
+- **The bell** (a Carbon `HeaderGlobalAction` and `HeaderPanel`): the unread count as a badge, the list with an icon per kind and the time ("5 min ago"), "Mark all as read", and each item links to its page. It refreshes every 60 seconds while the page is visible.
+
+### 8.5 README
+
+- **Built with** moves under the tagline and badges, before The problem.
+- The problem gets a Mermaid diagram of the two tiers: Standard workspaces as organizations in the shared `platform` realm, Enterprise workspaces as a realm each, both behind the same guard, API and Postgres with row-level security.
+- Screenshots are retaken after the redesign, at 1280 px wide in the light theme: welcome, Home, Admin › People, search, notifications, and the branded login.
+
+### 8.6 Tests
+
+- **app-kit:** `workspaceMenu` by role and app (items in the other app are full links; members see two items); search grouping, the permission filter, the keyboard; the bell's count, list, mark-read and refresh.
+- **ui:** `EmptyState`, `SetupCard` (count and progress), `Avatar` initials, the header badge (logo or initial), nav sections and icons.
+- **db:** `notification_reads` under RLS; `open_invites_for_email` returns only that email's open invites in active workspaces, never revoked or accepted ones, and nothing for another email.
+- **api:** each rule in §8.4, your own actions left out, the 14-day expiry, mark-read, and no cross-workspace invites for an unverified email.
+- **Isolation (new rows in the guarantees):** notifications never show another workspace's events; a member never sees owner or admin notifications; another workspace's invite shows only to its verified address.
+
+## 9. Testing (sections 1 to 7)
 
 Test-first, Vitest, next to the code.
 
