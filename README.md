@@ -7,12 +7,6 @@
 
 **Multi-tenant sign-in, teams and branding for SaaS, built on Keycloak.**
 
-[![CI](https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/actions/workflows/ci.yml/badge.svg)](https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-0f62fe)](LICENSE)
-[![Keycloak 26.8](https://img.shields.io/badge/Keycloak-26.8-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
-[![Node 22](https://img.shields.io/badge/Node-22-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-
 <sub><b>Built with</b></sub><br>
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
