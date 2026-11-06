@@ -49,9 +49,14 @@ export function listAuditSince(
 export async function openInvitesForEmail(
   db: Executor,
   email: string,
-): Promise<{ slug: string; name: string; role: Role }[]> {
-  const result = await db.execute<{ slug: string; name: string; role: Role }>(
-    sql`select slug, name, role from open_invites_for_email(${email})`,
+): Promise<{ slug: string; name: string; role: Role; invitedAt: Date }[]> {
+  const result = await db.execute<{ slug: string; name: string; role: Role; invited_at: string | Date }>(
+    sql`select slug, name, role, invited_at from open_invites_for_email(${email})`,
   );
-  return result.rows.map(({ slug, name, role }) => ({ slug, name, role }));
+  return result.rows.map(({ slug, name, role, invited_at }) => ({
+    slug,
+    name,
+    role,
+    invitedAt: new Date(invited_at),
+  }));
 }

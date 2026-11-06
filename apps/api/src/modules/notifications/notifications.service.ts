@@ -88,8 +88,8 @@ export class NotificationsService {
           title: `You're invited to ${invite.name}`,
           body: `As ${ROLE[invite.role]}. Open it to join.`,
           link: { app: 'web', path: '/', workspace: invite.slug },
-          createdAt: now.toISOString(),
-          unread: true,
+          createdAt: invite.invitedAt.toISOString(),
+          unread: unread(invite.invitedAt.toISOString()),
         });
       }
     }

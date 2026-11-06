@@ -44,11 +44,12 @@ describe('guarantee: open invites by email (ADR-0028)', () => {
       createInvite(tx, { email, role: 'admin', invitedBy: a.userId }),
     );
     expect(await openInvitesForEmail(conn.db, email.toUpperCase())).toEqual([
-      { slug: a.slug, name: a.slug, role: 'admin' },
+      { slug: a.slug, name: a.slug, role: 'admin', invitedAt: expect.any(Date) as Date },
     ]);
     expect(await openInvitesForEmail(conn.db, `other-${email}`)).toEqual([]);
-    // Only these three columns: no ids, no emails, no who invited.
+    // Only these: no ids, no emails, no who invited.
     expect(Object.keys((await openInvitesForEmail(conn.db, email))[0] ?? {}).sort()).toEqual([
+      'invitedAt',
       'name',
       'role',
       'slug',

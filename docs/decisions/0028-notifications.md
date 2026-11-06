@@ -17,7 +17,7 @@ People need to hear about what changes in their workspace without opening the au
 
 - **Worked out when read:** a directory sync token that expires within 14 days (owners).
 - **Read state:** `notification_reads (tenant_id, user_id, read_until)`, a tenant table with forced row-level security. `POST /api/notifications/read` moves it forward, never back. An item is unread when it is newer.
-- **Invites to other workspaces.** An invite lives in the inviting workspace's rows, which row-level security hides from every other workspace. A `security definer` function, `open_invites_for_email(email)`, returns the slug, name and role of active workspaces with an open invite to exactly that email (compared lower-cased), and nothing else.
+- **Invites to other workspaces.** An invite lives in the inviting workspace's rows, which row-level security hides from every other workspace. A `security definer` function, `open_invites_for_email(email)`, returns the slug, name, role and sending time of active workspaces' open invites to exactly that email (compared lower-cased), and nothing else. The time lets "Mark all as read" count an invite as read like any other notification.
   - The function runs as the table owner. Forced row-level security binds the owner too, so `tenant_invites` gets one extra read-only policy for `tenantry_owner`. The app role never runs as the owner; only migrations and this function do.
   - `EXECUTE` is revoked from `PUBLIC` and granted to `tenantry_app` only.
   - The API calls it only with the email from the person's own token, and only when the token says `email_verified`.

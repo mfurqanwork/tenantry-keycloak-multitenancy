@@ -137,6 +137,9 @@ describe('guarantee: notifications stay in their workspace', () => {
       title: `You're invited to Tenant ${other.slug}`,
       link: { app: 'web', path: '/', workspace: other.slug },
     });
+    // "Mark all as read" counts the invite as read too, until a newer one arrives.
+    await t.request({ host: ws.host, method: 'POST', path: '/api/notifications/read', token: invited.token });
+    expect((await feed(invited)).items.find((i) => i.kind === 'invite')?.unread).toBe(false);
     const unverified = await t.token(
       invited.user,
       { alias: ws.slug, groups: ['/members'] },
