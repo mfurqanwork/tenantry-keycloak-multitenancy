@@ -13,6 +13,7 @@
 @use '@carbon/react/scss/theme';
 @use '@carbon/react/scss/spacing' as *;
 @use '@carbon/react/scss/type';
+@use '@carbon/react/scss/breakpoint' as *;
 
 :root {
   @include theme.theme(themes.$g10);
@@ -25,6 +26,14 @@
 body {
   background: theme.$background;
   color: theme.$text-primary;
+}
+
+// On wide screens Carbon shows the side nav open without its "expanded" class, so the page keeps only the
+// rail's offset and slides under the nav. Make room for the open nav (16rem: Carbon's side-nav width).
+@include breakpoint(lg) {
+  .cds--side-nav--ux ~ .cds--content {
+    margin-inline-start: calc(#{$spacing-13} + #{$spacing-11} + #{$spacing-05});
+  }
 }
 
 .tenantry-page {
