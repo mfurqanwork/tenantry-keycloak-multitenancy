@@ -15,9 +15,6 @@ const DOCS = [
   'tests/isolation/README.md',
 ];
 
-// The screenshots are taken in the Phase 6a walkthrough (plan Task 11), which removes this exception.
-const PENDING = true;
-
 function relativeTargets(markdown) {
   const targets = new Set();
   for (const [, href] of markdown.matchAll(/\]\(([^)\s]+)\)/g)) targets.add(href);
@@ -32,7 +29,6 @@ for (const doc of DOCS) {
   test(`${doc} links only to files that exist`, () => {
     const markdown = readFileSync(join(ROOT, doc), 'utf8');
     const missing = relativeTargets(markdown).filter((href) => {
-      if (PENDING && href.startsWith('docs/images/')) return false;
       return !existsSync(join(ROOT, dirname(doc), href));
     });
     assert.deepEqual(missing, []);

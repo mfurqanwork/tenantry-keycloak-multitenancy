@@ -82,4 +82,15 @@ describe('WorkspaceSearch (spec 8.3)', () => {
     expect(await screen.findByText('Nothing matches "peo".')).toBeInTheDocument();
     expect(routes.get).toHaveBeenCalledWith('/api/projects');
   });
+
+  it("opens at the page's level, never inside the dark header", async () => {
+    renderWithApp(
+      <header>
+        <WorkspaceSearch pages={pages} />
+      </header>,
+      { api: api(), me: makeMe('owner', [...ROLE_PERMISSIONS.owner]) },
+    );
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Search' }));
+    expect((await screen.findByRole('searchbox')).closest('header')).toBeNull();
+  });
 });
