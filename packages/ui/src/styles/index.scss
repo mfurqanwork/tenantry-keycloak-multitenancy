@@ -310,3 +310,52 @@ body {
 .tenantry-setup__check {
   fill: theme.$support-success;
 }
+
+// Search (spec 8.3): results grouped, the highlighted one marked.
+.tenantry-search__group {
+  margin-block-start: $spacing-05;
+}
+
+.tenantry-search__heading {
+  @include type.type-style('label-01');
+
+  margin-block-end: $spacing-02;
+  color: theme.$text-secondary;
+}
+
+.tenantry-search__hit {
+  @include type.type-style('body-compact-01');
+
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+  inline-size: 100%;
+  padding: $spacing-04 $spacing-03;
+  border: 0;
+  background: transparent;
+  color: theme.$text-primary;
+  cursor: pointer;
+  text-align: start;
+}
+
+.tenantry-search__hit[data-active='true'],
+.tenantry-search__hit:hover {
+  background: theme.$layer-hover-01;
+}
+
+.tenantry-search__hit:disabled {
+  cursor: default;
+}
+
+.tenantry-search__detail,
+.tenantry-search__none {
+  color: theme.$text-secondary;
+}
+
+.tenantry-search__detail {
+  margin-inline-start: auto;
+}
+
+.tenantry-search__none {
+  margin-block-start: $spacing-05;
+}

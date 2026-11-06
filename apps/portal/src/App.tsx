@@ -6,9 +6,9 @@ import {
   useMe,
   useWorkspaces,
   workspaceMenu,
+  WorkspaceSearch,
 } from '@tenantry/app-kit';
 import { AppShell, type NavItem } from '@tenantry/ui';
-import type { ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
 import { AppDetailRoute } from './features/applications/AppDetailRoute.js';
@@ -44,14 +44,7 @@ function OldAppAddress() {
 }
 
 // The workspace's Admin, once signed in: people, settings and the advanced tools. Root supplies the theme.
-export function App({
-  onSignOut,
-  headerActions,
-}: {
-  onSignOut?: () => void;
-  // Search and notifications (spec 8.3, 8.4).
-  headerActions?: ReactNode;
-}) {
+export function App({ onSignOut }: { onSignOut?: () => void }) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
@@ -67,7 +60,7 @@ export function App({
       productName={me.tenant.name}
       appName="Admin"
       brandColor={branding?.primaryColor ?? null}
-      headerActions={headerActions}
+      headerActions={<WorkspaceSearch pages={nav} />}
       logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'portal', { admin })}
       workspaces={workspaces.map(({ slug, name, current, portalUrl }) => ({

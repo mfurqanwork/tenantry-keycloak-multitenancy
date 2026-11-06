@@ -1,5 +1,5 @@
 import { AppShell } from '@tenantry/ui';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { HomeRoute } from './features/home/HomeRoute.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
@@ -13,6 +13,7 @@ import {
   useMe,
   useWorkspaces,
   workspaceMenu,
+  WorkspaceSearch,
 } from '@tenantry/app-kit';
 
 // Members and the audit log moved to Admin in Phase 6a; old bookmarks land there.
@@ -25,14 +26,7 @@ function ToAdmin({ path }: { path: string }) {
 }
 
 // The tenant app's shell and routes, once signed in. Root supplies the theme.
-export function App({
-  onSignOut,
-  headerActions,
-}: {
-  onSignOut?: () => void;
-  // Search and notifications (spec 8.3, 8.4).
-  headerActions?: ReactNode;
-}) {
+export function App({ onSignOut }: { onSignOut?: () => void }) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
@@ -44,7 +38,7 @@ export function App({
       productName={me.tenant.name}
       appName="Tenantry"
       brandColor={branding?.primaryColor ?? null}
-      headerActions={headerActions}
+      headerActions={<WorkspaceSearch pages={nav} />}
       logoUrl={branding?.logoUrl ?? null}
       apps={appLinks(workspaces, 'web', { admin: canSeeAdmin(me.can) })}
       workspaces={workspaces.map(({ slug, name, current, webUrl }) => ({
