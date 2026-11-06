@@ -143,4 +143,32 @@ describe('page patterns', () => {
     expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toHaveTextContent('Home');
     expect(screen.getByRole('button', { name: 'Act' })).toBeInTheDocument();
   });
+
+  it('WizardPage shows progress only for two or more steps', () => {
+    const { container, rerender } = render(
+      <WizardPage
+        title="Create a workspace"
+        steps={['Workspace']}
+        currentStep={0}
+        onNext={vi.fn()}
+        nextLabel="Create workspace"
+      >
+        c
+      </WizardPage>,
+    );
+    expect(container.querySelector('.cds--progress')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create workspace' })).toBeInTheDocument();
+    rerender(
+      <WizardPage title="Register" steps={['Type', 'Review']} currentStep={0} onNext={vi.fn()}>
+        c
+      </WizardPage>,
+    );
+    expect(container.querySelector('.cds--progress')).not.toBeNull();
+  });
+
+  it('DashboardPage shows a line under its title when given one', () => {
+    render(<DashboardPage title="Tenantry" description="Sign-in, teams and branding." tiles={[]} />);
+    const title = screen.getByRole('heading', { level: 1, name: 'Tenantry' });
+    expect(title.closest('.tenantry-page-header')).toHaveTextContent('Sign-in, teams and branding.');
+  });
 });

@@ -1,54 +1,157 @@
-# Tenantry
+<div align="center">
 
-Tenantry is an open-source, multi-tenant identity platform on Keycloak 26.8. It has two tenant tiers:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="packages/ui/assets/brand/tenantry-logo-dark.svg">
+  <img src="packages/ui/assets/brand/tenantry-logo.svg" alt="Tenantry" width="336">
+</picture>
 
-- **Standard** tenants are organizations in one shared realm. Their users sign in once and move between our products.
-- **Enterprise** tenants each get their own realm, created by script from a versioned template. That gives them stronger isolation, their own login policies and their own connected apps.
+**Multi-tenant sign-in, teams and branding for SaaS, built on Keycloak.**
 
-One codebase serves both tiers, and the application code never needs to know which tier a tenant is on.
+[![CI](https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/actions/workflows/ci.yml/badge.svg)](https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0f62fe)](LICENSE)
+[![Keycloak 26.8](https://img.shields.io/badge/Keycloak-26.8-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![Node 22](https://img.shields.io/badge/Node-22-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-> **Status:** v0.1 (Phases 0–2) plus Phases 3, 4 and 5. Standard tenants work end to end: signup, members and roles, the audit log, single sign-on across two apps with single logout, workspace switching, tenant branding on the apps and the login page, and company login linked after a DNS proof. Enterprise tenants get a realm of their own, built and kept up to date from a versioned template by `pnpm ops enterprise`, and the API accepts only that realm's tokens for them. Their owners and admins connect their own apps to that realm from the portal, and their owners set its sign-in rules, connect their directory over SCIM, and let their own admins into the realm's Keycloak console for people and groups. An operator can move a Standard workspace into a realm of its own, keeping everyone's account. The Phase 1 to 5 guarantees are tested in CI. What does not work yet is in [docs/known-issues.md](docs/known-issues.md). See the [roadmap](#roadmap).
+<sub><b>Built with</b></sub><br>
 
-## Guarantees
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-5fa04e?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![React](https://img.shields.io/badge/React-087ea4?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
+[![IBM Carbon](https://img.shields.io/badge/IBM_Carbon-0f62fe?logo=ibm&logoColor=white)](https://carbondesignsystem.com/)
+[![Keycloak](https://img.shields.io/badge/Keycloak-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![Keycloakify](https://img.shields.io/badge/Keycloakify-1a1a1a)](https://www.keycloakify.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Drizzle](https://img.shields.io/badge/Drizzle-1a1a1a?logo=drizzle&logoColor=c5f74f)](https://orm.drizzle.team/)
+[![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Caddy](https://img.shields.io/badge/Caddy-1f88c0?logo=caddy&logoColor=white)](https://caddyserver.com/)
+[![Turborepo](https://img.shields.io/badge/Turborepo-ef4444?logo=turborepo&logoColor=white)](https://turborepo.com/)
+[![pnpm](https://img.shields.io/badge/pnpm-f69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Vitest](https://img.shields.io/badge/Vitest-6e9f18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-These are the project's promises. Each one is an automated test that runs in CI against real Keycloak and Postgres containers (`pnpm test:isolation`). Until its phase lands, a row stays _planned_.
+</div>
 
-| Guarantee                                                              | Expected result                                                  | Phase | Status |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------- | ----- | ------ |
-| Tenant A user requests tenant B data with A's token                    | 404 (the row is invisible to A)                                  | 1     | tested |
-| Tenant A user calls B's subdomain with A's token                       | 403                                                              | 1     | tested |
-| A query that forgets the tenant filter                                 | Returns only the current tenant's rows (row-level security)      | 1     | tested |
-| App database role tries to bypass row-level security                   | Not allowed; the role does not own the tables                    | 1     | tested |
-| User is admin in org A and member in org B, acts in B                  | Treated as member                                                | 1     | tested |
-| Client sends a tenant id header that differs from the token            | Ignored; the token decides                                       | 1     | tested |
-| Member tries to invite, remove or change roles                         | 403                                                              | 1     | tested |
-| Logout in one app                                                      | Session ends in the other app                                    | 2     | tested |
-| Domain link without a verified DNS record                              | Refused                                                          | 2     | tested |
-| Valid token from another enterprise realm                              | 401 (issuer rule)                                                | 3     | tested |
-| Valid token from the shared realm on an enterprise tenant              | 401                                                              | 3     | tested |
-| Token for the wrong audience                                           | 401                                                              | 3     | tested |
-| Enterprise realm token on a Standard workspace                         | 401                                                              | 3     | tested |
-| Password grant in an enterprise realm                                  | Refused by the realm's client policy                             | 3     | tested |
-| Company login brings an email outside the verified domain              | Refused by Keycloak                                              | 3     | tested |
-| Customer registers a wildcard or non-HTTPS redirect URI                | Refused by our API; plain http also by the realm's client policy | 4     | tested |
-| Tenant A admin registers or edits an app in tenant B                   | 401 or 404                                                       | 4     | tested |
-| User of another tenant signs in to a customer app                      | Refused                                                          | 4     | tested |
-| Token issued to a customer app, used on Tenantry's API                 | 401                                                              | 4     | tested |
-| A workspace's SCIM token on another workspace                          | 401 (another enterprise) or 404 (Standard)                       | 5a    | tested |
-| A person's token on `/scim`, a SCIM token on `/api`                    | 401                                                              | 5a    | tested |
-| A revoked or expired SCIM token                                        | 401                                                              | 5a    | tested |
-| A person created through SCIM                                          | Exists only in the workspace's realm, with its default role      | 5a    | tested |
-| Two-step sign-in required, password-only sign-in                       | Stopped at the authenticator set-up step                         | 5a    | tested |
-| A moved workspace's person signs in through the bridge                 | Old password works; same Tenantry user and role                  | 5b    | tested |
-| Someone not in the moved workspace uses the bridge                     | Refused by the realm; no account is made                         | 5b    | tested |
-| Shared-realm token on a moved workspace                                | 401                                                              | 5b    | tested |
-| Console user edits, resets or deletes an owner                         | 403                                                              | 5b    | tested |
-| Console user grants console access, or opens clients or realm settings | 403                                                              | 5b    | tested |
-| Console user reads another realm                                       | Refused                                                          | 5b    | tested |
+![The Tenantry welcome page](docs/images/welcome.png)
 
-## Quick start
+## The problem
 
-You need Docker Desktop, Node 22+ and pnpm 10.
+Every B2B SaaS product ends up building the same things for each customer: their own sign-in page, teams with roles, a brand, login through the customer's own company identity provider, and directory sync from their IT. Then the biggest customers ask for more: their own security rules, their own apps on the same login, an isolated realm.
+
+Doing that by hand on Keycloak means one realm per customer from day one (expensive, and it doesn't scale to thousands) or one shared realm forever (and no way to give a big customer their own). Either way, one missing filter can leak one customer's data to another.
+
+**Tenantry** is a working, tested answer: two tiers on one codebase, with isolation enforced at the token, the API and the database.
+
+- **Standard** workspaces are organizations in one shared realm: cheap, instant, single sign-on across every workspace a person belongs to.
+- **Enterprise** workspaces get a realm of their own, built and upgraded from a versioned template, with their own security rules, apps and directory sync. A Standard workspace can move to Enterprise without anyone losing their account.
+
+```mermaid
+flowchart TB
+  people([People in many workspaces]) --> guard
+
+  subgraph kc[Keycloak]
+    direction LR
+    subgraph platform["platform realm: Standard"]
+      direction TB
+      acme["acme<br/>organization"]
+      globex["globex<br/>organization"]
+      more["…thousands more"]
+    end
+    subgraph enterprise["Enterprise: a realm each"]
+      direction TB
+      initech["ent-initech<br/>realm"]
+      umbrella["ent-umbrella<br/>realm"]
+    end
+  end
+
+  kc -- tokens --> guard
+  guard["One guard<br/>subdomain picks the workspace,<br/>the token must prove it"] --> api[One API]
+  api --> pg[("Postgres<br/>row-level security per workspace")]
+```
+
+The application code never needs to know which tier a workspace is on.
+
+## Features
+
+### Workspaces and teams
+
+Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. Home greets you with a setup card that walks a new owner through the first minute, the workspace's numbers, and the latest projects.
+
+![Home with its setup card](docs/images/home.png)
+
+### Search and notifications
+
+Search pages, people and projects from the header, or press Ctrl+K. The bell tells you what changed: who joined, your role, security settings, a directory token about to expire, and invites from other workspaces. Each person sees only what their role allows.
+
+![Search across the workspace](docs/images/search.png)
+
+![Notifications](docs/images/notifications.png)
+
+### One sign-in, two apps
+
+**Tenantry** is the product people use; **Admin** is where owners and admins manage the workspace. They share one menu and one sign-in, live on separate addresses, and signing out of one signs you out of both.
+
+![Admin › People](docs/images/admin-people.png)
+
+### Branding
+
+Each workspace sets a colour and a logo. Tenantry refuses a colour that white text can't be read on, and suggests a darker shade. The apps and the workspace's own login page take the brand.
+
+![A branded login page](docs/images/login-branded.png)
+
+### Company login
+
+Link a customer's Entra ID, Okta or Google Workspace to their workspace once they prove they own their email domain with a DNS record. People with that domain are sent to their company's sign-in.
+
+### Enterprise
+
+- A realm per customer, built from a versioned template and upgraded with a dry run first.
+- **Customer apps:** customers register their own web, single-page, mobile and machine-to-machine apps on their realm, with secrets shown once, rotation and a test sign-in.
+- **Directory sync (SCIM)** from Entra ID or Okta, through a Tenantry gateway.
+- **Sign-in & security:** two-step sign-in, password, session and lockout rules per workspace.
+- **Keycloak console access** for the customer's own admins, limited to people and groups, with owners protected.
+- **Move to Enterprise:** an operator command moves a Standard workspace into its own realm, and everyone keeps their account, role and data.
+
+## How it keeps tenants apart
+
+Every promise is an automated test that runs in CI against real Keycloak and Postgres. A few of them:
+
+| What someone tries                                         | What happens                                      |
+| ---------------------------------------------------------- | ------------------------------------------------- |
+| A user of workspace A asks for workspace B's data          | 404: the row is invisible to them                 |
+| A query forgets the workspace filter                       | Postgres row-level security returns only A's rows |
+| A client sends a different workspace id than its token's   | Ignored: the token decides                        |
+| A token from another Enterprise realm                      | 401                                               |
+| A token issued to a customer's app, used on Tenantry's API | 401                                               |
+| A console user tries to change an owner                    | 403                                               |
+
+All 33 guarantees are in [tests/isolation](tests/isolation/README.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  browser[Browser] --> caddy[Caddy]
+  caddy -->|"&lt;slug&gt;.tenantry"| web[Tenantry<br/>React + Carbon]
+  caddy -->|"&lt;slug&gt;.portal.tenantry"| admin[Admin<br/>React + Carbon]
+  caddy -->|/api, /scim| api[API<br/>NestJS]
+  caddy -->|auth.tenantry| kc[Keycloak 26.8]
+  api --> pg[(Postgres<br/>row-level security)]
+  api --> kc
+  subgraph realms[Keycloak]
+    direction TB
+    platform["platform realm<br/>Standard: one organization per workspace"]
+    ent["ent-&lt;slug&gt; realms<br/>Enterprise: one realm per workspace"]
+  end
+  kc --- realms
+```
+
+The subdomain picks the workspace and the token must prove it. One guard turns every token, from either tier, into the same tenant context. Postgres row-level security is the second layer, so one missing filter cannot leak data. The [decision records](docs/decisions/README.md) explain each choice.
+
+## Try it in five minutes
+
+You need Docker Desktop, Node 22 and pnpm 10.
 
 ```bash
 pnpm install
@@ -58,96 +161,32 @@ pnpm install
 pnpm dev:stack
 ```
 
-Then open <http://demo.tenantry.localhost>. Any subdomain works as a tenant slug. The portal is at <http://demo.portal.tenantry.localhost>.
-
-- **Keycloak admin:** <http://auth.tenantry.localhost>, with the credentials in `.env`. The first run creates `.env` from `.env.example`.
-- **Mailpit** (catches outgoing email): <http://mail.tenantry.localhost>.
-- **Check the stack:** `pnpm smoke`.
-- **Port 80, 5432 or 8180 already in use?** `pnpm dev:stack` names the variable to change. Set `TENANTRY_HTTP_PORT` and add the port to `TENANTRY_AUTH_URL`. Or set `TENANTRY_PG_PORT` and the port in `DATABASE_URL` and `DATABASE_OWNER_URL`. Or set `TENANTRY_KC_PORT` and `TENANTRY_AUTH_INTERNAL_URL`. Then rerun. URLs then include the port, for example `http://demo.tenantry.localhost:8080`. Every port listens on `127.0.0.1` only.
-- **Day-to-day development:** `pnpm dev` runs Keycloak, Postgres, Caddy and Mailpit in Docker, and the API and both apps on your machine with hot reload.
-
-`*.localhost` names resolve to your own machine in Chrome, Edge and Firefox, with no hosts-file edits.
-
-## Try it
-
-The quickest way is the seeded demo, which follows [docs/demo-script.md](docs/demo-script.md):
-
 ```bash
 pnpm seed
 ```
 
-It creates the workspaces `acme` (blue) and `globex` (green) and their people, all with the password `SEED_PASSWORD` from `.env`. `pat@example.test` belongs to both. It also links `acme.test` to the stand-in company sign-in, so `alice@acme.test` signs in to `acme` through it. And it provisions the enterprise workspace `initech` in its own realm, `ent-initech`, whose owner `owner@initech.test` signs in at <http://initech.tenantry.localhost> with the same password.
+Then open <http://tenantry.localhost> and pick a demo workspace. The accounts, the ports and what to do when one is taken are in [docs/SETUP.md](docs/SETUP.md), and a two-minute walkthrough is in the [demo script](docs/demo-script.md).
 
-Or start from nothing, with the stack running (`pnpm dev:stack`; add `:8080`, or your port, to these addresses if port 80 was taken):
+## Documentation
 
-1. Open <http://tenantry.localhost>, choose **Register**, create an account, and confirm it with the link Keycloak emails to Mailpit (<http://mail.tenantry.localhost>).
-2. The **Create your workspace** wizard asks for a name and an address. Create `acme`.
-3. You land on <http://acme.tenantry.localhost>, signed in as the owner.
-4. Under **Members**, invite someone as Admin. The invite email arrives in Mailpit at <http://mail.tenantry.localhost>.
-5. Sign out, follow the email's link, register as that person, and confirm the address the same way. At `acme.tenantry.localhost` they are an Admin.
-6. **Audit log** lists `tenant.created`, `member.invited` and `member.joined`. **Projects** is the row-level security example.
-7. Open the portal at <http://acme.portal.tenantry.localhost>: you are signed in already. As the owner, set a colour and a logo under **Branding**. They show in both apps and on the login page.
-
-## Architecture
-
-```mermaid
-flowchart LR
-  browser[Browser] --> caddy[Caddy<br/>*.tenantry.localhost]
-  caddy -->|"&lt;slug&gt;.tenantry.localhost"| web[Web app<br/>React + Carbon]
-  caddy -->|"&lt;slug&gt;.portal.tenantry.localhost"| portal[Portal app<br/>React + Carbon]
-  caddy -->|/api/*| api[API<br/>NestJS]
-  caddy -->|auth.tenantry.localhost| keycloak[Keycloak 26.8]
-  api --> pg[(Postgres<br/>tenantry db, RLS)]
-  keycloak --> kcdb[(Postgres<br/>keycloak db)]
-  api --> keycloak
-```
-
-The subdomain picks the tenant, and the token must prove it. Every request becomes one tenant context at a single guard. Postgres row-level security is the second isolation layer, so one missing filter cannot leak data.
-
-## Standard vs Enterprise tenants
-
-| Capability                          | Standard (shared realm)                       | Enterprise (dedicated realm)   |
-| ----------------------------------- | --------------------------------------------- | ------------------------------ |
-| Lives in                            | An organization in the `platform` realm       | Its own realm, e.g. `ent-acme` |
-| SSO across our products             | Yes, and across all tenants a user belongs to | Yes, within the tenant's realm |
-| Company login (Entra, Okta, Google) | Yes, linked by verified email domain          | Yes, configured in their realm |
-| Login page branding                 | Logo and colour per tenant                    | Full custom theme              |
-| MFA, password and session rules     | Platform defaults                             | Their own                      |
-| Connect their own apps              | No                                            | Yes, through our portal        |
-| SCIM from their directory           | No                                            | Yes, through our SCIM gateway  |
-| Users in several tenants            | One account                                   | Separate account per realm     |
-| Scale                               | Thousands of tenants                          | Tens to low hundreds of realms |
-
-Phase 3 delivers the enterprise realm, its template and its sign-in; Phase 4 lets its customers connect their own apps ([guide](docs/guides/connect-your-app.md)). Phase 5 adds per-tenant security settings and SCIM ([guide](docs/guides/connect-scim.md)), console access, and moving a Standard workspace to Enterprise ([guide](docs/guides/move-to-enterprise.md)).
-
-## Repository
-
-| Path                      | What it holds                                             |
-| ------------------------- | --------------------------------------------------------- |
-| `apps/api`                | NestJS API: the auth guard, tenants, members, apps, audit |
-| `apps/web`, `apps/portal` | The two React apps used to demonstrate SSO                |
-| `apps/login-theme`        | The Keycloak login theme (Keycloakify, Carbon)            |
-| `apps/ops`                | Operator commands: enterprise realms, company login, seed |
-| `packages/app-kit`        | What both apps share: sign-in, API client, who is in      |
-| `packages/brand`          | Colour maths for tenant branding                          |
-| `packages/ui`             | Carbon setup, app shell and the five page patterns        |
-| `packages/db`             | Drizzle schema, migrations, row-level security            |
-| `packages/auth`           | Tenant context and the role-to-permission map             |
-| `packages/keycloak-admin` | The only code that calls Keycloak's admin APIs; templates |
-| `infra/`                  | Docker Compose, Caddy, Keycloak realm and Postgres setup  |
-| `docs/decisions/`         | [Architecture decision records](docs/decisions/README.md) |
+- [Setting up locally](docs/SETUP.md): addresses, demo accounts, commands, tests, common problems
+- Guides: [connect your app](docs/guides/connect-your-app.md), [connect SCIM](docs/guides/connect-scim.md), [move a workspace to Enterprise](docs/guides/move-to-enterprise.md)
+- [Decision records](docs/decisions/README.md)
+- [Demo script](docs/demo-script.md)
+- [Known issues](docs/known-issues.md)
+- [Brand](docs/brand.md)
+- [Contributing](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) (the rules every change follows)
 
 ## Roadmap
 
-| Phase | Delivers                                                                         |
-| ----- | -------------------------------------------------------------------------------- |
-| 0     | Foundations: decisions, monorepo, one-command stack, CI                          |
-| 1     | Standard tenant core: signup, auth guard, row-level security, members, audit log |
-| 2     | SSO across both apps, tenant switching, branding → **v0.1**                      |
-| 3     | Enterprise realm provisioning from versioned templates                           |
-| 4     | Customer applications registered through the portal                              |
-| 5     | SCIM, per-tenant policies, console access, Standard → Enterprise migration       |
-| 6     | Production hardening and realm-count measurements → **v1.0**                     |
+| Phase | Delivers                                                                         | Status |
+| ----- | -------------------------------------------------------------------------------- | ------ |
+| 0–2   | Foundations, the Standard workspace core, single sign-on and branding → **v0.1** | Done   |
+| 3–4   | Enterprise realms from versioned templates; customer apps                        | Done   |
+| 5     | SCIM, security settings, console access, moving to Enterprise                    | Done   |
+| 6a    | A simpler Tenantry: Tenantry and Admin, the welcome page, the brand              | Done   |
+| 6b    | Running in production: TLS, backups, health, metrics, rate limits                | Next   |
+| 6c    | Load test at 50, 100 and 200 realms, security review, docs site → **v1.0**       | Later  |
 
 ## Licence
 

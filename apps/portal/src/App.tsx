@@ -1,41 +1,74 @@
-import type { Permission } from '@tenantry/auth';
-import { appLinks, RouterLink, useBranding, useMe, useWorkspaces } from '@tenantry/app-kit';
+import {
+  appLinks,
+  canSeeAdmin,
+  NotificationsBell,
+  RouterLink,
+  useBranding,
+  useMe,
+  useWorkspaces,
+  workspaceMenu,
+  WorkspaceSearch,
+} from '@tenantry/app-kit';
 import { AppShell, type NavItem } from '@tenantry/ui';
-import { Route, Routes, useLocation } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { ApplicationsRoute } from './features/applications/ApplicationsRoute.js';
 import { AppDetailRoute } from './features/applications/AppDetailRoute.js';
 import { RegisterAppRoute } from './features/applications/RegisterAppRoute.js';
 import { TestCallbackRoute } from './features/applications/TestCallbackRoute.js';
+import { AuditRoute } from './features/audit/AuditRoute.js';
 import { BrandingRoute } from './features/branding/BrandingRoute.js';
-import { DashboardRoute } from './features/dashboard/DashboardRoute.js';
+import { NotAllowedPage } from './features/not-allowed/NotAllowedPage.js';
+import { PeopleRoute } from './features/people/PeopleRoute.js';
 import { ScimRoute } from './features/scim/ScimRoute.js';
 import { SecurityRoute } from './features/security/SecurityRoute.js';
 
-// Each page and the permission that shows it; the API checks again on every call.
-const PAGES: (NavItem & { needs?: Permission })[] = [
-  { label: 'Dashboard', href: '/' },
-  { label: 'Applications', href: '/applications', needs: 'apps:read' },
-  { label: 'Branding', href: '/branding', needs: 'tenant:settings' },
-  { label: 'Security', href: '/security', needs: 'tenant:settings' },
-  { label: 'Directory sync (SCIM)', href: '/scim', needs: 'tenant:settings' },
-];
+type Person = ReturnType<typeof useMe>;
+const enterpriseApps = (me: Person) => me.tenant.tier === 'enterprise' && me.can('apps:register');
 
-// The workspace's admin console, once signed in. Root supplies the theme.
+// The first of Admin's own pages in the menu: where Admin opens.
+function firstHere(items: NavItem[]): string | undefined {
+  for (const item of items) {
+    const found = item.children
+      ? firstHere(item.children)
+      : !item.crossApp && !item.external
+        ? item.href
+        : undefined;
+    if (found) return found;
+  }
+  return undefined;
+}
+
+// An app address from before Phase 6a: /applications/<id> lives at /advanced/apps/<id> now.
+function OldAppAddress() {
+  const { id } = useParams();
+  return <Navigate replace to={`/advanced/apps/${id ?? ''}`} />;
+}
+
+// The workspace's Admin, once signed in: people, settings and the advanced tools. Root supplies the theme.
 export function App({ onSignOut }: { onSignOut?: () => void }) {
   const { pathname } = useLocation();
   const me = useMe();
   const workspaces = useWorkspaces();
   const { branding, reload } = useBranding(me.tenant.slug);
-  const enterprise = me.tenant.tier === 'enterprise';
-  const nav = PAGES.filter((page) => !page.needs || me.can(page.needs)).map(({ label, href }) => ({
-    label,
-    href,
-  }));
+  const admin = canSeeAdmin(me.can);
+  // The same menu as Tenantry's (spec 8.1); a member, who has no Admin pages, gets none here.
+  const nav = admin ? workspaceMenu(me, workspaces, 'portal') : [];
+  const first = firstHere(nav);
+  const settings = me.can('tenant:settings');
+  const apps = enterpriseApps(me);
   return (
     <AppShell
       productName={me.tenant.name}
+      appName="Admin"
+      brandColor={branding?.primaryColor ?? null}
+      headerActions={
+        <>
+          <WorkspaceSearch pages={nav} />
+          <NotificationsBell workspaces={workspaces} />
+        </>
+      }
       logoUrl={branding?.logoUrl ?? null}
-      apps={appLinks(workspaces, 'portal')}
+      apps={appLinks(workspaces, 'portal', { admin })}
       workspaces={workspaces.map(({ slug, name, current, portalUrl }) => ({
         slug,
         name,
@@ -45,37 +78,39 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
       navItems={nav}
       currentPath={pathname}
       linkAs={RouterLink}
-      {...(onSignOut && me.user.email ? { user: { email: me.user.email, onSignOut } } : {})}
+      {...(onSignOut && me.user.email
+        ? { user: { email: me.user.email, name: me.user.displayName ?? undefined, onSignOut } }
+        : {})}
     >
-      <Routes>
-        <Route path="/" element={<DashboardRoute />} />
-        {/* Every applications address answers: a Standard workspace, or someone who may not register,
-            sees the list (or its Enterprise sentence) instead of an app called "new". */}
-        {me.can('apps:read') && (
-          <>
-            <Route path="/applications" element={<ApplicationsRoute />} />
-            <Route
-              path="/applications/new"
-              element={enterprise && me.can('apps:register') ? <RegisterAppRoute /> : <ApplicationsRoute />}
-            />
-            <Route
-              path="/applications/test-callback"
-              element={enterprise && me.can('apps:register') ? <TestCallbackRoute /> : <ApplicationsRoute />}
-            />
-            <Route
-              path="/applications/:id"
-              element={enterprise ? <AppDetailRoute /> : <ApplicationsRoute />}
-            />
-          </>
-        )}
-        {me.can('tenant:settings') && (
-          <>
-            <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
-            <Route path="/security" element={<SecurityRoute />} />
-            <Route path="/scim" element={<ScimRoute />} />
-          </>
-        )}
-      </Routes>
+      {!admin ? (
+        <NotAllowedPage />
+      ) : (
+        <Routes>
+          <Route path="/" element={first ? <Navigate replace to={first} /> : <NotAllowedPage />} />
+          {me.can('members:invite') && <Route path="/people" element={<PeopleRoute />} />}
+          {me.can('audit:read') && <Route path="/audit" element={<AuditRoute />} />}
+          {settings && (
+            <>
+              <Route path="/branding" element={<BrandingRoute onChanged={reload} />} />
+              <Route path="/security" element={<SecurityRoute />} />
+              <Route path="/advanced/scim" element={<ScimRoute />} />
+              <Route path="/scim" element={<Navigate replace to="/advanced/scim" />} />
+            </>
+          )}
+          {apps && (
+            <>
+              <Route path="/advanced/apps" element={<ApplicationsRoute />} />
+              <Route path="/advanced/apps/new" element={<RegisterAppRoute />} />
+              <Route path="/advanced/apps/:id" element={<AppDetailRoute />} />
+              {/* Registered redirect URIs name this path, so it stays where it was. */}
+              <Route path="/applications/test-callback" element={<TestCallbackRoute />} />
+              <Route path="/applications" element={<Navigate replace to="/advanced/apps" />} />
+              <Route path="/applications/:id" element={<OldAppAddress />} />
+            </>
+          )}
+          <Route path="*" element={<NotAllowedPage />} />
+        </Routes>
+      )}
     </AppShell>
   );
 }

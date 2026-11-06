@@ -23,7 +23,7 @@ function setup(routes: Record<string, unknown> = {}) {
   renderPortal(
     <Routes>
       <Route path="/applications/new" element={<RegisterAppRoute />} />
-      <Route path="/applications/:id" element={<Landed />} />
+      <Route path="/advanced/apps/:id" element={<Landed />} />
     </Routes>,
     { api, me, path: '/applications/new' },
   );
@@ -55,7 +55,7 @@ describe('RegisterAppRoute', () => {
       postLogoutRedirectUris: [],
       webOrigins: [],
     });
-    expect(await screen.findByText('Landed on /applications/a1 with s3cret')).toBeInTheDocument();
+    expect(await screen.findByText('Landed on /advanced/apps/a1 with s3cret')).toBeInTheDocument();
   });
 
   it('says what is wrong with a URI as it is typed, and holds the step until it is fixed', async () => {

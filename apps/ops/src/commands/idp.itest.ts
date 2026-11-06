@@ -118,6 +118,8 @@ describe('ops idp link', () => {
     expect(t.directory.identityProviders.get(alias)).toEqual({
       issuer: 'http://elsewhere/realms/x',
       clientId: 'someone-else',
+      // Not renamed either: the refusal comes before any change.
+      displayName: null,
     });
     expect(t.directory.domainsOf(acme.kcOrgId)).toEqual([]);
     expect(await tenantTx(t.db, acme.id, (tx) => listIdps(tx))).toEqual([]);
@@ -154,5 +156,23 @@ describe('ops idp link', () => {
     await expect(linkIdp(t.deps, company(alias, domain, acme.slug))).rejects.toThrow();
     expect(t.directory.identityProviders.has(alias)).toBe(false);
     expect(await tenantTx(t.db, acme.id, (tx) => listIdps(tx))).toEqual([]);
+  });
+
+  it('names the sign-in button after the workspace by default, and renames it when asked', async () => {
+    const acme = await t.seedTenant();
+    const domain = `${acme.slug}.test`;
+    const alias = `corp-${acme.slug}`;
+    await verified(acme.slug, domain);
+    expect(await linkIdp(t.deps, company(alias, domain, acme.slug))).toBe(0);
+    expect((await t.directory.getIdentityProvider(alias))?.displayName).toBe(
+      `Tenant ${acme.slug} company sign-in`,
+    );
+    t.out.length = 0;
+    expect(await linkIdp(t.deps, { ...company(alias, domain, acme.slug), displayName: 'Acme Corp' })).toBe(0);
+    expect((await t.directory.getIdentityProvider(alias))?.displayName).toBe('Acme Corp');
+    expect(t.out.join(' ')).toMatch(/now shows "Acme Corp"/);
+    t.out.length = 0;
+    expect(await linkIdp(t.deps, { ...company(alias, domain, acme.slug), displayName: 'Acme Corp' })).toBe(0);
+    expect(t.out.join(' ')).toMatch(/nothing changed/);
   });
 });

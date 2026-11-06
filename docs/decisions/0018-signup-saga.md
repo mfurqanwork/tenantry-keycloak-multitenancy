@@ -1,6 +1,6 @@
 # ADR-0018: Signup through Keycloak first, with a compensating saga
 
-Status: Accepted · Date: 2026-11-02
+Status: Accepted · Date: 2026-11-02 · Updated: 2026-11-08 (Phase 6a)
 
 ## Context
 
@@ -31,3 +31,8 @@ A Standard tenant is a row in our database plus a Keycloak organization with thr
 - A tenant client with thousands of redirect URIs may slow Keycloak; Phase 6 measures it.
 - `manage-realm` and `manage-clients` are broad for one service account; Phase 6 narrows them with fine-grained admin permissions.
 - Two API replicas could race on the client's redirect list. One process serialises its own edits; Phase 6 revisits this.
+
+## Update (Phase 6a)
+
+- The base domain's front page is a welcome page that needs no sign-in ([ADR-0027](0027-tenantry-and-admin.md)). "Create a workspace" goes to `/signup`, which signs in with `prompt=create`, so Keycloak opens its registration page first (it links to sign-in for people who already have an account).
+- Signup is one screen: the workspace name and its address, filled in from the name until edited. "Create workspace" checks the address and then creates; a taken or reserved address is shown on its field. The saga after that is unchanged.

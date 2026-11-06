@@ -146,6 +146,8 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_DEMO_WORKSPACES: ${VITE_DEMO_WORKSPACES:-}
     healthcheck:
       test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
       interval: 5s

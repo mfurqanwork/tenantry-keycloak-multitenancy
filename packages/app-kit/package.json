@@ -26,6 +26,7 @@
     "react-router": "^7.18.5"
   },
   "dependencies": {
+    "@carbon/icons-react": "^11.91.0",
     "@carbon/react": "^1.119.0",
     "@tenantry/auth": "workspace:*",
     "@tenantry/brand": "workspace:*",

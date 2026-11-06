@@ -21,5 +21,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     css: false,
+    // Keycloakify's lazy pages and Carbon render slowly under a full parallel run, like the apps' (15 s).
+    testTimeout: 15000,
   },
 });

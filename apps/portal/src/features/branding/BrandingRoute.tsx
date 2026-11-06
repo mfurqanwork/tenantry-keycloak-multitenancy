@@ -1,3 +1,4 @@
+import { ColorPalette } from '@carbon/icons-react';
 import {
   ActionableNotification,
   Button,
@@ -86,6 +87,8 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Branding"
+      icon={ColorPalette}
+      description="Your colour and logo, on the apps and the sign-in page."
       dirty={dirty}
       saving={saving}
       onSave={() => void save()}

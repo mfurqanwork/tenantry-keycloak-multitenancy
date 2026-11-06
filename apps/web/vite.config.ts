@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, 'TENANTRY_');
   return {
     plugins: [react()],
+    // VITE_ variables (the welcome page's demo workspaces) come from the repository's .env, like the rest.
+    envDir: root,
     // Carbon's own Sass still uses deprecated syntax; keep our build output to our own warnings.
     css: { preprocessorOptions: { scss: { quietDeps: true } } },
     server: {

@@ -12,6 +12,8 @@ export interface AuthSettings {
   redirect_uri: string;
   response_type: string;
   scope: string;
+  // 'create' opens Keycloak's registration page first (Keycloak 26), with a link to sign in instead.
+  prompt?: 'create';
 }
 
 export interface AuthClient {
@@ -32,13 +34,16 @@ export interface AuthClient {
 
 // Authorization code with PKCE (S256, the oidc-client-ts default). Tokens live in sessionStorage,
 // one tab's session at a time. ADR-0009.
-export function createAuthClient(config: AuthConfig & { redirectUri: string }): AuthClient {
+export function createAuthClient(
+  config: AuthConfig & { redirectUri: string; prompt?: 'create' },
+): AuthClient {
   const settings: AuthSettings = {
     authority: config.issuer,
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
     response_type: 'code',
     scope: config.organization ? `openid organization:${config.organization}` : 'openid',
+    ...(config.prompt ? { prompt: config.prompt } : {}),
   };
   const manager = new UserManager({
     ...settings,

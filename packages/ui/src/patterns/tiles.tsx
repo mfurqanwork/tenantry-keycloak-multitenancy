@@ -1,10 +1,20 @@
 import { Column, Grid, Tile } from '@carbon/react';
+import type { CarbonIconType } from '@carbon/icons-react';
 import type { ReactNode } from 'react';
 
 // One fact: a small label over its value. The value may be a link (where it leads).
-export function StatTile({ label, value }: { label: string; value: ReactNode }) {
+export function StatTile({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: ReactNode;
+  icon?: CarbonIconType;
+}) {
   return (
     <Tile className="tenantry-stat">
+      {Icon && <Icon size={20} aria-hidden="true" className="tenantry-stat__icon" />}
       <p className="tenantry-stat__label">{label}</p>
       <p className="tenantry-stat__value">{value}</p>
     </Tile>

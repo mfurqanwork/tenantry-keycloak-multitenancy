@@ -23,13 +23,13 @@ function setup(
   const api = fakeApi({ [`/api/apps/${app.id}`]: app, ...o.routes });
   renderPortal(
     <Routes>
-      <Route path="/applications/:id" element={<AppDetailRoute />} />
-      <Route path="/applications" element={<p>Back on the list</p>} />
+      <Route path="/advanced/apps/:id" element={<AppDetailRoute />} />
+      <Route path="/advanced/apps" element={<p>Back on the list</p>} />
     </Routes>,
     {
       api,
       me: o.me ?? ADMIN,
-      path: `/applications/${app.id}`,
+      path: `/advanced/apps/${app.id}`,
       ...(o.state ? { state: o.state } : {}),
     },
   );
@@ -77,13 +77,13 @@ describe('AppDetailRoute', () => {
     const api = fakeApi({ '/api/apps/a9': new ApiProblem(404, 'Not Found', 'No app with this id.') });
     renderPortal(
       <Routes>
-        <Route path="/applications/:id" element={<AppDetailRoute />} />
+        <Route path="/advanced/apps/:id" element={<AppDetailRoute />} />
       </Routes>,
-      { api, me: ADMIN, path: '/applications/a9' },
+      { api, me: ADMIN, path: '/advanced/apps/a9' },
     );
     expect(await screen.findByText('No app with this id.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Application' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Applications' })).toHaveAttribute('href', '/applications');
+    expect(screen.getByRole('link', { name: 'Customer apps' })).toHaveAttribute('href', '/advanced/apps');
   });
 
   it('names each value it offers to copy', async () => {

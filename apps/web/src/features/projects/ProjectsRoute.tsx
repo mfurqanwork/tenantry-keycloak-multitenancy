@@ -10,12 +10,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableToolbar,
+  TableToolbarContent,
+  TableToolbarSearch,
   TextInput,
-  Tile,
 } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
-import { ListPage } from '@tenantry/ui';
+import { Add, Folder, FolderOpen } from '@carbon/icons-react';
+import { EmptyState, ListPage } from '@tenantry/ui';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
 
 interface Project {
@@ -61,7 +64,11 @@ export function ProjectsRoute() {
   const me = useMe();
   const list = useResource<{ projects: Project[] }>('/api/projects');
   const [creating, setCreating] = useState(false);
+  // Search results open this page filtered (?q=); the box filters what is loaded.
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const projects = list.data?.projects ?? [];
+  const shown = projects.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   // The dialog sits beside the page: ListPage swaps its children for the empty state.
   return (
@@ -69,6 +76,8 @@ export function ProjectsRoute() {
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="Projects"
+        icon={Folder}
+        description="Your team's work, kept to this workspace."
         primaryAction={
           me.can('projects:write') ? (
             <Button
@@ -82,14 +91,20 @@ export function ProjectsRoute() {
           ) : undefined
         }
         isEmpty={list.data !== undefined && projects.length === 0}
-        emptyState={<Tile>No projects yet. Create one to get started.</Tile>}
+        emptyState={
+          <EmptyState
+            icon={FolderOpen}
+            title="Start your first project"
+            body="Projects keep your team's work in one place, and only this workspace sees them."
+          />
+        }
       >
         <Stack gap={6}>
           <ApiErrorNotification error={list.error} />
           {!list.data && !list.error && <DataTableSkeleton headers={HEADERS} rowCount={3} />}
           {list.data && (
             <DataTable
-              rows={projects.map((p) => ({
+              rows={shown.map((p) => ({
                 id: p.id,
                 name: p.name,
                 createdAt: new Date(p.createdAt).toLocaleDateString(),
@@ -98,6 +113,20 @@ export function ProjectsRoute() {
             >
               {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
                 <TableContainer>
+                  <TableToolbar aria-label="Projects toolbar">
+                    <TableToolbarContent>
+                      <TableToolbarSearch
+                        persistent
+                        labelText="Search projects"
+                        placeholder="Search projects"
+                        defaultValue={query}
+                        onChange={(_event, value) => {
+                          // Carbon reports the starting value as onChange('', value) on load.
+                          setQuery(value ?? '');
+                        }}
+                      />
+                    </TableToolbarContent>
+                  </TableToolbar>
                   <Table {...getTableProps()} aria-label="Projects">
                     <TableHead>
                       <TableRow>

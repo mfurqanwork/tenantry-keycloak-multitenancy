@@ -1,3 +1,4 @@
+import type { CarbonIconType } from '@carbon/icons-react';
 import { Button, ProgressIndicator, ProgressStep } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { PageHeader, type Crumb } from './PageHeader.js';
@@ -5,6 +6,8 @@ import { PageHeader, type Crumb } from './PageHeader.js';
 interface WizardPageProps {
   breadcrumbs?: Crumb[];
   title: string;
+  icon?: CarbonIconType;
+  description?: ReactNode;
   actions?: ReactNode;
   steps: string[];
   currentStep: number;
@@ -15,10 +18,12 @@ interface WizardPageProps {
   nextDisabled?: boolean;
 }
 
-// A multi-step flow (signup, app registration): progress, the step's content, then Back and Next.
+// A flow of one or more steps (signup, app registration): progress, the step's content, then Back and Next.
 export function WizardPage({
   breadcrumbs,
   title,
+  icon,
+  description,
   actions,
   steps,
   currentStep,
@@ -30,14 +35,23 @@ export function WizardPage({
 }: WizardPageProps) {
   return (
     <div className="tenantry-page">
-      <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
-      <div className="tenantry-wizard__progress">
-        <ProgressIndicator currentIndex={currentStep} spaceEqually>
-          {steps.map((step) => (
-            <ProgressStep key={step} label={step} />
-          ))}
-        </ProgressIndicator>
-      </div>
+      <PageHeader
+        breadcrumbs={breadcrumbs}
+        title={title}
+        icon={icon}
+        description={description}
+        actions={actions}
+      />
+      {/* One step is a plain form: no progress to show. */}
+      {steps.length > 1 && (
+        <div className="tenantry-wizard__progress">
+          <ProgressIndicator currentIndex={currentStep} spaceEqually>
+            {steps.map((step) => (
+              <ProgressStep key={step} label={step} />
+            ))}
+          </ProgressIndicator>
+        </div>
+      )}
       <div className="tenantry-page__body">{children}</div>
       <div className="tenantry-wizard__actions">
         {onBack && (

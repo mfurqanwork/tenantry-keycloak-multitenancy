@@ -1,4 +1,5 @@
 import { Breadcrumb, BreadcrumbItem } from '@carbon/react';
+import type { CarbonIconType } from '@carbon/icons-react';
 import type { ReactNode } from 'react';
 import { useRouterLink } from '../shell/link-context.js';
 
@@ -11,10 +12,14 @@ interface PageHeaderProps {
   breadcrumbs?: Crumb[] | undefined;
   title: string;
   actions?: ReactNode;
+  // One line under the title, saying what the page is for.
+  description?: ReactNode;
+  // A Carbon icon before the title (spec 8.2); decorative.
+  icon?: CarbonIconType | undefined;
 }
 
 // Shared by all five page patterns: breadcrumb, the page's only h1, then its actions at the end.
-export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
+export function PageHeader({ breadcrumbs, title, actions, description, icon: Icon }: PageHeaderProps) {
   const RouterLink = useRouterLink();
   return (
     <div className="tenantry-page-header">
@@ -32,9 +37,13 @@ export function PageHeader({ breadcrumbs, title, actions }: PageHeaderProps) {
         </Breadcrumb>
       )}
       <div className="tenantry-page-header__row">
-        <h1 className="tenantry-page-header__title">{title}</h1>
+        <h1 className="tenantry-page-header__title">
+          {Icon && <Icon size={24} aria-hidden="true" className="tenantry-page-header__icon" />}
+          {title}
+        </h1>
         {actions && <div className="tenantry-page-header__actions">{actions}</div>}
       </div>
+      {description && <p className="tenantry-page-header__description">{description}</p>}
     </div>
   );
 }

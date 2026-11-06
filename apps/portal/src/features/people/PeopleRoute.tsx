@@ -12,12 +12,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Tile,
+  TableToolbar,
+  TableToolbarContent,
+  TableToolbarSearch,
+  Tag,
 } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
+import { Add, UserMultiple } from '@carbon/icons-react';
 import type { Role } from '@tenantry/auth';
-import { ListPage } from '@tenantry/ui';
+import { Avatar, EmptyState, ListPage } from '@tenantry/ui';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import {
   ApiErrorNotification,
   assignableRoles,
@@ -56,11 +60,17 @@ const INVITE_HEADERS = [
   { key: 'createdAt', header: 'Invited' },
 ];
 
-export function MembersRoute() {
+export function PeopleRoute() {
   const me = useMe();
   const api = useApi();
   const list = useResource<{ members: MemberRow[]; invites: InviteRow[] }>('/api/members');
-  const [dialog, setDialog] = useState<Dialog>(null);
+  // /people?invite=1 (Tenantry's getting-started checklist) opens the invite dialog straight away.
+  const [searchParams] = useSearchParams();
+  // Search results open this page filtered (?q=); the box filters what is loaded.
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  const [dialog, setDialog] = useState<Dialog>(() =>
+    searchParams.get('invite') === '1' && me.can('members:invite') ? { kind: 'invite' } : null,
+  );
   const [actionError, setActionError] = useState<unknown>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [consoleBusy, setConsoleBusy] = useState<string | null>(null);
@@ -82,6 +92,10 @@ export function MembersRoute() {
   };
 
   const members = list.data?.members ?? [];
+  const q = query.trim().toLowerCase();
+  const shownMembers = members.filter(
+    (m) => !q || [m.displayName, m.email].some((v) => v?.toLowerCase().includes(q)),
+  );
   const invites = list.data?.invites ?? [];
 
   // Dialogs sit beside the page, never inside the part ListPage may swap for its empty state.
@@ -89,7 +103,9 @@ export function MembersRoute() {
     <>
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Members"
+        title="People"
+        icon={UserMultiple}
+        description="Who is in this workspace, their roles, and open invites."
         primaryAction={
           me.can('members:invite') ? (
             <Button
@@ -103,23 +119,43 @@ export function MembersRoute() {
           ) : undefined
         }
         isEmpty={list.data !== undefined && members.length === 0}
-        emptyState={<Tile>No members yet. Invite someone to get started.</Tile>}
+        emptyState={
+          <EmptyState
+            icon={UserMultiple}
+            title="Invite your team"
+            body="People you invite get an email with a link to join."
+          />
+        }
       >
         <Stack gap={6}>
           <ApiErrorNotification error={list.error ?? actionError} />
           {!list.data && !list.error && <DataTableSkeleton headers={MEMBER_HEADERS} rowCount={3} />}
           {list.data && (
             <DataTable
-              rows={members.map((m) => ({
+              rows={shownMembers.map((m) => ({
                 id: m.userId,
                 name: m.displayName ?? '',
                 email: m.email ?? '',
-                role: `${m.role ? ROLE_LABELS[m.role] : 'No role yet'}${m.console ? ' · Console access' : ''}`,
+                role: m.role ? ROLE_LABELS[m.role] : 'No role yet',
               }))}
               headers={MEMBER_HEADERS}
             >
               {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
                 <TableContainer>
+                  <TableToolbar aria-label="People toolbar">
+                    <TableToolbarContent>
+                      <TableToolbarSearch
+                        persistent
+                        labelText="Search people"
+                        placeholder="Search by name or email"
+                        defaultValue={query}
+                        onChange={(_event, value) => {
+                          // Carbon reports the starting value as onChange('', value) on load.
+                          setQuery(value ?? '');
+                        }}
+                      />
+                    </TableToolbarContent>
+                  </TableToolbar>
                   <Table {...getTableProps()} aria-label="Members">
                     <TableHead>
                       <TableRow>
@@ -139,7 +175,36 @@ export function MembersRoute() {
                         return (
                           <TableRow {...getRowProps({ row })} key={row.id}>
                             {row.cells.map((cell) => (
-                              <TableCell key={cell.id}>{cell.value as string}</TableCell>
+                              <TableCell key={cell.id}>
+                                {cell.info.header === 'name' ? (
+                                  <span className="tenantry-person">
+                                    <Avatar name={member?.displayName ?? member?.email ?? ''} size="sm" />
+                                    {cell.value as string}
+                                  </span>
+                                ) : cell.info.header === 'role' ? (
+                                  <span className="tenantry-tags">
+                                    <Tag
+                                      type={
+                                        member?.role === 'owner'
+                                          ? 'purple'
+                                          : member?.role === 'admin'
+                                            ? 'blue'
+                                            : 'gray'
+                                      }
+                                      size="sm"
+                                    >
+                                      {cell.value as string}
+                                    </Tag>
+                                    {member?.console && (
+                                      <Tag type="teal" size="sm">
+                                        Console access
+                                      </Tag>
+                                    )}
+                                  </span>
+                                ) : (
+                                  (cell.value as string)
+                                )}
+                              </TableCell>
                             ))}
                             {(manages || grantsConsole) && (
                               <TableCell className="cds--table-column-menu">

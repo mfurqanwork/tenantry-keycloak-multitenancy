@@ -66,3 +66,4 @@ export {
   type MigrationRecord,
 } from './repositories/migrations.js';
 export { grantConsole, listConsole, revokeConsole } from './repositories/console-access.js';
+export { getReadUntil, listAuditSince, markRead, openInvitesForEmail } from './repositories/notifications.js';

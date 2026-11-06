@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TenantryThemeProvider } from '@tenantry/ui';
 import { App } from './App.js';
 import { ApiProvider, type Me, MeProvider } from '@tenantry/app-kit';
@@ -32,6 +32,8 @@ function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
           api={fakeApi({
             '/api/me/workspaces': WORKSPACES,
             '/api/tenants/acme/branding': { name: 'Acme', primaryColor: null, logoUrl: null },
+            '/api/projects': { projects: [] },
+            '/api/members': { members: [], invites: [] },
           })}
         >
           <MeProvider value={me}>
@@ -43,47 +45,62 @@ function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
   );
 }
 
-const renderAs = (me: Me) => {
-  renderAt('/', me);
-};
-
-describe('web app', () => {
-  it('shows the dashboard with the workspace and your role, as the portal does', () => {
+describe('web app (Tenantry, ADR-0027)', () => {
+  it('opens on Home, with its greeting', async () => {
     renderAt('/');
-    const main = within(screen.getByRole('main'));
-    expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
-    expect(main.getByText('Workspace')).toBeInTheDocument();
-    expect(main.getByText('Acme')).toBeInTheDocument();
-    expect(main.getByText('Your role')).toBeInTheDocument();
-    expect(main.getByText('Owner')).toBeInTheDocument();
-    // No placeholders from before tenants had realms of their own.
-    expect(main.queryByText('platform')).not.toBeInTheDocument();
-    expect(main.queryByText('Phase 0')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
+    });
   });
 
-  it('shows every page pattern on /patterns', () => {
-    renderAt('/patterns');
-    for (const name of ['List page', 'Detail page', 'Settings page', 'Dashboard', 'Wizard']) {
-      expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument();
+  it("shares one menu with Admin: an owner's Workspace pages open Admin (spec 8.1)", async () => {
+    renderAt('/');
+    const menu = () => within(screen.getByRole('navigation', { name: 'Side navigation' }));
+    await waitFor(() => {
+      expect(menu().getByRole('link', { name: 'People' })).toHaveAttribute(
+        'href',
+        'http://acme.portal.tenantry.localhost/people',
+      );
+    });
+    expect(menu().getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(menu().getByText('Workspace')).toBeInTheDocument();
+  });
+
+  it('gives a member Home and Projects only', async () => {
+    renderAt('/', makeMe('member', MEMBER));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
+    });
+    const menu = within(screen.getByRole('navigation', { name: 'Side navigation' }));
+    expect(menu.getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Projects']);
+  });
+
+  it.each([
+    ['/members', 'http://acme.portal.tenantry.localhost/people'],
+    ['/audit', 'http://acme.portal.tenantry.localhost/audit'],
+  ])('sends the old address %s to Admin', async (path, target) => {
+    const replace = vi.fn();
+    const realLocation = window.location;
+    vi.stubGlobal('location', { href: realLocation.href, pathname: realLocation.pathname, replace });
+    try {
+      renderAt(path);
+      await waitFor(() => {
+        expect(replace).toHaveBeenCalledWith(target);
+      });
+    } finally {
+      vi.stubGlobal('location', realLocation);
     }
   });
 
-  it('marks the current page in the side nav', () => {
+  it('keeps the patterns page out of production builds', () => {
+    vi.stubEnv('DEV', false);
     renderAt('/patterns');
-    const links = screen.getAllByRole('link', { name: 'Patterns' });
-    expect(links.some((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
-  });
-
-  it('shows only the pages the role allows in the side nav', () => {
-    renderAs(makeMe('member', MEMBER));
-    expect(screen.getAllByRole('link', { name: 'Projects' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: 'Members' }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('link', { name: 'Audit log' })).not.toBeInTheDocument();
-  });
-
-  it('shows the audit log to an owner', () => {
-    renderAs(makeMe('owner', ALL));
-    expect(screen.getAllByRole('link', { name: 'Audit log' }).length).toBeGreaterThan(0);
+    vi.unstubAllEnvs();
+    expect(screen.queryByRole('heading', { level: 2, name: 'List page' })).not.toBeInTheDocument();
   });
 
   it("lists the person's workspaces, each at its web address", async () => {
@@ -96,13 +113,23 @@ describe('web app', () => {
     );
   });
 
-  it('switches to the portal of this workspace', async () => {
+  it('switches to the Admin of this workspace', async () => {
     renderAt('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Switch app' }));
     const panel = screen.getByRole('navigation', { name: 'Switch app' });
-    expect(within(panel).getByRole('link', { name: /Tenantry Portal/ })).toHaveAttribute(
+    expect(within(panel).getByRole('link', { name: /Admin/ })).toHaveAttribute(
       'href',
       'http://acme.portal.tenantry.localhost/',
     );
+  });
+
+  it('shows a member no app switcher, since Admin is not theirs', async () => {
+    renderAt('/', makeMe('member', MEMBER));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Switch app' })).not.toBeInTheDocument();
   });
 });

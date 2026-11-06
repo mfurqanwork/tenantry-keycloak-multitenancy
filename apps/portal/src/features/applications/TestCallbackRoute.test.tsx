@@ -32,7 +32,10 @@ describe('TestCallbackRoute', () => {
     expect(await screen.findByText('Sign-in works')).toBeInTheDocument();
     expect(screen.getByText('http://auth.test/realms/ent-acme')).toBeInTheDocument();
     expect(screen.getByText('u-1')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to the app' })).toHaveAttribute('href', '/applications/a1');
+    expect(screen.getByRole('link', { name: 'Back to the app' })).toHaveAttribute(
+      'href',
+      '/advanced/apps/a1',
+    );
   });
 
   it('says Keycloak signed the person in, for a client with a secret', async () => {
@@ -61,7 +64,7 @@ describe('TestCallbackRoute', () => {
     expect(await screen.findByText('This test sign-in has expired. Start it again.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to applications' })).toHaveAttribute(
       'href',
-      '/applications',
+      '/advanced/apps',
     );
   });
 });

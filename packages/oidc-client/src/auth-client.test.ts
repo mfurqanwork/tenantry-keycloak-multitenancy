@@ -29,4 +29,18 @@ describe('createAuthClient', () => {
     await expect(client.getAccessToken()).resolves.toBeNull();
     await expect(client.user()).resolves.toBeNull();
   });
+
+  it('opens registration first for "Create a workspace" (prompt=create)', () => {
+    const client = createAuthClient({
+      ...base,
+      organization: null,
+      redirectUri: 'http://x/auth/callback',
+      prompt: 'create',
+    });
+    expect(client.settings.prompt).toBe('create');
+    expect(
+      createAuthClient({ ...base, organization: null, redirectUri: 'http://x/auth/callback' }).settings
+        .prompt,
+    ).toBeUndefined();
+  });
 });

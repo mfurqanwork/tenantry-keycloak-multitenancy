@@ -22,9 +22,11 @@
     "test:isolation": "turbo run test:isolation --concurrency=1",
     "ops": "turbo run build --filter=@tenantry/ops^... --output-logs=errors-only && pnpm --filter @tenantry/ops --silent run ops",
     "seed": "pnpm ops seed",
-    "example:customer-app": "pnpm --filter @tenantry/customer-app --silent start"
+    "example:customer-app": "pnpm --filter @tenantry/customer-app --silent start",
+    "brand:icons": "node scripts/brand-icons.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.20.5",
     "eslint": "^10.14.0",
     "prettier": "^3.9.10",

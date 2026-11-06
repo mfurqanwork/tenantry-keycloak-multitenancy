@@ -148,7 +148,11 @@ describe('the cut-over', () => {
     await tenantTx(conn.db, t.tenantId, (tx) => startMigration(tx, { fromOrgId: 'org-x', realm: 'ent-x' }));
     const failed = await failure(
       tenantTx(conn.db, t.tenantId, async (tx) => {
-        await cutOver(tx, t.tenantId, { realm: 'ent-x', issuer: 'http://auth.test/realms/ent-x', templateVersion: 4 });
+        await cutOver(tx, t.tenantId, {
+          realm: 'ent-x',
+          issuer: 'http://auth.test/realms/ent-x',
+          templateVersion: 4,
+        });
         throw new Error('the audit entry could not be written');
       }),
     );
@@ -156,9 +160,17 @@ describe('the cut-over', () => {
     expect(await platform.findTenantById(t.tenantId)).toEqual(before);
     expect((await tenantTx(conn.db, t.tenantId, (tx) => getMigration(tx)))?.cutOverAt).toBeNull();
     await tenantTx(conn.db, t.tenantId, (tx) =>
-      cutOver(tx, t.tenantId, { realm: 'ent-x', issuer: 'http://auth.test/realms/ent-x', templateVersion: 4 }),
+      cutOver(tx, t.tenantId, {
+        realm: 'ent-x',
+        issuer: 'http://auth.test/realms/ent-x',
+        templateVersion: 4,
+      }),
     );
-    expect(await platform.findTenantById(t.tenantId)).toMatchObject({ tier: 'enterprise', realm: 'ent-x', kcOrgId: null });
+    expect(await platform.findTenantById(t.tenantId)).toMatchObject({
+      tier: 'enterprise',
+      realm: 'ent-x',
+      kcOrgId: null,
+    });
     expect((await tenantTx(conn.db, t.tenantId, (tx) => getMigration(tx)))?.cutOverAt).toBeInstanceOf(Date);
   });
 });

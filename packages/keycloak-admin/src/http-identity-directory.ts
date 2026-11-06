@@ -229,6 +229,7 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
         '/identity-provider/instances',
         {
           alias: input.alias,
+          ...(input.displayName ? { displayName: input.displayName } : {}),
           providerId: 'oidc',
           enabled: true,
           trustEmail: true,
@@ -291,7 +292,7 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       const path = `/identity-provider/instances/${encodeURIComponent(alias)}`;
       const res = await call('getIdentityProvider', 'GET', path, undefined, [404]);
       if (res.status === 404) return null;
-      const idp = await json<{ alias: string; config: Record<string, string> }>(res);
+      const idp = await json<{ alias: string; displayName?: string; config: Record<string, string> }>(res);
       // Keycloak answers with the secret masked; drop the key so nothing passes it on.
       const config = Object.fromEntries(Object.entries(idp.config).filter(([key]) => key !== 'clientSecret'));
       const mappers = await json<IdentityProviderSettings['mappers'][number][]>(
@@ -299,6 +300,7 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
       );
       return {
         alias: idp.alias,
+        displayName: idp.displayName ?? null,
         issuer: config['issuer'] ?? '',
         clientId: config['clientId'] ?? '',
         config,
@@ -308,6 +310,16 @@ export function createHttpIdentityDirectory(o: HttpIdentityDirectoryOptions): Id
           config: c,
         })),
       };
+    },
+
+    async setIdentityProviderDisplayName(alias, displayName) {
+      const path = `/identity-provider/instances/${encodeURIComponent(alias)}`;
+      const current = await json<{ displayName?: string } & Record<string, unknown>>(
+        await call('setIdentityProviderDisplayName', 'GET', path),
+      );
+      if (current.displayName === displayName) return { changed: false };
+      await call('setIdentityProviderDisplayName', 'PUT', path, { ...current, displayName });
+      return { changed: true };
     },
 
     async ensureBridgeClient(slug, redirectUri, secret) {

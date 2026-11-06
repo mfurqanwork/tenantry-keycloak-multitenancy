@@ -1,3 +1,4 @@
+import type { CarbonIconType } from '@carbon/icons-react';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import type { ReactNode } from 'react';
 import { PageHeader, type Crumb } from './PageHeader.js';
@@ -5,16 +6,32 @@ import { PageHeader, type Crumb } from './PageHeader.js';
 interface DetailPageProps {
   breadcrumbs?: Crumb[];
   title: string;
+  icon?: CarbonIconType;
+  description?: ReactNode;
   actions?: ReactNode;
   summary: ReactNode;
   tabs: { label: string; content: ReactNode }[];
 }
 
 // One record: read-only summary tiles above, its sections in tabs below.
-export function DetailPage({ breadcrumbs, title, actions, summary, tabs }: DetailPageProps) {
+export function DetailPage({
+  breadcrumbs,
+  title,
+  icon,
+  description,
+  actions,
+  summary,
+  tabs,
+}: DetailPageProps) {
   return (
     <div className="tenantry-page">
-      <PageHeader breadcrumbs={breadcrumbs} title={title} actions={actions} />
+      <PageHeader
+        breadcrumbs={breadcrumbs}
+        title={title}
+        icon={icon}
+        description={description}
+        actions={actions}
+      />
       <div className="tenantry-page__summary">{summary}</div>
       <Tabs>
         <TabList aria-label={`${title} sections`}>
