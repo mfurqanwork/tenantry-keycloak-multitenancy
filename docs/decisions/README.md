@@ -32,3 +32,5 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0026](0026-console-access.md)              | Scoped Keycloak console access for a workspace's own admins  |
 | [0027](0027-tenantry-and-admin.md)          | Tenantry and Admin: two apps split by who they are for       |
 | [0028](0028-notifications.md)               | Notifications read from the audit log                        |
+| [0029](0029-production-on-one-vm.md)        | Production on one VM, rebuilt on each release                |
+| [0030](0030-releases.md)                    | One version and a hand-written changelog                     |
