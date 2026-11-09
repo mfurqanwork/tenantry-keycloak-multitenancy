@@ -100,3 +100,29 @@ describe('AppShell, redesigned (spec §8.2)', () => {
     expect(items.indexOf('Projects')).toBeLessThan(items.indexOf('Workspace'));
   });
 });
+
+describe('AppShell version', () => {
+  const user = { email: 'ada@example.test', onSignOut: vi.fn() };
+
+  it('shows the running version in the account panel', async () => {
+    render(
+      <AppShell productName="Acme" navItems={[]} currentPath="/" user={user} version="0.6.0">
+        <p>content</p>
+      </AppShell>,
+      { wrapper },
+    );
+    await userEvent.setup().click(screen.getByRole('button', { name: /account/i }));
+    expect(screen.getByText('Tenantry 0.6.0')).toBeInTheDocument();
+  });
+
+  it('shows nothing when there is no version', async () => {
+    render(
+      <AppShell productName="Acme" navItems={[]} currentPath="/" user={user}>
+        <p>content</p>
+      </AppShell>,
+      { wrapper },
+    );
+    await userEvent.setup().click(screen.getByRole('button', { name: /account/i }));
+    expect(screen.queryByText(/^Tenantry \d/)).toBeNull();
+  });
+});

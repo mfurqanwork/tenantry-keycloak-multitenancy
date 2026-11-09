@@ -1,14 +1,17 @@
 import { Link, Stack, Tile } from '@carbon/react';
 import { DashboardPage } from '@tenantry/ui';
+import { DemoSignIns } from './DemoSignIns.js';
 import { GoToWorkspace, workspaceUrl } from './GoToWorkspace.js';
 
 // The base domain's front page (spec §2.1): what Tenantry is, and the two ways in. No sign-in until one is chosen.
 export function WelcomeRoute({
   baseDomain,
   demoWorkspaces,
+  demoPassword,
 }: {
   baseDomain: string;
   demoWorkspaces: string[];
+  demoPassword?: string | undefined;
 }) {
   const tiles = [
     <Tile key="create" className="tenantry-welcome__tile">
@@ -38,6 +41,13 @@ export function WelcomeRoute({
             ))}
           </ul>
         </Stack>
+      </Tile>,
+    );
+  }
+  if (demoPassword) {
+    tiles.push(
+      <Tile key="sign-ins" className="tenantry-welcome__tile">
+        <DemoSignIns baseDomain={baseDomain} password={demoPassword} />
       </Tile>,
     );
   }

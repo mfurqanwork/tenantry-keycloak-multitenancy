@@ -15,4 +15,5 @@ COPY tsconfig.base.json .
 RUN pnpm --filter "@tenantry/db..." build
 
 FROM builder
+USER node
 CMD ["node", "packages/db/dist/migrate-cli.js"]

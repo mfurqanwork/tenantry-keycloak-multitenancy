@@ -15,6 +15,9 @@ COPY tsconfig.base.json .
 RUN pnpm --filter "@tenantry/api..." build
 
 FROM builder
-ENV NODE_ENV=production
+ARG TENANTRY_VERSION=dev
+ENV NODE_ENV=production TENANTRY_VERSION=$TENANTRY_VERSION
+RUN mkdir /secrets && chown node:node /secrets
+USER node
 EXPOSE 3000
 CMD ["node", "apps/api/dist/main.js"]

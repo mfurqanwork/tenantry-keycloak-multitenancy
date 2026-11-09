@@ -26,6 +26,7 @@ import { resolveTxt } from './dns/txt.js';
 import { stackEnv } from './env.js';
 import { secretFrom } from './secret.js';
 import { apiClient } from './seed/http.js';
+import { memoryDns } from './seed/memory-dns.js';
 import { seed } from './seed/seed.js';
 
 const USAGE = `Usage: pnpm ops <command>
@@ -116,9 +117,17 @@ async function operatorToken(): Promise<string> {
   return ((await res.json()) as { access_token: string }).access_token;
 }
 
+// Through Caddy locally; straight to the API inside production's network.
+function stackApi() {
+  return apiClient(
+    Number(stackEnv('TENANTRY_HTTP_PORT', '80')),
+    stackEnv('TENANTRY_API_UPSTREAM', '') || undefined,
+  );
+}
+
 function enterpriseDeps(): EnterpriseDeps {
   return {
-    api: apiClient(Number(stackEnv('TENANTRY_HTTP_PORT', '80'))),
+    api: stackApi(),
     operatorToken,
     baseDomain: stackEnv('TENANTRY_BASE_DOMAIN', 'tenantry.localhost'),
     out: (line) => {
@@ -133,14 +142,17 @@ function enterpriseDeps(): EnterpriseDeps {
 async function seedWith(deps: OpsDeps): Promise<number> {
   const internal = stackEnv('TENANTRY_AUTH_INTERNAL_URL', stackEnv('TENANTRY_AUTH_URL'));
   const zoneOut = () => undefined;
+  const production = stackEnv('TENANTRY_SEED_PRODUCTION', '') === 'true';
+  const dns = memoryDns();
   return seed({
     ...deps,
+    ...(production ? { resolveTxt: dns.resolveTxt } : {}),
     users: createDevUsers({
       baseUrl: internal,
       adminUsername: stackEnv('KC_BOOTSTRAP_ADMIN_USERNAME'),
       adminPassword: stackEnv('KC_BOOTSTRAP_ADMIN_PASSWORD'),
     }),
-    api: apiClient(Number(stackEnv('TENANTRY_HTTP_PORT', '80'))),
+    api: stackApi(),
     operatorToken,
     async tokenFor(email, slug) {
       const res = await fetch(`${internal}/realms/platform/protocol/openid-connect/token`, {
@@ -164,16 +176,19 @@ async function seedWith(deps: OpsDeps): Promise<number> {
       clientSecret: stackEnv('CORP_DEMO_CLIENT_SECRET'),
     },
     setTxt: (name, value) => {
-      setTxt(ZONE_FILE, name, value, zoneOut, reloadDns);
+      if (production) dns.setTxt(name, value);
+      else setTxt(ZONE_FILE, name, value, zoneOut, reloadDns);
     },
     authInternalUrl: internal,
-    exampleAppEnv: {
-      read: () => (existsSync(EXAMPLE_ENV) ? readFileSync(EXAMPLE_ENV, 'utf8') : null),
-      write: (text) => {
-        mkdirSync(dirname(EXAMPLE_ENV), { recursive: true });
-        writeFileSync(EXAMPLE_ENV, text, { mode: 0o600 });
-      },
-    },
+    exampleAppEnv: production
+      ? null
+      : {
+          read: () => (existsSync(EXAMPLE_ENV) ? readFileSync(EXAMPLE_ENV, 'utf8') : null),
+          write: (text) => {
+            mkdirSync(dirname(EXAMPLE_ENV), { recursive: true });
+            writeFileSync(EXAMPLE_ENV, text, { mode: 0o600 });
+          },
+        },
   });
 }
 

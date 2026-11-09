@@ -70,6 +70,8 @@ interface AppShellProps {
   linkAs?: ElementType;
   // The signed-in person, for the account menu; no menu without one.
   user?: { email: string; name?: string | undefined; onSignOut: () => void };
+  // The running release, shown in the account panel (ADR-0030).
+  version?: string | undefined;
   // The other apps of this workspace and the person's other workspaces; each switcher shows from two entries.
   apps?: SwitcherEntry[];
   workspaces?: WorkspaceEntry[];
@@ -150,6 +152,7 @@ export function AppShell({
   currentPath,
   linkAs,
   user,
+  version,
   apps = [],
   workspaces = [],
   logoUrl = null,
@@ -269,6 +272,7 @@ export function AppShell({
                     <Button kind="secondary" size="sm" onClick={user.onSignOut}>
                       Sign out
                     </Button>
+                    {version && <p className="tenantry-account__version">Tenantry {version}</p>}
                   </div>
                 </HeaderPanel>
               )}

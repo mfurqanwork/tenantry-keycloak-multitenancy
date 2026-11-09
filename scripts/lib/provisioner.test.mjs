@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureBackendRoles, ensureProvisionerClient } from './provisioner.mjs';
+import { ensureBackendRoles, ensureProvisionerClient, setClientEnabled } from './provisioner.mjs';
 
 // A Keycloak stand-in for the few admin calls the setup makes.
 function fakeKeycloak({ exists = false } = {}) {
@@ -97,4 +97,32 @@ test('gives the platform backend view-identity-providers once', async () => {
   assert.deepEqual(await ensureBackendRoles(opts), { added: ['view-identity-providers'] });
   assert.deepEqual(await ensureBackendRoles(opts), { added: [] });
   assert.equal(kc.calls.filter((c) => c.startsWith('POST') && c.includes('role-mappings')).length, 1);
+});
+
+test('setClientEnabled turns one platform client on or off', async () => {
+  const puts = [];
+  const json = (body) =>
+    new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
+  const fetchFn = async (url, init = {}) => {
+    const u = new URL(url);
+    if (u.pathname.endsWith('/token')) return json({ access_token: 'admin' });
+    if (u.pathname === '/admin/realms/platform/clients' && (init.method ?? 'GET') === 'GET')
+      return json([{ id: 'c9', clientId: 'tenantry-isolation-tests', enabled: false, secret: 's' }]);
+    if (u.pathname === '/admin/realms/platform/clients/c9' && init.method === 'PUT') {
+      puts.push(JSON.parse(init.body));
+      return new Response(null, { status: 204 });
+    }
+    return new Response('unexpected', { status: 500 });
+  };
+  await setClientEnabled({
+    baseUrl: 'http://kc',
+    adminUser: 'admin',
+    adminPassword: 'pw',
+    clientId: 'tenantry-isolation-tests',
+    enabled: true,
+    fetch: fetchFn,
+  });
+  assert.equal(puts.length, 1);
+  assert.equal(puts[0].enabled, true);
+  assert.equal(puts[0].clientId, 'tenantry-isolation-tests');
 });

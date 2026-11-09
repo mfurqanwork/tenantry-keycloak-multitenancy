@@ -79,7 +79,8 @@ export interface SeedDeps extends OpsDeps {
   operatorToken: () => Promise<string>;
   // Where the example customer app reaches Keycloak, and its settings file (Phase 4).
   authInternalUrl: string;
-  exampleAppEnv: ExampleAppDeps['envFile'];
+  // Null in production: the example app's redirect is a local address.
+  exampleAppEnv: ExampleAppDeps['envFile'] | null;
 }
 
 // Creates or completes the demo; a second run changes nothing.
@@ -273,10 +274,12 @@ async function ensureEnterprise(deps: SeedDeps, changes: string[]) {
     });
     changes.push(`${ENTERPRISE.slug} colour and logo`);
   }
-  const exampleApp = await ensureExampleApp({
-    ...operator,
-    authInternalUrl: deps.authInternalUrl,
-    envFile: deps.exampleAppEnv,
-  });
-  if (exampleApp) changes.push(exampleApp);
+  if (deps.exampleAppEnv) {
+    const exampleApp = await ensureExampleApp({
+      ...operator,
+      authInternalUrl: deps.authInternalUrl,
+      envFile: deps.exampleAppEnv,
+    });
+    if (exampleApp) changes.push(exampleApp);
+  }
 }

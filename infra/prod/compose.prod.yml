@@ -1,0 +1,194 @@
+# The live stack on one VM (ADR-0029). Images come from the registry; secrets from /opt/tenantry/.env.
+name: tenantry
+
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '3' }
+
+services:
+  caddy:
+    <<: *service
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-caddy:${TENANTRY_VERSION}
+    mem_limit: 96m
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      default:
+        # Containers reach Keycloak at the same URL the browser uses, so token issuers match.
+        aliases: ['auth.${TENANTRY_BASE_DOMAIN}']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 5s
+      retries: 10
+
+  postgres:
+    <<: *service
+    image: postgres:17
+    mem_limit: 256m
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TENANTRY_OWNER_PASSWORD: ${TENANTRY_OWNER_PASSWORD}
+      TENANTRY_APP_PASSWORD: ${TENANTRY_APP_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d tenantry']
+      interval: 5s
+      retries: 20
+
+  keycloak:
+    <<: *service
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-keycloak:${TENANTRY_VERSION}
+    command: ['start', '--optimized', '--import-realm']
+    mem_limit: 1100m
+    environment:
+      KC_HOSTNAME: ${TENANTRY_AUTH_URL}
+      KC_HTTP_ENABLED: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      # Sized for the 2 GB VM.
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=55 -XX:InitialRAMPercentage=25
+      TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN}
+      # Filled into the realm files at import.
+      KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
+      KEYCLOAK_OPS_CLIENT_SECRET: ${KEYCLOAK_OPS_CLIENT_SECRET}
+      TENANTRY_ISOLATION_CLIENT_SECRET: ${TENANTRY_ISOLATION_CLIENT_SECRET}
+      CORP_DEMO_CLIENT_SECRET: ${CORP_DEMO_CLIENT_SECRET}
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q UP <&3
+      interval: 10s
+      retries: 40
+      start_period: 180s
+
+  # Keycloak and the API send here; the relay passes real addresses to Resend. No public address.
+  mailpit:
+    <<: *service
+    image: axllent/mailpit:v1.27
+    mem_limit: 64m
+    command: ['--smtp-relay-config', '/relay.yml', '--smtp-relay-all', '--max', '200']
+    configs:
+      - source: relay
+        target: /relay.yml
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      retries: 10
+
+  migrate:
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-migrate:${TENANTRY_VERSION}
+    restart: 'no'
+    environment:
+      DATABASE_OWNER_URL: postgres://tenantry_owner:${TENANTRY_OWNER_PASSWORD}@postgres:5432/tenantry
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    <<: *service
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-api:${TENANTRY_VERSION}
+    mem_limit: 256m
+    environment: &api-env
+      DATABASE_URL: postgres://tenantry_app:${TENANTRY_APP_PASSWORD}@postgres:5432/tenantry
+      TENANTRY_AUTH_URL: ${TENANTRY_AUTH_URL}
+      TENANTRY_AUTH_INTERNAL_URL: http://keycloak:8080
+      TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN}
+      KEYCLOAK_BACKEND_CLIENT_ID: tenantry-backend
+      KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
+      KEYCLOAK_PROVISIONER_CLIENT_ID: tenantry-provisioner
+      KEYCLOAK_PROVISIONER_CLIENT_SECRET: ${KEYCLOAK_PROVISIONER_CLIENT_SECRET}
+      TENANTRY_SECRETS_DIR: /secrets
+      TENANTRY_SMTP_HOST: mailpit
+      TENANTRY_SMTP_PORT: '1025'
+      TENANTRY_SMTP_FROM: no-reply@${TENANTRY_BASE_DOMAIN}
+    volumes:
+      - secrets:/secrets
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      keycloak: { condition: service_healthy }
+      caddy: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      retries: 12
+      start_period: 20s
+
+  web:
+    <<: *service
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-web:${TENANTRY_VERSION}
+    mem_limit: 48m
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 5s
+      retries: 10
+
+  portal:
+    <<: *service
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-portal:${TENANTRY_VERSION}
+    mem_limit: 48m
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 5s
+      retries: 10
+
+  # The demo's seed, run by deploy.sh.
+  ops:
+    profiles: [tools]
+    image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-ops:${TENANTRY_VERSION}
+    restart: 'no'
+    environment:
+      <<: *api-env
+      TENANTRY_API_UPSTREAM: api:3000
+      TENANTRY_SEED_PRODUCTION: 'true'
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KEYCLOAK_OPS_CLIENT_ID: tenantry-ops
+      KEYCLOAK_OPS_CLIENT_SECRET: ${KEYCLOAK_OPS_CLIENT_SECRET}
+      TENANTRY_ISOLATION_CLIENT_SECRET: ${TENANTRY_ISOLATION_CLIENT_SECRET}
+      CORP_DEMO_CLIENT_SECRET: ${CORP_DEMO_CLIENT_SECRET}
+      SEED_PASSWORD: ${SEED_PASSWORD}
+    volumes:
+      - secrets:/secrets
+
+configs:
+  relay:
+    content: |
+      host: smtp.resend.com
+      port: 587
+      starttls: true
+      auth: plain
+      username: resend
+      password: ${RESEND_API_KEY}
+      blocked-recipients: '\.test$$'
+
+volumes:
+  pgdata:
+  secrets:
+  caddy_data:
+  caddy_config:

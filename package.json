@@ -25,7 +25,8 @@
     "seed": "pnpm ops seed",
     "example:customer-app": "pnpm --filter @tenantry/customer-app --silent start",
     "brand:icons": "node scripts/brand-icons.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "smoke:live": "node scripts/smoke-live.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

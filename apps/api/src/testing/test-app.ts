@@ -213,6 +213,7 @@ export async function createTestApp(
     authInternalUrl: issuer.baseUrl,
     platformRealm: 'platform',
     logLevel: 'error',
+    version: 'dev',
     baseDomain: 'tenantry.localhost',
     publicPort: null,
     backendClientId: 'unused',
