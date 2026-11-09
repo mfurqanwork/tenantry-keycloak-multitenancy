@@ -2,7 +2,7 @@
 
 The honest list of what does not work yet, what is missing, and what waits on a decision. Each phase adds to it and strikes out what it fixes. Decisions themselves live in [the ADRs](decisions/README.md) and each phase's spec.
 
-Last updated: Phase 6a (2026-11-08).
+Last updated: Phase 6b (2026-11-10).
 
 ## Open items that need a person
 

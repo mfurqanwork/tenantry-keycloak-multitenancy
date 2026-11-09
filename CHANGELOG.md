@@ -4,7 +4,19 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access. Phase 6a: a simpler Tenantry.
+Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access. Phase 6a: a simpler Tenantry. Phase 6b: live on Azure.
+
+### Added (Phase 6b)
+
+- The live demo on one VM (ADR-0029): `infra/prod/compose.prod.yml`, Caddy with wildcard certificates through Cloudflare, Keycloak in production mode, production realms generated from the dev ones, and email relayed to Resend through an internal Mailpit. `docs/guides/deploy-azure.md` is the setup.
+- One product version and releases (ADR-0030): `pnpm release <version>`, a CI check for a line under Unreleased, and a `release.yml` that tests a version tag, publishes the images and a GitHub Release, deploys and checks the live site.
+- The running version in `/api/health` and the account panel.
+- Demo sign-ins on the welcome page, when the build has a demo password. The live demo is rebuilt on each release and reset every night.
+
+### Changed (Phase 6b)
+
+- The API, migration, web and portal images run as a normal user.
+- `pnpm ops seed` can run inside the production network, with no CoreDNS and no example app.
 
 ### Added (Phase 6a)
 

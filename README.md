@@ -176,7 +176,7 @@ Then open <http://tenantry.localhost> and pick a demo workspace. The accounts, t
 | 3–4   | Enterprise realms from versioned templates; customer apps                        | Done   |
 | 5     | SCIM, security settings, console access, moving to Enterprise                    | Done   |
 | 6a    | A simpler Tenantry: Tenantry and Admin, the welcome page, the brand              | Done   |
-| 6b    | Running in production: TLS, backups, health, metrics, rate limits                | Next   |
+| 6b    | Live on Azure: HTTPS, real email, releases, a nightly demo reset                 | Done   |
 | 6c    | Load test at 50, 100 and 200 realms, security review, docs site → **v1.0**       | Later  |
 
 ## Licence
