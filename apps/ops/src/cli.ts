@@ -146,7 +146,7 @@ async function seedWith(deps: OpsDeps): Promise<number> {
   const dns = memoryDns();
   return seed({
     ...deps,
-    ...(production ? { resolveTxt: dns.resolveTxt } : {}),
+    ...(production ? { resolveTxt: (name: string) => dns.resolveTxt(name) } : {}),
     users: createDevUsers({
       baseUrl: internal,
       adminUsername: stackEnv('KC_BOOTSTRAP_ADMIN_USERNAME'),
