@@ -1,6 +1,7 @@
 {
   "name": "tenantry",
   "private": true,
+  "version": "0.1.0",
   "license": "MIT",
   "packageManager": "pnpm@10.18.2",
   "engines": {
@@ -23,7 +24,8 @@
     "ops": "turbo run build --filter=@tenantry/ops^... --output-logs=errors-only && pnpm --filter @tenantry/ops --silent run ops",
     "seed": "pnpm ops seed",
     "example:customer-app": "pnpm --filter @tenantry/customer-app --silent start",
-    "brand:icons": "node scripts/brand-icons.mjs"
+    "brand:icons": "node scripts/brand-icons.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

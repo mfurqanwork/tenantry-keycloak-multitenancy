@@ -6,15 +6,15 @@ A public demo at `https://tenantry.pengopal.com`, released by pushing a version 
 
 ## Decisions
 
-| Topic     | Decision                                                                          |
-| --------- | --------------------------------------------------------------------------------- |
+| Topic     | Decision                                                                            |
+| --------- | ----------------------------------------------------------------------------------- |
 | Host      | One Azure for Students VM (B1ms, 2 GB, 2 GB swap; resize to B2als v2 if it is slow) |
-| DNS       | `pengopal.com` on Cloudflare, proxy off for Tenantry's records                    |
-| Addresses | `tenantry.pengopal.com`, and `auth.`, `<slug>.`, `<slug>.portal.` under it        |
-| Email     | Resend SMTP, from `no-reply@tenantry.pengopal.com`                                |
-| Versions  | One product version in the root `package.json`, a hand-written changelog CI checks |
-| Deploy    | On a pushed `v*` tag, or by hand with an existing tag                             |
-| Demo      | Seeded workspaces with public sign-ins; everything resets every night             |
+| DNS       | `pengopal.com` on Cloudflare, proxy off for Tenantry's records                      |
+| Addresses | `tenantry.pengopal.com`, and `auth.`, `<slug>.`, `<slug>.portal.` under it          |
+| Email     | Resend SMTP, from `no-reply@tenantry.pengopal.com`                                  |
+| Versions  | One product version in the root `package.json`, a hand-written changelog CI checks  |
+| Deploy    | On a pushed `v*` tag, or by hand with an existing tag                               |
+| Demo      | Seeded workspaces with public sign-ins; everything resets every night               |
 
 ## 1. The server
 
