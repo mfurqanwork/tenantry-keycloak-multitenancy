@@ -2,7 +2,7 @@
 # Shared by deploy.sh and reset.sh: the compose command, and the cold copy of the stack's data (ADR-0029).
 home="${TENANTRY_HOME:-/opt/tenantry}"
 project="${TENANTRY_PROJECT:-tenantry}"
-compose_files=("${TENANTRY_COMPOSE_FILES[@]:-$home/compose.prod.yml}")
+IFS=';' read -ra compose_files <<<"${TENANTRY_COMPOSE_FILES:-$home/compose.prod.yml}"
 args=(compose --project-name "$project" --project-directory "$home" --env-file "$home/.env" --env-file "$home/release.env")
 for file in "${compose_files[@]}"; do args+=(-f "$file"); done
 stack() { docker "${args[@]}" "$@"; }

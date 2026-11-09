@@ -1,0 +1,121 @@
+name: Release
+
+# A pushed version tag is tested, published and deployed. Run by hand with an existing tag to deploy it
+# again or to roll back (ADR-0030).
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: An existing tag to deploy, such as v0.6.0
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency: production
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: git merge-base --is-ancestor HEAD origin/main
+      - run: node scripts/verify-release.mjs "$TAG"
+      - id: version
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: verify
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    needs: [verify, test]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { name: caddy, file: infra/prod/caddy.Dockerfile }
+          - { name: keycloak, file: infra/keycloak/Dockerfile, target: prod }
+          - { name: api, file: apps/api/Dockerfile }
+          - { name: migrate, file: packages/db/Dockerfile }
+          - { name: ops, file: apps/ops/Dockerfile }
+          - { name: web, file: apps/web/Dockerfile }
+          - { name: portal, file: apps/portal/Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ghcr.io/mfurqanwork/tenantry-${{ matrix.name }}:${{ needs.verify.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          build-args: |
+            TENANTRY_VERSION=${{ needs.verify.outputs.version }}
+            TENANTRY_BASE_DOMAIN=${{ vars.TENANTRY_BASE_DOMAIN }}
+            VITE_TENANTRY_VERSION=${{ needs.verify.outputs.version }}
+            VITE_TENANTRY_BASE_DOMAIN=${{ vars.TENANTRY_BASE_DOMAIN }}
+            VITE_DEMO_WORKSPACES=acme,globex,initech
+            VITE_DEMO_PASSWORD=${{ vars.TENANTRY_DEMO_PASSWORD }}
+
+  publish:
+    needs: [verify, images]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/verify-release.mjs "$TAG" > notes.md
+      - run: gh release create "$TAG" --title "Tenantry ${TAG#v}" --notes-file notes.md --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: [verify, publish]
+    if: ${{ !cancelled() && needs.verify.result == 'success' && (needs.publish.result == 'success' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy
+          ssh -i ~/.ssh/deploy -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "tenantry@$HOST" "$VERSION"
+      - name: Check the live site
+        run: node scripts/smoke-live.mjs "${{ vars.TENANTRY_BASE_DOMAIN }}" "${{ needs.verify.outputs.version }}"

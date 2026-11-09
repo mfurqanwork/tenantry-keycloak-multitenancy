@@ -27,5 +27,5 @@ stack run --rm ops
 stack stop
 take_baseline
 stack up -d --wait
-docker image prune -af --filter "until=168h" >/dev/null
+[[ -n "${TENANTRY_KEEP_IMAGES:-}" ]] || docker image prune -af --filter "until=168h" >/dev/null
 echo "Tenantry $version is live."
