@@ -22,7 +22,7 @@ await ensureProvisionerClient({
 });
 await seedClient(true);
 try {
-  execFileSync('node', ['--import', 'tsx', 'apps/ops/src/cli.ts', 'seed'], { stdio: 'inherit' });
+  execFileSync('node', ['--import', 'tsx', 'src/cli.ts', 'seed'], { cwd: 'apps/ops', stdio: 'inherit' });
 } finally {
   await seedClient(false);
 }
