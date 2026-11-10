@@ -34,7 +34,7 @@ services:
   postgres:
     <<: *service
     image: postgres:17
-    mem_limit: 256m
+    mem_limit: 192m
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TENANTRY_OWNER_PASSWORD: ${TENANTRY_OWNER_PASSWORD}
@@ -52,7 +52,7 @@ services:
     <<: *service
     image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-keycloak:${TENANTRY_VERSION}
     command: ['start', '--optimized', '--import-realm']
-    mem_limit: 1100m
+    mem_limit: 768m
     environment:
       KC_HOSTNAME: ${TENANTRY_AUTH_URL}
       KC_HTTP_ENABLED: 'true'
@@ -62,8 +62,8 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
-      # Sized for the 2 GB VM.
-      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=55 -XX:InitialRAMPercentage=25
+      # Sized for the free 1 GB VM, with swap behind it (ADR-0029).
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=45 -XX:InitialRAMPercentage=20
       TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN}
       # Filled into the realm files at import.
       KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
@@ -108,7 +108,7 @@ services:
   api:
     <<: *service
     image: ${TENANTRY_IMAGES:-ghcr.io/mfurqanwork/tenantry}-api:${TENANTRY_VERSION}
-    mem_limit: 256m
+    mem_limit: 192m
     environment: &api-env
       DATABASE_URL: postgres://tenantry_app:${TENANTRY_APP_PASSWORD}@postgres:5432/tenantry
       TENANTRY_AUTH_URL: ${TENANTRY_AUTH_URL}

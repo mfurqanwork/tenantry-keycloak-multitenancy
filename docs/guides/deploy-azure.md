@@ -9,13 +9,15 @@ The guide uses `<VM_IP>` for the VM's public address. For a different domain, ch
 1. Activate [Azure for Students](https://azure.microsoft.com/en-us/free/students) with your school email.
 2. **Create a resource → Virtual machine:**
    - Image: **Ubuntu Server 24.04 LTS, x64**
-   - Size: **B1ms** (2 GB). If it is not offered, or later feels slow, use **B2als v2** (4 GB).
-   - Region: the closest one that lets you create the VM. Azure for Students allows only some regions; if one is refused, try another.
+   - Size: **B2ats v2** (2 vCPU, 1 GB). Azure lists 750 hours a month of this size as free, enough for one VM all month; the review screen still shows its list price. If the site later feels slow, resize to **B1ms** (2 GB, paid).
+   - Disks: **Premium SSD**, size **64 GiB** (P6), which Azure lists as free for 12 months.
+   - Region: East US or Canada Central if allowed; otherwise the closest one that lets you create the VM. Azure for Students allows only some regions; if one is refused, try another.
    - Authentication: **SSH public key**, username `azureuser`. Download the key Azure generates, or paste your own.
    - Inbound ports: **SSH (22), HTTP (80), HTTPS (443)**
    - Public IP: make sure it is **Static**.
 3. Note the VM's public IP address: this is `<VM_IP>`.
-4. Optional but sensible: **Cost Management → Budgets**, a budget of $20 a month with an email alert, so you can see the credit going.
+4. After a day, check **Cost Management → Cost analysis** (or the free services view) to confirm the VM hours are counted as free. Your credit still pays for the public IP.
+5. Optional but sensible: **Cost Management → Budgets**, a budget of $20 a month with an email alert, so you can see the credit going.
 
 Moving between sizes later is **Size → Resize** on the VM, and a reboot.
 
@@ -138,5 +140,5 @@ sudo docker logs tenantry-keycloak-1 --tail 100
 | The deploy stops at pulling images      | `GHCR_TOKEN` is wrong or expired. The running site is untouched.                                     |
 | The browser reports a certificate error | `CLOUDFLARE_API_TOKEN` is wrong, or the DNS records are missing. See the logs of `tenantry-caddy-1`. |
 | Sign-up or invite emails do not arrive  | The Resend domain is not verified, or the day's 100 emails are used up. See the Resend dashboard.    |
-| Keycloak restarts or the site is slow   | The VM is short of memory. Resize it to B2als v2.                                                    |
+| Keycloak restarts or the site is slow   | The VM is short of memory. Resize it to B1ms (2 GB).                                                 |
 | The demo sign-ins are refused           | `SEED_PASSWORD` differs from `TENANTRY_DEMO_PASSWORD`, or a visitor changed it until the next reset. |
