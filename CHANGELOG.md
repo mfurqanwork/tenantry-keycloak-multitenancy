@@ -4,6 +4,11 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Fixed
+
+- Keycloak counted as healthy while it was still starting, because one of its checks said UP; it is now healthy only when `/health/ready` answers 200.
+- The production Keycloak keeps its caches local, so a single small server no longer starts cluster discovery.
+
 ## [0.6.1] - 2026-11-10
 
 ### Fixed
