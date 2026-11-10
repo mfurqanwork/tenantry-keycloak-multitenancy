@@ -11,3 +11,6 @@ infra/dns/zones/*.db
 .secrets/
 # Written by pnpm seed; holds the example app's client secret.
 examples/customer-app/.env
+# The deploy key made by docs/guides/deploy-azure.md; it never belongs in the repository.
+tenantry_deploy
+tenantry_deploy.pub
