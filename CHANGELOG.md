@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
 Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access. Phase 6a: a simpler Tenantry. Phase 6b: live on Azure.
 
 ### Added (Phase 6b)
@@ -126,4 +128,6 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.1.0...v0.6.0
 [0.1.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/releases/tag/v0.1.0
