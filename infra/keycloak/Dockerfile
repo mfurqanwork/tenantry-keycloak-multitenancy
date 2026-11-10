@@ -31,7 +31,7 @@ RUN node scripts/prod-realm.mjs "$TENANTRY_BASE_DOMAIN" /realms
 FROM quay.io/keycloak/keycloak:26.8.1 AS prod
 COPY --from=theme /repo/apps/login-theme/dist_keycloak/tenantry-login-theme.jar /opt/keycloak/providers/
 COPY --from=realms /realms/ /opt/keycloak/data/import/
-RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true
+RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true --cache=local
 
 # The dev image: the last stage, so a plain build gets it.
 FROM quay.io/keycloak/keycloak:26.8.1

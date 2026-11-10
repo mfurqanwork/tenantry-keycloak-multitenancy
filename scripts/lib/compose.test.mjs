@@ -32,3 +32,19 @@ test('the API container runs as the host user dev-stack names', () => {
   const api = /^ {2}api:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(compose)?.[1] ?? '';
   assert.match(api, /user: '\$\{TENANTRY_UID:-0\}:\$\{TENANTRY_GID:-0\}'/);
 });
+
+// /health/ready lists each check, and one of them says UP even while Keycloak is still starting; only the
+// HTTP status says the whole server is ready (Phase 6b's first deploy waited on a false "healthy").
+for (const file of ['../../infra/docker-compose.yml', '../../infra/prod/compose.prod.yml']) {
+  test(`${file.split('/').pop()}: Keycloak is healthy only on a 200 from /health/ready`, () => {
+    const text = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const keycloak = /^ {2}keycloak:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(text)?.[1] ?? '';
+    assert.match(keycloak, /grep -q 'HTTP\/1\.1 200'/);
+    assert.doesNotMatch(keycloak, /grep -q UP/);
+  });
+}
+
+test('the production Keycloak keeps its caches local: one server, no cluster to find', () => {
+  const dockerfile = readFileSync(new URL('../../infra/keycloak/Dockerfile', import.meta.url), 'utf8');
+  assert.match(dockerfile, /kc\.sh build [^\n]*--cache=local/);
+});
