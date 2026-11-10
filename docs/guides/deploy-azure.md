@@ -53,7 +53,7 @@ ssh-keyscan -t ed25519 <VM_IP>
 
 In the repository's **Settings**:
 
-- **Environments → New environment → `production`.** Under deployment branches and tags, allow only tags matching `v*`. Add these **environment secrets**:
+- **Environments → New environment → `production`.** Under **Deployment branches and tags**, choose **Selected branches and tags**, then **Add deployment branch or tag rule** with **Ref type: Tag** and pattern `v*`. A branch rule with the same pattern refuses the tag. Add these **environment secrets**:
 
   | Secret               | Value                                   |
   | -------------------- | --------------------------------------- |
@@ -61,7 +61,7 @@ In the repository's **Settings**:
   | `DEPLOY_HOST`        | `<VM_IP>`                               |
   | `DEPLOY_KNOWN_HOSTS` | the line `ssh-keyscan` printed          |
 
-- **Secrets and variables → Actions → Variables** (repository variables):
+- **Secrets and variables → Actions → Variables → Repository variables.** Not environment variables: the image builds run outside the `production` environment and cannot see those.
 
   | Variable                 | Value                                                                                                             |
   | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
@@ -135,10 +135,12 @@ sudo docker logs tenantry-keycloak-1 --tail 100
 
 ## If something goes wrong
 
-| What you see                            | Likely cause                                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| The deploy stops at pulling images      | `GHCR_TOKEN` is wrong or expired. The running site is untouched.                                     |
-| The browser reports a certificate error | `CLOUDFLARE_API_TOKEN` is wrong, or the DNS records are missing. See the logs of `tenantry-caddy-1`. |
-| Sign-up or invite emails do not arrive  | The Resend domain is not verified, or the day's 100 emails are used up. See the Resend dashboard.    |
-| Keycloak restarts or the site is slow   | The VM is short of memory. Resize it to B1ms (2 GB).                                                 |
-| The demo sign-ins are refused           | `SEED_PASSWORD` differs from `TENANTRY_DEMO_PASSWORD`, or a visitor changed it until the next reset. |
+| What you see                                           | Likely cause                                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| The deploy stops at pulling images                     | `GHCR_TOKEN` is wrong or expired. The running site is untouched.                                                |
+| The browser reports a certificate error                | `CLOUDFLARE_API_TOKEN` is wrong, or the DNS records are missing. See the logs of `tenantry-caddy-1`.            |
+| Sign-up or invite emails do not arrive                 | The Resend domain is not verified, or the day's 100 emails are used up. See the Resend dashboard.               |
+| A subdomain shows `ERR_SSL_VERSION_OR_CIPHER_MISMATCH` | The Cloudflare records are proxied (orange cloud). Set all three to **DNS only**.                               |
+| The deploy stops with `api-1 is unhealthy`             | Keycloak is still waking from swap. Run the deploy again (Actions → Release → Run workflow), or resize to B1ms. |
+| Keycloak restarts or the site is slow                  | The VM is short of memory. Resize it to B1ms (2 GB).                                                            |
+| The demo sign-ins are refused                          | `SEED_PASSWORD` differs from `TENANTRY_DEMO_PASSWORD`, or a visitor changed it until the next reset.            |
