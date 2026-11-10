@@ -4,6 +4,11 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Fixed
+
+- The first deploy on the 1 GB VM gave up while Keycloak was still waking from swap: the API now has a few minutes to report healthy.
+- A release stops at once, with a clear message, when its repository variables are missing.
+
 ## [0.6.0] - 2026-11-10
 
 Phase 3: Enterprise tenants. Phase 4: Customer applications. Phase 5a: SCIM and security settings. Phase 5b: moving to Enterprise, and console access. Phase 6a: a simpler Tenantry. Phase 6b: live on Azure.

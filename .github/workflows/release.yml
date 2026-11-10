@@ -34,6 +34,14 @@ jobs:
         with:
           node-version: 22
       - run: git merge-base --is-ancestor HEAD origin/main
+      # The images bake these in; they must be repository variables, not environment ones.
+      - name: The build has its settings
+        env:
+          BASE: ${{ vars.TENANTRY_BASE_DOMAIN }}
+          PASSWORD: ${{ vars.TENANTRY_DEMO_PASSWORD }}
+        run: |
+          [ -n "$BASE" ] || { echo "::error::Set the repository variable TENANTRY_BASE_DOMAIN."; exit 1; }
+          [ -n "$PASSWORD" ] || { echo "::error::Set the repository variable TENANTRY_DEMO_PASSWORD."; exit 1; }
       - run: node scripts/verify-release.mjs "$TAG"
       - id: version
         run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
