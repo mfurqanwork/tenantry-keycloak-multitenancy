@@ -1,0 +1,55 @@
+# The live site (ADR-0029). Caddy's * matches one label, so portal and web hosts never overlap.
+{
+	email {$ACME_EMAIL}
+}
+
+(site) {
+	tls {
+		dns cloudflare {$CLOUDFLARE_API_TOKEN}
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+auth.{$TENANTRY_BASE_DOMAIN} {
+	import site
+	reverse_proxy keycloak:8080
+}
+
+# The base domain serves the welcome page and signup from the web app.
+{$TENANTRY_BASE_DOMAIN} {
+	import site
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+*.portal.{$TENANTRY_BASE_DOMAIN} {
+	import site
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle {
+		reverse_proxy portal:80
+	}
+}
+
+*.{$TENANTRY_BASE_DOMAIN} {
+	import site
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	# The workspace's SCIM address for its directory (ADR-0024).
+	handle /scim/* {
+		reverse_proxy api:3000
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}

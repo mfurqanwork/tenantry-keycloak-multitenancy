@@ -17,6 +17,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `tests/isolation`: the README guarantees, run against the whole stack.
 - `examples/customer-app`: an outside app on an enterprise realm (`pnpm example:customer-app`); `pnpm seed` writes its git-ignored `.env`.
 - `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`, and builds enterprise tenants through the API's operator endpoints.
+- `infra/prod/`: the live stack and its deploy scripts (ADR-0029); `docs/guides/deploy-azure.md` is the setup.
 - `infra/`: Compose, Caddy, the Keycloak realms (`platform`, and the dev-only `corp-demo`), CoreDNS (dev only) and the Postgres init script.
 - `docs/decisions/`: ADRs. A change to a recorded decision needs a new or updated ADR.
 - `docs/SETUP.md`: running, seeding and testing locally. `docs/brand.md` and `packages/ui/assets/brand/`: Tenantry's own logo and icons.
@@ -31,6 +32,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 | `pnpm test:isolation`                                       | The guarantees and integration tests against the running stack                                                                                                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` | What CI runs                                                                                                                                                                     |
 | `pnpm ops <command>`                                        | Operator commands: enterprise tenants and their apps, moving a workspace to Enterprise, company domains and identity providers, origins (ADR-0010, ADR-0011, ADR-0022, ADR-0025) |
+| `pnpm release <version>`                                    | Cuts the changelog, sets the version, commits and tags; you push (ADR-0030)                                                                                                      |
 | `pnpm stack:down`                                           | Stops the stack                                                                                                                                                                  |
 
 ## Hard rules
@@ -57,4 +59,5 @@ These keep tenant isolation intact. A change that breaks one of them is wrong, e
 - TypeScript strict everywhere. ESM with `.js` import specifiers.
 - Tests sit next to the code (`*.test.ts(x)`) and run with Vitest. Write the failing test first.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
+- A change to `apps/`, `packages/` or `infra/` adds a line under Unreleased in `CHANGELOG.md`; CI checks (ADR-0030).
 - Configuration comes from the environment and is validated at startup; add new variables to `.env.example`.

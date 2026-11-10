@@ -128,6 +128,12 @@ body {
   padding: $spacing-05;
 }
 
+.tenantry-account__version {
+  @include type.type-style('helper-text-01');
+
+  color: theme.$text-secondary;
+}
+
 .tenantry-account__email {
   @include type.type-style('body-compact-01');
 

@@ -18,7 +18,11 @@ export function Root() {
           <SignupApp baseDomain={BASE_DOMAIN} />
         ) : (
           <AppShell productName="Tenantry" navItems={[]} currentPath="/">
-            <WelcomeRoute baseDomain={BASE_DOMAIN} demoWorkspaces={DEMO_WORKSPACES} />
+            <WelcomeRoute
+              baseDomain={BASE_DOMAIN}
+              demoWorkspaces={DEMO_WORKSPACES}
+              demoPassword={import.meta.env['VITE_DEMO_PASSWORD'] as string | undefined}
+            />
           </AppShell>
         ))}
       {host.kind === 'tenant' && <TenantApp slug={host.slug} signupUrl={signupUrl} />}

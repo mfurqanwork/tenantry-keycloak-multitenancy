@@ -19,6 +19,7 @@ describe('loadConfig', () => {
 
   it('fills defaults for the optional variables', () => {
     expect(loadConfig(base)).toEqual({
+      version: 'dev',
       port: 3000,
       databaseUrl: 'postgres://x',
       authUrl: 'http://auth.tenantry.localhost',

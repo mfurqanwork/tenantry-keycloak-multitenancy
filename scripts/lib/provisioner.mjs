@@ -58,6 +58,42 @@ export async function ensureProvisionerClient({
   return { created };
 }
 
+// Turns one platform-realm client on or off, keeping the rest of its settings (ADR-0029).
+export async function setClientEnabled({
+  baseUrl,
+  adminUser,
+  adminPassword,
+  clientId,
+  enabled,
+  fetch: doFetch = fetch,
+}) {
+  const tokenRes = await doFetch(`${baseUrl}/realms/master/protocol/openid-connect/token`, {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'password',
+      client_id: 'admin-cli',
+      username: adminUser,
+      password: adminPassword,
+    }),
+  });
+  if (!tokenRes.ok) throw new Error(`bootstrap admin token: ${tokenRes.status}`);
+  const { access_token: token } = await tokenRes.json();
+  const clients = `${baseUrl}/admin/realms/platform/clients`;
+  const authorization = `Bearer ${token}`;
+  const found = await doFetch(`${clients}?clientId=${encodeURIComponent(clientId)}`, {
+    headers: { authorization },
+  });
+  if (!found.ok) throw new Error(`client ${clientId}: ${found.status}`);
+  const [client] = await found.json();
+  if (!client) throw new Error(`client ${clientId} is missing`);
+  const res = await doFetch(`${clients}/${client.id}`, {
+    method: 'PUT',
+    headers: { authorization, 'content-type': 'application/json' },
+    body: JSON.stringify({ ...client, enabled }),
+  });
+  if (!res.ok) throw new Error(`PUT client ${clientId}: ${res.status}`);
+}
+
 // The platform realm's tenantry-backend also reads company logins' settings (never their secrets), to copy
 // them when a workspace moves to Enterprise (ADR-0025). A fresh Keycloak gets this from platform-realm.json;
 // this brings a stack started before Phase 5b up to date. Dev only.

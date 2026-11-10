@@ -60,6 +60,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
     <AppShell
       productName={me.tenant.name}
       appName="Admin"
+      version={import.meta.env['VITE_TENANTRY_VERSION'] as string | undefined}
       brandColor={branding?.primaryColor ?? null}
       headerActions={
         <>

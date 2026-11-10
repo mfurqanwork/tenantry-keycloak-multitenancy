@@ -4,6 +4,7 @@ import type { AppConfig } from '../config/config.js';
 import { KeycloakHealthIndicator } from './keycloak.health.js';
 
 const config: AppConfig = {
+  version: 'dev',
   port: 3000,
   databaseUrl: 'postgres://x',
   authUrl: 'http://auth.tenantry.localhost',

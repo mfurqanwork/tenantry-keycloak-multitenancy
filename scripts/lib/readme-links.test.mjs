@@ -12,6 +12,7 @@ const DOCS = [
   'docs/SETUP.md',
   'docs/brand.md',
   'docs/demo-script.md',
+  'docs/guides/deploy-azure.md',
   'tests/isolation/README.md',
 ];
 

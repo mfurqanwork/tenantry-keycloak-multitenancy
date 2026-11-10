@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 import { DatabaseHealthIndicator } from './db.health.js';
 import { HealthController } from './health.controller.js';
+import { APP_CONFIG } from '../config/config.js';
 import { KeycloakHealthIndicator } from './keycloak.health.js';
 
 async function controllerWith(keycloakUp: boolean) {
@@ -11,6 +12,7 @@ async function controllerWith(keycloakUp: boolean) {
     imports: [TerminusModule],
     controllers: [HealthController],
     providers: [
+      { provide: APP_CONFIG, useValue: { version: '1.2.3' } },
       {
         provide: DatabaseHealthIndicator,
         useValue: { check: () => Promise.resolve({ database: { status: 'up' } }) },
@@ -31,6 +33,7 @@ describe('HealthController', () => {
   it('reports ok when every check is up', async () => {
     const result = await (await controllerWith(true)).check();
     expect(result.status).toBe('ok');
+    expect(result.version).toBe('1.2.3');
   });
 
   it('answers 503 naming keycloak when it is down', async () => {

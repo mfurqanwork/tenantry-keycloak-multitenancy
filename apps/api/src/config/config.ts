@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export interface AppConfig {
+  // The release this image was built from (ADR-0030); 'dev' otherwise.
+  version: string;
   port: number;
   databaseUrl: string;
   authUrl: string;
@@ -33,6 +35,7 @@ const schema = z.object({
   TENANTRY_AUTH_INTERNAL_URL: z.url().optional(),
   TENANTRY_PLATFORM_REALM: z.string().min(1).default('platform'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  TENANTRY_VERSION: z.string().min(1).default('dev'),
   TENANTRY_BASE_DOMAIN: z.string().min(1).default('tenantry.localhost'),
   KEYCLOAK_BACKEND_CLIENT_ID: z.string().min(1),
   KEYCLOAK_BACKEND_CLIENT_SECRET: z.string().min(1),
@@ -57,6 +60,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     port: e.PORT,
     databaseUrl: e.DATABASE_URL,
     authUrl: e.TENANTRY_AUTH_URL.replace(/\/$/, ''),
+    version: e.TENANTRY_VERSION,
     authInternalUrl: (e.TENANTRY_AUTH_INTERNAL_URL ?? e.TENANTRY_AUTH_URL).replace(/\/$/, ''),
     platformRealm: e.TENANTRY_PLATFORM_REALM,
     logLevel: e.LOG_LEVEL,
