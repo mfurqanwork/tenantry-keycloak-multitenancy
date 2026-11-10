@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-10
+
 ### Fixed
 
 - The first deploy on the 1 GB VM gave up while Keycloak was still waking from swap: the API now has a few minutes to report healthy.
@@ -133,6 +135,7 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.1.0...v0.6.0
 [0.1.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/releases/tag/v0.1.0
