@@ -14,20 +14,20 @@ const MODULE_INTERNALS = {
   message: "Import another module's service (or module), not its internals.",
 };
 
-// ADR-0031: the new code is Tailwind and Radix; Carbon stays only in Admin and the login theme until they move.
+// ADR-0031: the UI is Tailwind and Radix; Carbon is gone, everywhere.
 const CARBON = {
   group: ['@carbon/*'],
   message: 'Use @tenantry/ui components and Lucide icons (ADR-0031).',
 };
 
-const restrict = ({ pg = true, oidc = true, keycloak = true, modules = false, carbon = false }) => [
+const restrict = ({ pg = true, oidc = true, keycloak = true, modules = false }) => [
   'error',
   {
     paths: [...(pg ? PG.paths : []), ...(oidc ? [OIDC] : []), ...(keycloak ? [KEYCLOAK_HTTP] : [])],
     patterns: [
       ...(pg ? PG.patterns.map((p) => ({ group: [p] })) : []),
       ...(modules ? [MODULE_INTERNALS] : []),
-      ...(carbon ? [CARBON] : []),
+      CARBON,
     ],
   },
 ];
@@ -68,10 +68,6 @@ export default tseslint.config(
         },
       ],
     },
-  },
-  {
-    files: ['packages/ui/src/**', 'packages/app-kit/**', 'apps/web/**'],
-    rules: { 'no-restricted-imports': restrict({ carbon: true }) },
   },
   { files: ['packages/db/**'], rules: { 'no-restricted-imports': restrict({ pg: false }) } },
   { files: ['packages/oidc-client/**'], rules: { 'no-restricted-imports': restrict({ oidc: false }) } },

@@ -1,23 +1,29 @@
+import { confidential } from '@tenantry/auth';
+import { ApiErrorNotification, Loading, useApi, useMe, useResource } from '@tenantry/app-kit';
+import { startTestLogin } from '@tenantry/oidc-client';
 import {
   Button,
   CodeSnippet,
-  InlineLoading,
-  InlineNotification,
-  PasswordInput,
-  Stack,
-  StructuredListBody,
-  StructuredListCell,
-  StructuredListRow,
-  StructuredListWrapper,
-} from '@carbon/react';
-import { confidential } from '@tenantry/auth';
-import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
-import { startTestLogin } from '@tenantry/oidc-client';
-import { DetailPage, PageHeader, StatTile, TileGrid } from '@tenantry/ui';
+  DetailPage,
+  Input,
+  Label,
+  Page,
+  PageHeader,
+  StatTile,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TileGrid,
+} from '@tenantry/ui';
+import { AppWindow, CalendarClock, KeyRound, LogIn, Pencil, RotateCw, Shapes, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { TYPE_LABELS, type AppView, type SecretState } from './api.js';
+import { type AppView, type SecretState } from './api.js';
 import { DeleteAppDialog, EditAppDialog, RotateSecretDialog } from './AppDialogs.js';
+import { AppTypeLabel } from './AppTypeLabel.js';
+import { Notice } from './Notice.js';
 import { snippetsFor } from './snippets.js';
 
 type Dialog = 'edit' | 'rotate' | 'delete' | null;
@@ -46,13 +52,11 @@ export function AppDetailRoute() {
   ];
   if (!app.data) {
     return (
-      <div className="tenantry-page">
-        <PageHeader breadcrumbs={crumbs} title="Application" />
-        <div className="tenantry-page__body">
-          <ApiErrorNotification error={app.error} />
-          {!app.error && <InlineLoading description="Loading the app" />}
-        </div>
-      </div>
+      <Page>
+        <PageHeader breadcrumbs={crumbs} title="Application" icon={AppWindow} />
+        <ApiErrorNotification error={app.error} />
+        {!app.error && <Loading description="Loading the app" />}
+      </Page>
     );
   }
   const a = app.data;
@@ -66,66 +70,74 @@ export function AppDetailRoute() {
       <DetailPage
         breadcrumbs={crumbs}
         title={a.name}
+        icon={AppWindow}
         actions={
           registers ? (
             <>
               <Button
-                kind="tertiary"
+                variant="outline"
                 onClick={() => {
                   setDialog('edit');
                 }}
               >
+                <Pencil aria-hidden="true" />
                 Edit
               </Button>
               {confidential(a.type) && (
                 <Button
-                  kind="tertiary"
+                  variant="outline"
                   onClick={() => {
                     setDialog('rotate');
                   }}
                 >
+                  <RotateCw aria-hidden="true" />
                   Rotate secret
                 </Button>
               )}
               <Button
-                kind="danger--ghost"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive-muted hover:text-destructive"
                 onClick={() => {
                   setDialog('delete');
                 }}
               >
+                <Trash2 aria-hidden="true" />
                 Delete
               </Button>
             </>
           ) : undefined
         }
         summary={
-          <Stack gap={6}>
+          <div className="flex flex-col gap-6">
             {secret && (
-              <Stack gap={3}>
-                <InlineNotification
-                  kind="warning"
-                  lowContrast
-                  hideCloseButton
-                  title="Copy the client secret now"
-                  subtitle="It won't be shown again. If it is lost, rotate it for a new one."
-                />
-                <CodeSnippet type="single" feedback="Copied" aria-label="Client secret">
+              <Notice
+                tone="warning"
+                title="Copy the client secret now"
+                detail="It won't be shown again. If it is lost, rotate it for a new one."
+              >
+                <CodeSnippet label="Client secret" className="bg-background">
                   {secret}
                 </CodeSnippet>
-              </Stack>
+              </Notice>
             )}
             <TileGrid>
               {[
-                <StatTile key="type" label="Type" value={TYPE_LABELS[a.type]} />,
-                <StatTile key="client" label="Client ID" value={a.clientId} />,
+                <StatTile key="type" icon={Shapes} label="Type" value={<AppTypeLabel type={a.type} />} />,
+                <StatTile
+                  key="client"
+                  icon={KeyRound}
+                  label="Client ID"
+                  value={<span className="font-mono text-base break-all">{a.clientId}</span>}
+                />,
                 <StatTile
                   key="registered"
+                  icon={CalendarClock}
                   label="Registered"
                   value={new Date(a.createdAt).toLocaleDateString()}
                 />,
               ]}
             </TileGrid>
-          </Stack>
+          </div>
         }
         tabs={[
           { label: 'Connection details', content: <ConnectionDetails app={a} /> },
@@ -162,39 +174,48 @@ function ConnectionDetails({ app }: { app: AppView }) {
     ['Client ID', c.clientId],
     ['Scopes', c.scopes],
   ];
+  const head = 'w-1/3 align-top font-medium text-foreground whitespace-normal';
   return (
-    <StructuredListWrapper aria-label="Connection details">
-      <StructuredListBody>
+    <Table aria-label="Connection details">
+      <TableBody>
         {rows.map(([label, value]) => (
-          <StructuredListRow key={label}>
-            <StructuredListCell>{label}</StructuredListCell>
-            <StructuredListCell>
-              <CodeSnippet type="single" feedback="Copied" aria-label={label}>
-                {value}
-              </CodeSnippet>
-            </StructuredListCell>
-          </StructuredListRow>
+          <TableRow key={label}>
+            <TableHead scope="row" className={head}>
+              {label}
+            </TableHead>
+            <TableCell>
+              <CodeSnippet label={label}>{value}</CodeSnippet>
+            </TableCell>
+          </TableRow>
         ))}
-        <StructuredListRow>
-          <StructuredListCell>Client secret</StructuredListCell>
-          <StructuredListCell>
+        <TableRow>
+          <TableHead scope="row" className={head}>
+            Client secret
+          </TableHead>
+          <TableCell className="whitespace-normal text-muted-foreground">
             {confidential(app.type) ? 'Shown once, when registered or rotated' : 'None (public client, PKCE)'}
-          </StructuredListCell>
-        </StructuredListRow>
+          </TableCell>
+        </TableRow>
         {app.type !== 'm2m' && (
-          <StructuredListRow>
-            <StructuredListCell>Redirect URIs</StructuredListCell>
-            <StructuredListCell>{app.redirectUris.join(', ')}</StructuredListCell>
-          </StructuredListRow>
+          <TableRow>
+            <TableHead scope="row" className={head}>
+              Redirect URIs
+            </TableHead>
+            <TableCell className="font-mono text-sm whitespace-normal break-all">
+              {app.redirectUris.join(', ')}
+            </TableCell>
+          </TableRow>
         )}
         {c.testRedirectUri && (
-          <StructuredListRow>
-            <StructuredListCell>Tenantry test sign-in (kept by Tenantry)</StructuredListCell>
-            <StructuredListCell>{c.testRedirectUri}</StructuredListCell>
-          </StructuredListRow>
+          <TableRow>
+            <TableHead scope="row" className={head}>
+              Tenantry test sign-in (kept by Tenantry)
+            </TableHead>
+            <TableCell className="font-mono text-sm whitespace-normal break-all">{c.testRedirectUri}</TableCell>
+          </TableRow>
         )}
-      </StructuredListBody>
-    </StructuredListWrapper>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -202,42 +223,41 @@ function SetUp({ app }: { app: AppView }) {
   const snippets = snippetsFor(app);
   if (snippets.length === 0) {
     return (
-      <p>
+      <p className="text-sm text-muted-foreground">
         Use the connection details with your platform&apos;s OpenID Connect library (AppAuth on iOS and
         Android), with PKCE and one of the redirect URIs above.
       </p>
     );
   }
   return (
-    <Stack gap={6}>
+    <div className="flex flex-col gap-6">
       {snippets.map((s) => (
-        <section key={s.label} aria-label={s.label}>
-          <h2 className="tenantry-section__title">{s.label}</h2>
-          <CodeSnippet type="multi" feedback="Copied" aria-label={s.label}>
+        <section key={s.label} aria-label={s.label} className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold">{s.label}</h2>
+          <CodeSnippet label={s.label} multiline>
             {s.code}
           </CodeSnippet>
         </section>
       ))}
-    </Stack>
+    </div>
   );
 }
 
 function TestSignIn({ app, enabled }: { app: AppView; enabled: boolean }) {
   const c = app.connection;
   if (!enabled || !c.testRedirectUri) {
-    return <p>Owners and admins can run a test sign-in here.</p>;
+    return <p className="text-sm text-muted-foreground">Owners and admins can run a test sign-in here.</p>;
   }
   const redirectUri = c.testRedirectUri;
   return (
-    <Stack gap={5}>
-      <p>
+    <div className="flex max-w-prose flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
         {app.type === 'web'
           ? 'Signs you in to this app through Keycloak and comes back here. Its secret is not needed: the test stops once Keycloak hands back the sign-in code.'
           : 'Signs you in to this app through Keycloak with PKCE and shows the token it receives.'}
       </p>
       <div>
         <Button
-          kind="primary"
           onClick={() => {
             void startTestLogin({
               appId: app.id,
@@ -249,10 +269,11 @@ function TestSignIn({ app, enabled }: { app: AppView; enabled: boolean }) {
             });
           }}
         >
+          <LogIn aria-hidden="true" />
           Test sign-in
         </Button>
       </div>
-    </Stack>
+    </div>
   );
 }
 
@@ -262,51 +283,57 @@ function TokenCheck({ app, enabled }: { app: AppView; enabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [error, setError] = useState<unknown>(null);
-  if (!enabled) return <p>Owners and admins can request a test token here.</p>;
+  if (!enabled) {
+    return <p className="text-sm text-muted-foreground">Owners and admins can request a test token here.</p>;
+  }
   return (
-    <Stack gap={5}>
-      <p>
+    <form
+      className="flex max-w-md flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setBusy(true);
+        setError(null);
+        setResult(null);
+        api
+          .post<{ ok: boolean; error?: string }>(`/api/apps/${app.id}/token-check`, {
+            clientSecret: secret,
+          })
+          .then(setResult, setError)
+          .finally(() => {
+            setBusy(false);
+          });
+      }}
+    >
+      <p className="text-sm text-muted-foreground">
         Paste the app&apos;s client secret: Tenantry asks Keycloak for one token with it and keeps nothing.
       </p>
       <ApiErrorNotification error={error} />
-      <PasswordInput
-        id="token-check-secret"
-        labelText="Client secret"
-        value={secret}
-        onChange={(event) => {
-          setSecret(event.target.value);
-        }}
-      />
-      <div>
-        <Button
-          disabled={busy || secret === ''}
-          onClick={() => {
-            setBusy(true);
-            setError(null);
-            setResult(null);
-            api
-              .post<{ ok: boolean; error?: string }>(`/api/apps/${app.id}/token-check`, {
-                clientSecret: secret,
-              })
-              .then(setResult, setError)
-              .finally(() => {
-                setBusy(false);
-              });
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="token-check-secret">Client secret</Label>
+        <Input
+          id="token-check-secret"
+          type="password"
+          autoComplete="off"
+          className="font-mono"
+          value={secret}
+          onChange={(event) => {
+            setSecret(event.target.value);
           }}
-        >
+        />
+      </div>
+      <div>
+        <Button type="submit" disabled={busy || secret === ''}>
+          <KeyRound aria-hidden="true" />
           Request a token
         </Button>
       </div>
-      {busy && <InlineLoading description="Asking Keycloak for a token" />}
-      {result && (
-        <InlineNotification
-          kind={result.ok ? 'success' : 'error'}
-          lowContrast
-          hideCloseButton
-          title={result.ok ? 'Keycloak issued a token for this app.' : 'Keycloak refused'}
-          subtitle={result.ok ? '' : (result.error ?? '')}
-        />
-      )}
-    </Stack>
+      {busy && <Loading description="Asking Keycloak for a token" />}
+      {result &&
+        (result.ok ? (
+          <Notice tone="success" title="Keycloak issued a token for this app." />
+        ) : (
+          <Notice tone="error" title="Keycloak refused" detail={result.error ?? null} />
+        ))}
+    </form>
   );
 }

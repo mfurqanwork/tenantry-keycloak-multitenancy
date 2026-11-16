@@ -27,8 +27,7 @@ function useSystemDark(): boolean {
   return dark;
 }
 
-// Light or dark, following the OS unless the person picked one. The `dark` class on <html> drives the tokens;
-// `data-carbon-theme` keeps the legacy Carbon pages (Admin, the login theme) in step until they move (ADR-0031).
+// Light or dark, following the OS unless the person picked one. The `dark` class on <html> drives the tokens.
 export function TenantryThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setStored] = useState<ThemePreference>(() => readPreference());
   const systemDark = useSystemDark();
@@ -39,7 +38,6 @@ export function TenantryThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.toggle('dark', resolved === 'dark');
     root.style.colorScheme = resolved;
-    root.dataset['carbonTheme'] = resolved === 'dark' ? 'g100' : 'g10';
   }, [resolved]);
 
   const value = useMemo<ThemeState>(

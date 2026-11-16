@@ -32,19 +32,9 @@ describe('useBranding', () => {
     );
     expect(await screen.findByText('brand Acme')).toBeInTheDocument();
     await waitFor(() => {
-      expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe('#0f62fe');
+      expect(document.body.style.getPropertyValue('--primary')).toBe('#0f62fe');
     });
     unmount();
-    expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe('');
-  });
-
-  it("leaves Carbon's colours without one", async () => {
-    render(
-      <ApiProvider api={api({ name: 'Acme', primaryColor: null, logoUrl: null })}>
-        <Show />
-      </ApiProvider>,
-    );
-    await screen.findByText('brand Acme');
-    expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe('');
+    expect(document.body.style.getPropertyValue('--primary')).toBe('');
   });
 });

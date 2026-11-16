@@ -1,19 +1,22 @@
-import { DataShare } from '@carbon/icons-react';
+import type { ScimDefaultRole } from '@tenantry/auth';
+import { ApiErrorNotification, FormDialog, Loading, useApi, useMe, useResource } from '@tenantry/app-kit';
 import {
   Button,
   CodeSnippet,
-  InlineLoading,
-  InlineNotification,
+  Label,
   Select,
+  SelectContent,
   SelectItem,
-  Stack,
-  Tile,
-} from '@carbon/react';
-import type { ScimDefaultRole } from '@tenantry/auth';
-import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
-import { SettingsPage, StatTile, TileGrid } from '@tenantry/ui';
-import { useState } from 'react';
-import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
+  SelectTrigger,
+  SelectValue,
+  SettingsPage,
+  StatTile,
+  TechLogo,
+  TileGrid,
+} from '@tenantry/ui';
+import { CalendarClock, Clock, FolderSync, KeyRound, TriangleAlert } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { EnterpriseOnlyPage } from '../../lib/enterprise-only.js';
 
 interface ScimView {
   url: string;
@@ -35,20 +38,45 @@ const ROLES: { value: ScimDefaultRole; label: string }[] = [
 
 const date = (iso: string) => new Date(iso).toLocaleDateString();
 
+const header = {
+  title: 'Directory sync (SCIM)',
+  icon: FolderSync,
+  description: 'Keep people in step with Entra ID or Okta.',
+};
+
+function Card({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+      <h2 id={id} className="text-base font-semibold">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 function ExpirySelect({ id, value, onChange }: { id: string; value: Days; onChange: (d: Days) => void }) {
   return (
-    <Select
-      id={id}
-      labelText="Token expires after"
-      value={String(value)}
-      onChange={(event) => {
-        onChange(Number(event.target.value) as Days);
-      }}
-    >
-      {EXPIRIES.map((e) => (
-        <SelectItem key={e.days} value={String(e.days)} text={e.label} />
-      ))}
-    </Select>
+    <div className="flex max-w-xs flex-col gap-2">
+      <Label htmlFor={id}>Token expires after</Label>
+      <Select
+        value={String(value)}
+        onValueChange={(next) => {
+          onChange(Number(next) as Days);
+        }}
+      >
+        <SelectTrigger id={id}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {EXPIRIES.map((e) => (
+            <SelectItem key={e.days} value={String(e.days)}>
+              {e.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -57,20 +85,7 @@ function ExpirySelect({ id, value, onChange }: { id: string; value: Days; onChan
 export function ScimRoute() {
   const me = useMe();
   if (me.tenant.tier !== 'enterprise') {
-    return (
-      <SettingsPage
-        breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Directory sync (SCIM)"
-        icon={DataShare}
-        description="Keep people in step with Entra ID or Okta."
-        dirty={false}
-        saving={false}
-        onSave={() => undefined}
-        onDiscard={() => undefined}
-      >
-        <Tile>{ENTERPRISE_ONLY}</Tile>
-      </SettingsPage>
-    );
+    return <EnterpriseOnlyPage {...header} />;
   }
   return <EnterpriseScim />;
 }
@@ -111,9 +126,7 @@ function EnterpriseScim() {
   return (
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-      title="Directory sync (SCIM)"
-      icon={DataShare}
-      description="Keep people in step with Entra ID or Okta."
+      {...header}
       dirty={view !== undefined && roleValue !== view.defaultRole}
       saving={saving}
       onSave={() =>
@@ -132,93 +145,123 @@ function EnterpriseScim() {
         setRole(null);
       }}
     >
-      <Stack gap={6}>
-        <ApiErrorNotification error={saved.error ?? error} />
-        {secret && (
-          <Stack gap={3}>
-            <InlineNotification
-              kind="warning"
-              lowContrast
-              hideCloseButton
-              title="Copy the SCIM token now"
-              subtitle="It won't be shown again. If it is lost, replace it with a new one."
-            />
-            <CodeSnippet type="single" feedback="Copied" aria-label="SCIM token">
-              {secret}
-            </CodeSnippet>
-          </Stack>
-        )}
-        {!view && !saved.error && <InlineLoading description="Loading directory sync" />}
-        {view && (
-          <>
-            <section aria-label="SCIM address">
-              <h2 className="tenantry-section__title">SCIM address</h2>
-              <CodeSnippet type="single" feedback="Copied" aria-label="SCIM address">
-                {view.url}
-              </CodeSnippet>
-            </section>
-            <section aria-label="Token">
-              <h2 className="tenantry-section__title">Token</h2>
-              {view.token ? (
-                <Stack gap={5}>
-                  <TileGrid>
-                    {[
-                      <StatTile key="expires" label="Expires" value={date(view.token.expiresAt)} />,
-                      <StatTile
-                        key="used"
-                        label="Last used"
-                        value={view.token.lastUsedAt ? date(view.token.lastUsedAt) : 'Never'}
-                      />,
-                      <StatTile key="created" label="Created" value={date(view.token.createdAt)} />,
-                    ]}
-                  </TileGrid>
-                  <Stack orientation="horizontal" gap={3}>
-                    <Button
-                      kind="tertiary"
-                      onClick={() => {
-                        setDialog('replace');
-                      }}
-                    >
-                      Replace token
-                    </Button>
-                    <Button
-                      kind="danger--ghost"
-                      onClick={() => {
-                        setDialog('revoke');
-                      }}
-                    >
-                      Revoke
-                    </Button>
-                  </Stack>
-                </Stack>
-              ) : (
-                <Stack gap={5}>
-                  <p>No token yet. A directory needs one to sync people into this workspace.</p>
-                  <ExpirySelect id="scim-expiry" value={days} onChange={setDays} />
-                  <div>
-                    <Button kind="tertiary" disabled={busy} onClick={() => void run(() => generate(days))}>
-                      Generate token
-                    </Button>
-                  </div>
-                </Stack>
-              )}
-            </section>
-            <Select
-              id="scim-default-role"
-              labelText="Role for people the directory creates"
-              helperText="Groups tenantry-members and tenantry-admins give their role on top. Owners are never managed by the directory."
-              value={roleValue}
-              onChange={(event) => {
-                setRole(event.target.value as ScimDefaultRole);
-              }}
-            >
-              {ROLES.map((r) => (
-                <SelectItem key={r.value} value={r.value} text={r.label} />
-              ))}
-            </Select>
-          </>
-        )}
-      </Stack>
+      <ApiErrorNotification error={saved.error ?? error} />
+      {secret && (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning-muted p-4">
+          <p className="flex items-start gap-2 text-sm">
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+            <span>
+              <span className="font-medium">Copy the SCIM token now</span>{' '}
+              <span className="text-muted-foreground">
+                It won&apos;t be shown again. If it is lost, replace it with a new one.
+              </span>
+            </span>
+          </p>
+          <CodeSnippet label="SCIM token" className="bg-background">
+            {secret}
+          </CodeSnippet>
+        </div>
+      )}
+      {!view && !saved.error && <Loading description="Loading directory sync" />}
+      {view && (
+        <>
+          <Card id="scim-address" title="SCIM address">
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              Works with
+              <TechLogo name="entra" />
+              <TechLogo name="okta" size={20} />
+              and any SCIM 2.0 directory.
+            </p>
+            <CodeSnippet label="SCIM address">{view.url}</CodeSnippet>
+          </Card>
+          <Card id="scim-token" title="Token">
+            {view.token ? (
+              <>
+                <TileGrid>
+                  {[
+                    <StatTile
+                      key="expires"
+                      icon={CalendarClock}
+                      label="Expires"
+                      value={date(view.token.expiresAt)}
+                    />,
+                    <StatTile
+                      key="used"
+                      icon={Clock}
+                      label="Last used"
+                      value={view.token.lastUsedAt ? date(view.token.lastUsedAt) : 'Never'}
+                    />,
+                    <StatTile
+                      key="created"
+                      icon={KeyRound}
+                      label="Created"
+                      value={date(view.token.createdAt)}
+                    />,
+                  ]}
+                </TileGrid>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDialog('replace');
+                    }}
+                  >
+                    Replace token
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive-muted hover:text-destructive"
+                    onClick={() => {
+                      setDialog('revoke');
+                    }}
+                  >
+                    Revoke
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  No token yet. A directory needs one to sync people into this workspace.
+                </p>
+                <ExpirySelect id="scim-expiry" value={days} onChange={setDays} />
+                <div>
+                  <Button disabled={busy} onClick={() => void run(() => generate(days))}>
+                    <KeyRound aria-hidden="true" />
+                    Generate token
+                  </Button>
+                </div>
+              </>
+            )}
+          </Card>
+          <Card id="scim-role" title="New people">
+            <div className="flex max-w-md flex-col gap-2">
+              <Label htmlFor="scim-default-role">Role for people the directory creates</Label>
+              <Select
+                value={roleValue}
+                onValueChange={(next) => {
+                  setRole(next as ScimDefaultRole);
+                }}
+              >
+                <SelectTrigger id="scim-default-role" aria-describedby="scim-default-role-help">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p id="scim-default-role-help" className="text-sm text-muted-foreground">
+                Groups tenantry-members and tenantry-admins give their role on top. Owners are never managed
+                by the directory.
+              </p>
+            </div>
+          </Card>
+        </>
+      )}
       {dialog === 'replace' && (
         <FormDialog
           heading="Replace token"
@@ -230,13 +273,11 @@ function EnterpriseScim() {
             setDialog(null);
           }}
         >
-          <Stack gap={5}>
-            <p>
-              You get a new token, shown once. The current token stops working at once, so update your
-              directory straight after.
-            </p>
-            <ExpirySelect id="scim-replace-expiry" value={days} onChange={setDays} />
-          </Stack>
+          <p className="text-sm">
+            You get a new token, shown once. The current token stops working at once, so update your directory
+            straight after.
+          </p>
+          <ExpirySelect id="scim-replace-expiry" value={days} onChange={setDays} />
         </FormDialog>
       )}
       {dialog === 'revoke' && (
@@ -254,7 +295,7 @@ function EnterpriseScim() {
             setDialog(null);
           }}
         >
-          <p>
+          <p className="text-sm">
             The token stops working at once and directory sync is turned off: your directory can no longer
             change people in this workspace. People it already made stay.
           </p>

@@ -30,14 +30,14 @@ The word "Tenantry" is set in Geist, semibold (600), as PengOPA's is. Where Geis
 
 In `packages/ui/assets/brand/`:
 
-| File                                                     | What                                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `tenantry-mark.svg`, `tenantry-mark-dark.svg`            | the mark alone, for light and dark backgrounds (the app header is dark)  |
-| `tenantry-logo.svg`, `tenantry-logo-dark.svg`            | mark and word, for light and dark backgrounds                            |
-| `tenantry-logo-card.svg`                                 | the dark logo on its own black card; the README's, readable in any theme |
-| `favicon.svg`                                            | the mark, following the browser's light or dark scheme                   |
-| `favicon-32.png`, `apple-touch-icon.png`, `icon-512.png` | rendered icons; the app icons put the mark on a navy tile                |
-| `opal-tile.png`                                          | the square of opal mosaic the SVGs embed                                 |
-| `social-preview.png`                                     | 1280×640, for the GitHub repository's social preview                     |
+| File                                                     | What                                                                          |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `tenantry-mark.svg`, `tenantry-mark-dark.svg`            | the mark alone, for light and dark backgrounds (the header follows the theme) |
+| `tenantry-logo.svg`, `tenantry-logo-dark.svg`            | mark and word, for light and dark backgrounds                                 |
+| `tenantry-logo-card.svg`                                 | the dark logo on its own black card; the README's, readable in any theme      |
+| `favicon.svg`                                            | the mark, following the browser's light or dark scheme                        |
+| `favicon-32.png`, `apple-touch-icon.png`, `icon-512.png` | rendered icons; the app icons put the mark on a navy tile                     |
+| `opal-tile.png`                                          | the square of opal mosaic the SVGs embed                                      |
+| `social-preview.png`                                     | 1280×640, for the GitHub repository's social preview                          |
 
 `pnpm brand:icons` (`scripts/brand-icons.mjs`) writes the SVGs, with `opal-tile.png` embedded, and renders the PNGs. Change the script, not the SVGs, then run it and commit what it writes.

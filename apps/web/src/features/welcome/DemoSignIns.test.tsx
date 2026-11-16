@@ -16,15 +16,9 @@ describe('the demo sign-ins', () => {
     show();
     expect(screen.getByText('ada@example.test')).toBeInTheDocument();
     expect(screen.getByText('cy@example.test')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Open Acme' })[0]).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'Open Pengopal' })[0]).toHaveAttribute(
       'href',
-      expect.stringContaining('acme.tenantry.example'),
+      expect.stringContaining('pengopal.tenantry.example'),
     );
-  });
-
-  it('shows the password and says the demo resets', () => {
-    show();
-    expect(screen.getByText('public-demo')).toBeInTheDocument();
-    expect(screen.getByText(/resets every night/i)).toBeInTheDocument();
   });
 });

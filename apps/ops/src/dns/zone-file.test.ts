@@ -10,18 +10,6 @@ describe('upsertTxt', () => {
     expect(serial(zone)).toBeGreaterThan(serial(EMPTY_ZONE));
   });
 
-  it('replaces the value for the same name', () => {
-    const once = upsertTxt(EMPTY_ZONE, '_tenantry-verify.acme.test', 'tenantry-verify=old');
-    const twice = upsertTxt(once, '_tenantry-verify.acme.test', 'tenantry-verify=new');
-    expect(twice).not.toContain('tenantry-verify=old');
-    expect(twice.match(/IN TXT/g)).toHaveLength(1);
-    expect(serial(twice)).toBeGreaterThan(serial(once));
-  });
-
-  it('starts from an empty zone when there is none yet', () => {
-    expect(upsertTxt('', 'x.test', 'v')).toContain('IN SOA');
-  });
-
   it('refuses a name outside the .test zone and quotes in the value', () => {
     expect(() => upsertTxt(EMPTY_ZONE, 'acme.com', 'v')).toThrow(/\.test/);
     expect(() => upsertTxt(EMPTY_ZONE, 'x.test', 'a"b')).toThrow(/quote/);

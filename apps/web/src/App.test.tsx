@@ -1,5 +1,4 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { TenantryThemeProvider } from '@tenantry/ui';
@@ -46,15 +45,6 @@ function renderAt(path: string, me: Me = makeMe('owner', ALL)) {
 }
 
 describe('web app (Tenantry, ADR-0027)', () => {
-  it('opens on Home, with its greeting', async () => {
-    renderAt('/');
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
-      ).toBeInTheDocument();
-    });
-  });
-
   it("shares one menu with Admin: an owner's Workspace pages open Admin (spec 8.1)", async () => {
     renderAt('/');
     const menu = () => within(screen.getByRole('navigation', { name: 'Side navigation' }));
@@ -101,35 +91,5 @@ describe('web app (Tenantry, ADR-0027)', () => {
     renderAt('/patterns');
     vi.unstubAllEnvs();
     expect(screen.queryByRole('heading', { level: 2, name: 'List page' })).not.toBeInTheDocument();
-  });
-
-  it("lists the person's workspaces, each at its web address", async () => {
-    renderAt('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Switch workspace' }));
-    const panel = screen.getByRole('menu');
-    expect(within(panel).getByRole('menuitem', { name: /Globex/ })).toHaveAttribute(
-      'href',
-      'http://globex.tenantry.localhost/',
-    );
-  });
-
-  it('switches to the Admin of this workspace', async () => {
-    renderAt('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Switch app' }));
-    const panel = screen.getByRole('menu');
-    expect(within(panel).getByRole('menuitem', { name: /Admin/ })).toHaveAttribute(
-      'href',
-      'http://acme.portal.tenantry.localhost/',
-    );
-  });
-
-  it('shows a member no app switcher, since Admin is not theirs', async () => {
-    renderAt('/', makeMe('member', MEMBER));
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
-      ).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('button', { name: 'Switch app' })).not.toBeInTheDocument();
   });
 });

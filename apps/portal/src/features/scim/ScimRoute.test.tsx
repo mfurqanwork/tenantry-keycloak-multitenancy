@@ -21,16 +21,12 @@ function setup(routes: Record<string, unknown> = {}) {
 }
 
 describe('ScimRoute', () => {
-  it('shows the SCIM address to copy', async () => {
-    setup();
-    expect(await screen.findByText(URL_)).toBeInTheDocument();
-  });
-
   it('generates a token with the chosen expiry and shows it once', async () => {
     const { api, user, view } = setup({
       'POST /api/scim/token': { token: SECRET, expiresAt: '2027-11-04T00:00:00.000Z' },
     });
-    await user.selectOptions(await screen.findByLabelText('Token expires after'), '365');
+    await user.click(await screen.findByRole('combobox', { name: 'Token expires after' }));
+    await user.click(await screen.findByRole('option', { name: '1 year' }));
     await user.click(screen.getByRole('button', { name: 'Generate token' }));
     expect(api.post).toHaveBeenCalledWith('/api/scim/token', { expiresInDays: 365 });
     expect(await screen.findByText('Copy the SCIM token now')).toBeInTheDocument();
@@ -74,23 +70,26 @@ describe('ScimRoute', () => {
 
   it('saves the default role', async () => {
     const { api, user } = setup({ 'PUT /api/scim/default-role': { ...none, defaultRole: 'none' } });
-    const role = await screen.findByLabelText('Role for people the directory creates');
+    const role = await screen.findByRole('combobox', { name: 'Role for people the directory creates' });
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-    await user.selectOptions(role, 'none');
+    await user.click(role);
+    await user.click(await screen.findByRole('option', { name: /No role/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(api.put).toHaveBeenCalledWith('/api/scim/default-role', { role: 'none' });
   });
 
-  it('explains Standard workspaces without asking the API', () => {
+  it('tells a Standard workspace it is Enterprise only, with nothing to save', () => {
+    const owner = makeMe('owner', OWNER);
     const api = fakeApi();
     renderPortal(<ScimRoute />, {
       api,
-      me: { ...me, tenant: { ...me.tenant, tier: 'standard' } },
-      path: '/scim',
+      me: { ...owner, tenant: { ...owner.tenant, tier: 'standard' } },
+      path: '/advanced/scim',
     });
     expect(
       screen.getByText('Security settings and SCIM are available on Enterprise workspaces.'),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(api.get).not.toHaveBeenCalled();
   });
 });

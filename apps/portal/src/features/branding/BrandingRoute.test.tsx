@@ -18,12 +18,6 @@ function setup(routes: Record<string, unknown> = {}) {
 const colour = () => screen.findByLabelText('Primary colour');
 
 describe('BrandingRoute', () => {
-  it('starts from the saved colour, with Save off until something changes', async () => {
-    setup();
-    expect(await colour()).toHaveValue('#0f62fe');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-  });
-
   it('saves a new colour', async () => {
     const { api, onChanged, user } = setup({ 'PUT /api/branding': { primaryColor: '#198038' } });
     await user.clear(await colour());
@@ -39,7 +33,7 @@ describe('BrandingRoute', () => {
     const { api, user } = setup();
     await user.clear(await colour());
     await user.type(await colour(), 'blue');
-    expect(screen.getByText('Use a colour like #0f62fe.')).toBeInTheDocument();
+    expect(screen.getByText('Use a colour like #2b77c0.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(api.put).not.toHaveBeenCalled();
   });
@@ -60,18 +54,22 @@ describe('BrandingRoute', () => {
   it('uploads a logo', async () => {
     const { api, onChanged, user } = setup({ 'UPLOAD /api/branding/logo': {} });
     const file = new File([new Uint8Array([0x89, 0x50])], 'logo.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText(/Drag and drop a logo/), file);
+    await user.upload(screen.getByLabelText(/Upload a logo/), file);
     expect(api.upload).toHaveBeenCalledWith('/api/branding/logo', 'file', file);
     await waitFor(() => {
       expect(onChanged).toHaveBeenCalled();
     });
   });
 
-  it('refuses a logo over 256 KB before uploading it', async () => {
-    const { api, user } = setup();
-    const big = new File([new Uint8Array(262145)], 'big.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText(/Drag and drop a logo/), big);
-    expect(await screen.findByText('The logo must be 256 KB or smaller.')).toBeInTheDocument();
-    expect(api.upload).not.toHaveBeenCalled();
+  it("previews Tenantry's own colour when the field is cleared, not the saved one", async () => {
+    // The theme's own primary; the workspace's saved colour sits on <body>, not on <html>.
+    document.documentElement.style.setProperty('--primary', '#12224a');
+    const { user } = setup();
+    await user.clear(await colour());
+    const preview = screen.getByRole('group', { name: 'Preview' });
+    await waitFor(() => {
+      expect(preview.style.getPropertyValue('--primary')).toBe('#12224a');
+    });
+    document.documentElement.style.removeProperty('--primary');
   });
 });

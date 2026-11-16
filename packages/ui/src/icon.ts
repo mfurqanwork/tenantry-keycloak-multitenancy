@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-/** Any icon component: Lucide's, and Carbon's for the pages that still use it until they move (ADR-0031). */
+/** Any icon component, such as Lucide's. */
 export type IconComponent = ComponentType<{
   size?: number | string;
   className?: string;

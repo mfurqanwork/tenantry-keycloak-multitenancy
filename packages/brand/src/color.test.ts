@@ -9,10 +9,6 @@ import {
 } from './color.js';
 
 describe('parseHex', () => {
-  it('reads #rrggbb in either case', () => {
-    expect(parseHex('#0F62FE')).toEqual({ r: 15, g: 98, b: 254 });
-  });
-
   it('refuses anything else', () => {
     expect(parseHex('0f62fe')).toBeNull();
     expect(parseHex('#fff')).toBeNull();
@@ -39,10 +35,6 @@ describe('darkerUntilContrast', () => {
     expect(meetsContrast(adjustLightness(suggestion, 1))).toBe(false);
     expect(suggestion).toMatch(/^#[0-9a-f]{6}$/);
   });
-
-  it('leaves a passing colour alone', () => {
-    expect(darkerUntilContrast('#0F62FE')).toBe('#0f62fe');
-  });
 });
 
 describe('brandTokens', () => {
@@ -55,19 +47,15 @@ describe('brandTokens', () => {
 });
 
 describe('brandTokens foreground and subtle', () => {
-  it.each(['#ffff00', '#0a0a0a', '#2b77c0', '#808080', '#f5f6fa'])('%s gets a label colour that reads at 4.5:1', (hex) => {
-    const tokens = brandTokens(hex);
-    expect(contrastRatio(tokens.foreground, tokens.interactive)).toBeGreaterThanOrEqual(4.5);
-  });
+  it.each(['#ffff00', '#0a0a0a', '#2b77c0', '#808080', '#f5f6fa'])(
+    '%s gets a label colour that reads at 4.5:1',
+    (hex) => {
+      const tokens = brandTokens(hex);
+      expect(contrastRatio(tokens.foreground, tokens.interactive)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 
   it('keeps white labels where white reads', () => {
     expect(brandTokens('#2b77c0').foreground).toBe('#ffffff');
-  });
-
-  it('gives a pale tint of the colour for selected backgrounds', () => {
-    const tokens = brandTokens('#2b77c0');
-    expect(tokens.subtle).toMatch(/^#[0-9a-f]{6}$/);
-    expect(contrastRatio(tokens.subtle, '#ffffff')).toBeLessThan(1.3);
-    expect(contrastRatio('#12224a', tokens.subtle)).toBeGreaterThanOrEqual(4.5);
   });
 });

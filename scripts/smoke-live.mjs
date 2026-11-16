@@ -53,12 +53,12 @@ const failed = await checkAll([
     },
   ],
   [`${base} serves the app`, () => shell(base)],
-  [`acme.${base} serves the app`, () => shell(`acme.${base}`)],
-  [`acme.portal.${base} serves the app`, () => shell(`acme.portal.${base}`)],
+  [`pengopal.${base} serves the app`, () => shell(`pengopal.${base}`)],
+  [`pengopal.portal.${base} serves the app`, () => shell(`pengopal.portal.${base}`)],
   [
     `the API is healthy and running ${version}`,
     async () => {
-      const body = await (await page(`https://acme.${base}/api/health`)).json();
+      const body = await (await page(`https://pengopal.${base}/api/health`)).json();
       return (body.status === 'ok' && body.version === version) || JSON.stringify(body);
     },
   ],

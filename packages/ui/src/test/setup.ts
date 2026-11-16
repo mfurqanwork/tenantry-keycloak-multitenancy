@@ -7,7 +7,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// jsdom has no matchMedia; Carbon's shell and our theme provider both read it.
+// jsdom has no matchMedia; the theme provider reads it.
 export function stubColorScheme(dark: boolean): void {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: query.includes('dark') ? dark : false,
@@ -22,7 +22,7 @@ export function stubColorScheme(dark: boolean): void {
 }
 stubColorScheme(false);
 
-// jsdom has no ResizeObserver either; Carbon Tabs measures its tab list with one.
+// jsdom has no ResizeObserver either; Radix measures with one.
 globalThis.ResizeObserver = class {
   observe(): void {}
   unobserve(): void {}

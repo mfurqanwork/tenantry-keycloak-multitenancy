@@ -8,7 +8,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `apps/web` (Tenantry: the welcome page, signup, Home, Projects) and `apps/portal` (Admin: People, Branding, Sign-in & security, Audit log, Advanced), the React + Vite SPAs built on `@tenantry/ui` (ADR-0027). Pages live in `src/features/<name>/` of each app. Admin pages are for owners and admins (`canSeeAdmin`).
 - `apps/login-theme`: the Keycloakify login theme, built into the Keycloak image (ADR-0021).
 - `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`; `/testing` has the test helpers both apps use (`fakeApi`, `makeMe`, `renderWithApp`).
-- `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, Carbon tokens).
+- `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, hover and active shades).
 - `packages/ui`: the tokens (Tailwind v4), our Radix-based components, `TechLogo`, `AppShell`, the five page patterns, and `StatTile`/`TileGrid` for facts on tiles (ADR-0031).
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.
@@ -50,14 +50,14 @@ These keep tenant isolation intact. A change that breaks one of them is wrong, e
 
 - Every screen starts from a `@tenantry/ui` page pattern.
 - Use `@tenantry/ui` components and Lucide icons only; technology logos only through `TechLogo`.
-- Colour, spacing, radius, shadow and type come from tokens. Stylelint and ESLint reject raw colours and sizes outside the token files, and imports of `@carbon/*`.
+- Colour, spacing, radius, shadow and type come from tokens. Stylelint and ESLint reject raw colours and sizes outside the token files, and ESLint rejects `@carbon/*` everywhere.
 - The header follows the page's light or dark theme.
-- Until the redesign's second release, Admin and the login theme still use the legacy Carbon stylesheet (ADR-0031).
 
 ## Conventions
 
 - TypeScript strict everywhere. ESM with `.js` import specifiers.
 - Tests sit next to the code (`*.test.ts(x)`) and run with Vitest. Write the failing test first.
+- Test behaviour, not looks: a user flow, a rule across functions, or a security or isolation guarantee. No tests for icons, colours, copy, layout, a library's own behaviour, or the in-memory fakes; a unit test that an integration test already covers goes.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - A change to `apps/`, `packages/` or `infra/` adds a line under Unreleased in `CHANGELOG.md`; CI checks (ADR-0030).
 - Configuration comes from the environment and is validated at startup; add new variables to `.env.example`.

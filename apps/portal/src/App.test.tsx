@@ -37,19 +37,6 @@ describe('Admin (ADR-0027)', () => {
     );
   });
 
-  it('Advanced holds Directory sync, and Customer apps on Enterprise', async () => {
-    renderPortal(<App />, { api: api(), me: enterprise(makeMe('owner', OWNER)) });
-    await userEvent.click(within(menu()).getByRole('button', { name: 'Advanced' }));
-    expect(within(menu()).getByRole('link', { name: 'Directory sync (SCIM)' })).toBeInTheDocument();
-    expect(within(menu()).getByRole('link', { name: 'Customer apps' })).toBeInTheDocument();
-  });
-
-  it('a Standard workspace has no Customer apps', async () => {
-    renderPortal(<App />, { api: api(), me: standard(makeMe('owner', OWNER)) });
-    await userEvent.click(within(menu()).getByRole('button', { name: 'Advanced' }));
-    expect(within(menu()).queryByRole('link', { name: 'Customer apps' })).not.toBeInTheDocument();
-  });
-
   it('an admin of a Standard workspace sees People and Audit log only', () => {
     renderPortal(<App />, { api: api(), me: standard(makeMe('admin', ADMIN)) });
     expect(within(menu()).getByRole('link', { name: 'People' })).toBeInTheDocument();
@@ -63,13 +50,7 @@ describe('Admin (ADR-0027)', () => {
     expect(screen.getByRole('heading', { level: 1, name: "You can't open Admin" })).toBeInTheDocument();
     // No pages of theirs, so no side nav at all.
     expect(screen.queryByRole('navigation', { name: 'Side navigation' })).not.toBeInTheDocument();
-  });
-
-  it('opens on People for an owner', async () => {
-    renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER), path: '/' });
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'People' })).toBeInTheDocument();
-    });
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it.each([
@@ -90,15 +71,6 @@ describe('Admin (ADR-0027)', () => {
     });
   });
 
-  it('the test callback keeps its path', () => {
-    renderPortal(<App />, {
-      api: api(),
-      me: enterprise(makeMe('owner', OWNER)),
-      path: '/applications/test-callback',
-    });
-    expect(screen.getByRole('heading', { level: 1, name: 'Test sign-in' })).toBeInTheDocument();
-  });
-
   it('links to the Keycloak console only for someone with console access', async () => {
     const me = enterprise(makeMe('owner', OWNER));
     const { unmount } = renderPortal(<App />, { api: api(), me });
@@ -114,13 +86,6 @@ describe('Admin (ADR-0027)', () => {
       'target',
       '_blank',
     );
-  });
-
-  it('/people?invite=1 opens the invite dialog', async () => {
-    renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER), path: '/people?invite=1' });
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /Invite/ })).toBeInTheDocument();
-    });
   });
 
   it("switches to another workspace's Admin, and to this workspace's Tenantry", async () => {

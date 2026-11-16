@@ -1,27 +1,4 @@
-import {
-  Button,
-  DataTable,
-  DataTableSkeleton,
-  OverflowMenu,
-  OverflowMenuItem,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableToolbar,
-  TableToolbarContent,
-  TableToolbarSearch,
-  Tag,
-} from '@carbon/react';
-import { Add, UserMultiple } from '@carbon/icons-react';
 import type { Role } from '@tenantry/auth';
-import { Avatar, EmptyState, ListPage } from '@tenantry/ui';
-import { useState } from 'react';
-import { useSearchParams } from 'react-router';
 import {
   ApiErrorNotification,
   assignableRoles,
@@ -30,6 +7,31 @@ import {
   useMe,
   useResource,
 } from '@tenantry/app-kit';
+import {
+  Avatar,
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  EmptyState,
+  Input,
+  Label,
+  ListPage,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TechLogo,
+  type BadgeTone,
+} from '@tenantry/ui';
+import { Ellipsis, Search, Trash2, UserCog, UserPlus, Users } from 'lucide-react';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { ChangeRoleDialog, InviteDialog, RemoveMemberDialog } from './MemberDialogs.js';
 
 interface MemberRow {
@@ -49,16 +51,7 @@ interface InviteRow {
 
 type Dialog = { kind: 'invite' } | { kind: 'role' | 'remove'; member: MemberRow } | null;
 
-const MEMBER_HEADERS = [
-  { key: 'name', header: 'Name' },
-  { key: 'email', header: 'Email' },
-  { key: 'role', header: 'Role' },
-];
-const INVITE_HEADERS = [
-  { key: 'email', header: 'Email' },
-  { key: 'role', header: 'Role' },
-  { key: 'createdAt', header: 'Invited' },
-];
+const ROLE_TONES: Record<Role, BadgeTone> = { owner: 'primary', admin: 'primary', member: 'neutral' };
 
 export function PeopleRoute() {
   const me = useMe();
@@ -78,7 +71,7 @@ export function PeopleRoute() {
   const manages = me.can('members:change-role') || me.can('members:remove');
   // Owners of an enterprise workspace let owners and admins into the realm's console.
   const grantsConsole = me.tenant.tier === 'enterprise' && me.can('tenant:settings');
-  const mayHaveConsole = (m: MemberRow | undefined) => m?.role === 'owner' || m?.role === 'admin';
+  const mayHaveConsole = (m: MemberRow) => m.role === 'owner' || m.role === 'admin';
   const setConsole = (member: MemberRow, on: boolean) => {
     setActionError(null);
     setConsoleBusy(member.userId);
@@ -86,6 +79,16 @@ export function PeopleRoute() {
     void (on ? api.post(path, {}) : api.del(path)).then(list.reload, setActionError).finally(() => {
       setConsoleBusy(null);
     });
+  };
+  const revoke = (invite: InviteRow) => {
+    setActionError(null);
+    setRevoking(invite.id);
+    void api
+      .del(`/api/members/invites/${invite.id}`)
+      .then(list.reload, setActionError)
+      .finally(() => {
+        setRevoking(null);
+      });
   };
   const close = () => {
     setDialog(null);
@@ -97,6 +100,7 @@ export function PeopleRoute() {
     (m) => !q || [m.displayName, m.email].some((v) => v?.toLowerCase().includes(q)),
   );
   const invites = list.data?.invites ?? [];
+  const actions = manages || grantsConsole;
 
   // Dialogs sit beside the page, never inside the part ListPage may swap for its empty state.
   return (
@@ -104,222 +108,201 @@ export function PeopleRoute() {
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="People"
-        icon={UserMultiple}
+        icon={Users}
         description="Who is in this workspace, their roles, and open invites."
         primaryAction={
           me.can('members:invite') ? (
             <Button
-              renderIcon={Add}
               onClick={() => {
                 setDialog({ kind: 'invite' });
               }}
             >
+              <UserPlus aria-hidden="true" />
               Invite member
             </Button>
           ) : undefined
         }
         isEmpty={list.data !== undefined && members.length === 0}
         emptyState={
-          <EmptyState
-            icon={UserMultiple}
-            title="Invite your team"
-            body="People you invite get an email with a link to join."
-          />
+          <EmptyState icon={Users} title="Invite your team" body="People you invite get an email with a link to join." />
         }
       >
-        <Stack gap={6}>
-          <ApiErrorNotification error={list.error ?? actionError} />
-          {!list.data && !list.error && <DataTableSkeleton headers={MEMBER_HEADERS} rowCount={3} />}
-          {list.data && (
-            <DataTable
-              rows={shownMembers.map((m) => ({
-                id: m.userId,
-                name: m.displayName ?? '',
-                email: m.email ?? '',
-                role: m.role ? ROLE_LABELS[m.role] : 'No role yet',
-              }))}
-              headers={MEMBER_HEADERS}
-            >
-              {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-                <TableContainer>
-                  <TableToolbar aria-label="People toolbar">
-                    <TableToolbarContent>
-                      <TableToolbarSearch
-                        persistent
-                        labelText="Search people"
-                        placeholder="Search by name or email"
-                        defaultValue={query}
-                        onChange={(_event, value) => {
-                          // Carbon reports the starting value as onChange('', value) on load.
-                          setQuery(value ?? '');
-                        }}
-                      />
-                    </TableToolbarContent>
-                  </TableToolbar>
-                  <Table {...getTableProps()} aria-label="Members">
-                    <TableHead>
-                      <TableRow>
-                        {headers.map((header) => (
-                          <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                            {header.header}
-                          </TableHeader>
-                        ))}
-                        {(manages || grantsConsole) && <TableHeader aria-label="Actions" />}
-                      </TableRow>
+        <ApiErrorNotification error={list.error ?? actionError} />
+        {!list.data && !list.error && (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        )}
+        {list.data && (
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full sm:max-w-xs">
+              <Label htmlFor="people-search" className="sr-only">
+                Search people
+              </Label>
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                id="people-search"
+                type="search"
+                placeholder="Search by name or email"
+                className="pl-8"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
+              />
+            </div>
+            <Table aria-label="Members">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  {actions && (
+                    <TableHead className="w-12">
+                      <span className="sr-only">Actions</span>
                     </TableHead>
-                    <TableBody>
-                      {rows.map((row) => {
-                        const member = members.find((m) => m.userId === row.id);
-                        const canManage = manages && member && member.userId !== me.user.id;
-                        const consoleItem = grantsConsole && member && mayHaveConsole(member);
-                        return (
-                          <TableRow {...getRowProps({ row })} key={row.id}>
-                            {row.cells.map((cell) => (
-                              <TableCell key={cell.id}>
-                                {cell.info.header === 'name' ? (
-                                  <span className="tenantry-person">
-                                    <Avatar name={member?.displayName ?? member?.email ?? ''} size="sm" />
-                                    {cell.value as string}
-                                  </span>
-                                ) : cell.info.header === 'role' ? (
-                                  <span className="tenantry-tags">
-                                    <Tag
-                                      type={
-                                        member?.role === 'owner'
-                                          ? 'purple'
-                                          : member?.role === 'admin'
-                                            ? 'blue'
-                                            : 'gray'
-                                      }
-                                      size="sm"
-                                    >
-                                      {cell.value as string}
-                                    </Tag>
-                                    {member?.console && (
-                                      <Tag type="teal" size="sm">
-                                        Console access
-                                      </Tag>
-                                    )}
-                                  </span>
-                                ) : (
-                                  (cell.value as string)
-                                )}
-                              </TableCell>
-                            ))}
-                            {(manages || grantsConsole) && (
-                              <TableCell className="cds--table-column-menu">
-                                {member && (canManage || consoleItem) && (
-                                  <OverflowMenu
-                                    aria-label={`Actions for ${member.email ?? 'member'}`}
-                                    iconDescription={`Actions for ${member.email ?? 'member'}`}
-                                    flipped
-                                    size="sm"
-                                  >
-                                    {consoleItem && (
-                                      <OverflowMenuItem
-                                        itemText={
-                                          member.console ? 'Take console access away' : 'Give console access'
-                                        }
-                                        disabled={consoleBusy === member.userId}
-                                        onClick={() => {
-                                          setConsole(member, !member.console);
-                                        }}
-                                      />
-                                    )}
-                                    {canManage && me.can('members:change-role') && (
-                                      <OverflowMenuItem
-                                        itemText="Change role"
-                                        onClick={() => {
-                                          setDialog({ kind: 'role', member });
-                                        }}
-                                      />
-                                    )}
-                                    {canManage && me.can('members:remove') && (
-                                      <OverflowMenuItem
-                                        itemText="Remove"
-                                        isDelete
-                                        onClick={() => {
-                                          setDialog({ kind: 'remove', member });
-                                        }}
-                                      />
-                                    )}
-                                  </OverflowMenu>
-                                )}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </DataTable>
-          )}
-          {invites.length > 0 && (
-            <section aria-labelledby="pending-invites">
-              <h2 id="pending-invites" className="tenantry-section__title">
-                Pending invites
-              </h2>
-              <DataTable
-                rows={invites.map((i) => ({
-                  id: i.id,
-                  email: i.email,
-                  role: ROLE_LABELS[i.role],
-                  createdAt: new Date(i.createdAt).toLocaleDateString(),
-                }))}
-                headers={INVITE_HEADERS}
-              >
-                {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-                  <TableContainer>
-                    <Table {...getTableProps()} aria-label="Pending invites">
-                      <TableHead>
-                        <TableRow>
-                          {headers.map((header) => (
-                            <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                              {header.header}
-                            </TableHeader>
-                          ))}
-                          {me.can('members:invite') && <TableHeader aria-label="Actions" />}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {rows.map((row) => (
-                          <TableRow {...getRowProps({ row })} key={row.id}>
-                            {row.cells.map((cell) => (
-                              <TableCell key={cell.id}>{cell.value as string}</TableCell>
-                            ))}
-                            {me.can('members:invite') && (
-                              <TableCell>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shownMembers.map((member) => {
+                  const canManage = manages && member.userId !== me.user.id;
+                  const consoleItem = grantsConsole && mayHaveConsole(member);
+                  return (
+                    <TableRow key={member.userId}>
+                      <TableCell className="font-medium">
+                        <span className="flex items-center gap-2">
+                          <Avatar name={member.displayName ?? member.email ?? ''} size="sm" />
+                          {member.displayName ?? ''}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{member.email ?? ''}</TableCell>
+                      <TableCell>
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <Badge tone={member.role ? ROLE_TONES[member.role] : 'neutral'}>
+                            {member.role ? ROLE_LABELS[member.role] : 'No role yet'}
+                          </Badge>
+                          {member.console && (
+                            <Badge tone="success">
+                              <TechLogo name="keycloak" size={12} decorative />
+                              Console access
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
+                      {actions && (
+                        <TableCell className="text-right">
+                          {(canManage || consoleItem) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
                                 <Button
-                                  kind="ghost"
-                                  size="sm"
-                                  disabled={revoking === row.id}
-                                  onClick={() => {
-                                    setActionError(null);
-                                    setRevoking(row.id);
-                                    api
-                                      .del(`/api/members/invites/${row.id}`)
-                                      .then(list.reload, setActionError)
-                                      .finally(() => {
-                                        setRevoking(null);
-                                      });
-                                  }}
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Actions for ${member.email ?? 'member'}`}
                                 >
-                                  Revoke
+                                  <Ellipsis aria-hidden="true" />
                                 </Button>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </DataTable>
-            </section>
-          )}
-        </Stack>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canManage && me.can('members:change-role') && (
+                                  <DropdownMenuItem
+                                    onSelect={() => {
+                                      setDialog({ kind: 'role', member });
+                                    }}
+                                  >
+                                    <UserCog aria-hidden="true" />
+                                    Change role
+                                  </DropdownMenuItem>
+                                )}
+                                {consoleItem && (
+                                  <DropdownMenuItem
+                                    disabled={consoleBusy === member.userId}
+                                    onSelect={() => {
+                                      setConsole(member, !member.console);
+                                    }}
+                                  >
+                                    <TechLogo name="keycloak" decorative />
+                                    {member.console ? 'Take console access away' : 'Give console access'}
+                                  </DropdownMenuItem>
+                                )}
+                                {canManage && me.can('members:remove') && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onSelect={() => {
+                                      setDialog({ kind: 'remove', member });
+                                    }}
+                                  >
+                                    <Trash2 aria-hidden="true" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            {shownMembers.length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">{`No one matches "${query.trim()}".`}</p>
+            )}
+          </div>
+        )}
+        {invites.length > 0 && (
+          <section aria-labelledby="pending-invites" className="flex flex-col gap-3">
+            <h2 id="pending-invites" className="text-lg font-semibold">
+              Pending invites
+            </h2>
+            <Table aria-label="Pending invites">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Invited</TableHead>
+                  {me.can('members:invite') && (
+                    <TableHead className="w-24">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invites.map((invite) => (
+                  <TableRow key={invite.id}>
+                    <TableCell className="font-medium">{invite.email}</TableCell>
+                    <TableCell>
+                      <Badge tone={ROLE_TONES[invite.role]}>{ROLE_LABELS[invite.role]}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {new Date(invite.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    {me.can('members:invite') && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={revoking === invite.id}
+                          onClick={() => {
+                            revoke(invite);
+                          }}
+                        >
+                          Revoke
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </section>
+        )}
       </ListPage>
       {dialog?.kind === 'invite' && <InviteDialog roles={roles} onDone={list.reload} onClose={close} />}
       {dialog?.kind === 'role' && (

@@ -6,7 +6,7 @@ afterEach(() => {
   cleanup();
 });
 
-// jsdom lacks matchMedia and ResizeObserver, which the theme provider and Carbon read.
+// jsdom lacks matchMedia and ResizeObserver, which the theme provider and Radix read.
 vi.stubGlobal('matchMedia', (query: string) => ({
   matches: false,
   media: query,
@@ -22,3 +22,10 @@ globalThis.ResizeObserver = class {
   unobserve(): void {}
   disconnect(): void {}
 };
+
+// jsdom lacks the pointer-capture and scrolling calls Radix menus and selects make.
+Object.assign(Element.prototype, {
+  hasPointerCapture: () => false,
+  releasePointerCapture: () => undefined,
+  scrollIntoView: () => undefined,
+});

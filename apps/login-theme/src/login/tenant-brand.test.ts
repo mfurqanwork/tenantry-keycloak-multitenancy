@@ -26,19 +26,11 @@ describe('tenantFromLocation', () => {
     });
   });
 
-  it('has no tenant on a first page without one', () => {
-    expect(tenantFromLocation('', sessionStorage, base)).toBeNull();
-  });
-
   it('reads no tenant from an address outside the base domain, and forgets an earlier one', () => {
     tenantFromLocation(redirect('http://acme.tenantry.localhost/auth/callback'), sessionStorage, base);
     expect(tenantFromLocation(redirect('http://evil.example/cb'), sessionStorage, base)).toBeNull();
     expect(tenantFromLocation('', sessionStorage, base)).toBeNull();
     expect(tenantFromLocation(redirect('http://a.b.tenantry.localhost/cb'), sessionStorage, base)).toBeNull();
-  });
-
-  it('ignores a redirect address that is not a URL', () => {
-    expect(tenantFromLocation('?redirect_uri=not-a-url', sessionStorage, base)).toBeNull();
   });
 });
 

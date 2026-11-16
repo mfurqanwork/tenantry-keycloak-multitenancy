@@ -11,7 +11,8 @@
 [![NestJS](https://img.shields.io/badge/NestJS-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![React](https://img.shields.io/badge/React-087ea4?logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
-[![IBM Carbon](https://img.shields.io/badge/IBM_Carbon-0f62fe?logo=ibm&logoColor=white)](https://carbondesignsystem.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06b6d4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Radix](https://img.shields.io/badge/Radix-161618?logo=radixui&logoColor=white)](https://www.radix-ui.com/)
 [![Keycloak](https://img.shields.io/badge/Keycloak-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
 [![Keycloakify](https://img.shields.io/badge/Keycloakify-1a1a1a)](https://www.keycloakify.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -24,7 +25,10 @@
 
 </div>
 
-![The Tenantry welcome page](docs/images/welcome.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/welcome-dark.webp">
+  <img src="docs/images/welcome-light.webp" alt="The Tenantry welcome page">
+</picture>
 
 ## The problem
 
@@ -45,7 +49,7 @@ flowchart TB
     direction LR
     subgraph platform["platform realm: Standard"]
       direction TB
-      acme["acme<br/>organization"]
+      pengopal["pengopal<br/>organization"]
       globex["globex<br/>organization"]
       more["…thousands more"]
     end
@@ -67,29 +71,54 @@ The application code never needs to know which tier a workspace is on.
 
 ### Workspaces and teams
 
-Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. Home greets you with a setup card that walks a new owner through the first minute, the workspace's numbers, and the latest projects.
+Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. Home shows the workspace's numbers and the latest projects; a new owner first gets a setup card that walks them through the first minute.
 
-![Home with its setup card](docs/images/home.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/home-dark.webp">
+  <img src="docs/images/home-light.webp" alt="Home in the Pengopal workspace: people, open invites, projects and the latest projects">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/audit-log-dark.webp">
+  <img src="docs/images/audit-log-light.webp" alt="Admin › Audit log: every change to people, sign-in and settings, newest first">
+</picture>
 
 ### Search and notifications
 
 Search pages, people and projects from the header, or press Ctrl+K. The bell tells you what changed: who joined, your role, security settings, a directory token about to expire, and invites from other workspaces. Each person sees only what their role allows.
 
-![Search across the workspace](docs/images/search.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.webp">
+  <img src="docs/images/search-light.webp" alt="Search across the workspace">
+</picture>
 
-![Notifications](docs/images/notifications.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/notifications-dark.webp">
+  <img src="docs/images/notifications-light.webp" alt="Notifications">
+</picture>
 
 ### One sign-in, two apps
 
 **Tenantry** is the product people use; **Admin** is where owners and admins manage the workspace. They share one menu and one sign-in, live on separate addresses, and signing out of one signs you out of both.
 
-![Admin › People](docs/images/admin-people.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/admin-people-dark.webp">
+  <img src="docs/images/admin-people-light.webp" alt="Admin › People">
+</picture>
 
 ### Branding
 
 Each workspace sets a colour and a logo. Tenantry refuses a colour that white text can't be read on, and suggests a darker shade. The apps and the workspace's own login page take the brand.
 
-![A branded login page](docs/images/login-branded.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/branding-dark.webp">
+  <img src="docs/images/branding-light.webp" alt="Admin › Branding: the colour, a live preview and the logo">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/login-branded-dark.webp">
+  <img src="docs/images/login-branded-light.webp" alt="Pengopal's sign-in page in its own colour, with company login first">
+</picture>
 
 ### Company login
 
@@ -124,8 +153,8 @@ All 34 guarantees are in [tests/isolation](tests/isolation/README.md).
 ```mermaid
 flowchart LR
   browser[Browser] --> caddy[Caddy]
-  caddy -->|"&lt;slug&gt;.tenantry"| web[Tenantry<br/>React + Carbon]
-  caddy -->|"&lt;slug&gt;.portal.tenantry"| admin[Admin<br/>React + Carbon]
+  caddy -->|"&lt;slug&gt;.tenantry"| web[Tenantry<br/>React + Tailwind]
+  caddy -->|"&lt;slug&gt;.portal.tenantry"| admin[Admin<br/>React + Tailwind]
   caddy -->|/api, /scim| api[API<br/>NestJS]
   caddy -->|auth.tenantry| kc[Keycloak 26.8]
   api --> pg[(Postgres<br/>row-level security)]

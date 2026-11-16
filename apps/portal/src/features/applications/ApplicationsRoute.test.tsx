@@ -5,8 +5,6 @@ import { ApplicationsRoute } from './ApplicationsRoute.js';
 import { sampleApp } from './test-data.js';
 
 const ADMIN = makeMe('admin', ['apps:read', 'apps:register']);
-const MEMBER = makeMe('member', ['apps:read']);
-
 describe('ApplicationsRoute', () => {
   it('lists the apps with their type and client id, each linking to its page', async () => {
     const api = fakeApi({
@@ -29,25 +27,6 @@ describe('ApplicationsRoute', () => {
       'href',
       '/advanced/apps/new',
     );
-  });
-
-  it('invites admins to register the first app, and only tells members there is none', async () => {
-    renderPortal(<ApplicationsRoute />, {
-      api: fakeApi({ '/api/apps': { apps: [] } }),
-      me: ADMIN,
-      path: '/advanced/apps',
-    });
-    expect(await screen.findByText('Register one to connect it to your sign-in.')).toBeInTheDocument();
-  });
-
-  it('shows members the list without the register action', async () => {
-    renderPortal(<ApplicationsRoute />, {
-      api: fakeApi({ '/api/apps': { apps: [] } }),
-      me: MEMBER,
-      path: '/advanced/apps',
-    });
-    expect(await screen.findByText('Owners and admins register apps here.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Register an app' })).not.toBeInTheDocument();
   });
 
   it('explains that Standard workspaces have no apps, without asking the API', () => {

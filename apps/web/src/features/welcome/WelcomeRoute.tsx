@@ -19,12 +19,20 @@ const TIERS = [
   {
     name: 'Standard',
     opal: false,
-    lines: ['An organization in the shared realm', 'Ready the moment you sign up', 'One sign-in across workspaces'],
+    lines: [
+      'An organization in the shared realm',
+      'Ready the moment you sign up',
+      'One sign-in across workspaces',
+    ],
   },
   {
     name: 'Enterprise',
     opal: true,
-    lines: ['A Keycloak realm of its own', 'Company login and directory sync', 'Moves from Standard, accounts kept'],
+    lines: [
+      'A Keycloak realm of its own',
+      'Company login and directory sync',
+      'Moves from Standard, accounts kept',
+    ],
   },
 ];
 
@@ -34,7 +42,58 @@ const LAYERS: { name: string; icon: LucideIcon; line: string }[] = [
   { name: 'Database', icon: Database, line: 'Row-level security on every tenant table.' },
 ];
 
+const SCREENS: { name: string; file: string; alt: string; line: string }[] = [
+  {
+    name: 'Sign-in',
+    file: 'login',
+    alt: "Pengopal's sign-in page in its own colour, with Continue with Acme Corp above the email field",
+    line: "Each workspace's own logo and colour, with company login first.",
+  },
+  {
+    name: 'Branding',
+    file: 'branding',
+    alt: 'Admin › Branding: the primary colour, a live preview of buttons and the sign-in card, and the logo',
+    line: 'Pick a colour and see it before you save. Tenantry checks it can be read.',
+  },
+  {
+    name: 'Audit log',
+    file: 'audit',
+    alt: 'Admin › Audit log: who changed what in the workspace, newest first, with filters',
+    line: 'Every change to who can sign in, written down as it happens.',
+  },
+];
+
 const section = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8';
+
+// A real screen from the demo workspace, in the page's own light or dark theme.
+function Screen({ file, alt, eager = false }: { file: string; alt: string; eager?: boolean }) {
+  const loading = eager ? 'eager' : 'lazy';
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-muted p-1.5 shadow-raised">
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <img
+          src={`/welcome/${file}-light.webp`}
+          alt={alt}
+          width={2160}
+          height={1200}
+          loading={loading}
+          decoding="async"
+          className="block h-auto w-full dark:hidden"
+        />
+        <img
+          src={`/welcome/${file}-dark.webp`}
+          alt=""
+          aria-hidden="true"
+          width={2160}
+          height={1200}
+          loading="lazy"
+          decoding="async"
+          className="hidden h-auto w-full dark:block"
+        />
+      </div>
+    </div>
+  );
+}
 
 // The base domain's front page (spec §4): what Tenantry is, and the ways in. No sign-in until one is chosen.
 export function WelcomeRoute({
@@ -94,20 +153,17 @@ export function WelcomeRoute({
               )}
             </div>
           </div>
-          <picture className="block overflow-hidden rounded-xl border border-border shadow-raised">
-            <source srcSet="/welcome/home-dark.png" media="(prefers-color-scheme: dark)" />
-            <img
-              src="/welcome/home-light.png"
-              alt="Tenantry Home: the setup checklist, workspace numbers and latest projects"
-              className="block h-auto w-full"
-              width={1280}
-              height={800}
-            />
-          </picture>
+          <Screen
+            file="home"
+            eager
+            alt="Tenantry Home in the Pengopal workspace: people, open invites and projects, with the latest projects"
+          />
         </section>
 
         <section aria-label="Built on" className="border-y border-border bg-muted/50">
-          <ul className={`${section} flex flex-wrap items-center justify-center gap-x-10 gap-y-4 py-6 text-muted-foreground`}>
+          <ul
+            className={`${section} flex flex-wrap items-center justify-center gap-x-10 gap-y-4 py-6 text-muted-foreground`}
+          >
             {STACK.map((name) => (
               <li key={name} className="flex items-center gap-2 text-sm font-medium">
                 {name === 'scim' ? (
@@ -121,6 +177,43 @@ export function WelcomeRoute({
               </li>
             ))}
           </ul>
+        </section>
+
+        <section id="product" aria-labelledby="product-heading" className="scroll-mt-14">
+          <div className={`${section} flex flex-col gap-10 py-16 sm:py-20`}>
+            <div className="flex max-w-2xl flex-col gap-3">
+              <h2
+                id="product-heading"
+                className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
+              >
+                See it before you sign up
+              </h2>
+              <p className="text-pretty text-muted-foreground">
+                These are real screens from the Pengopal demo workspace, signed in as its owner. Admin is
+                where owners and admins run the workspace.
+              </p>
+            </div>
+            <figure className="flex flex-col gap-3">
+              <Screen
+                file="people"
+                eager
+                alt="Admin › People: everyone in Pengopal with their role and how they sign in, an invite button and a search"
+              />
+              <figcaption className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">People.</span> Invite people, change their role,
+                and see who signs in with their company login.
+              </figcaption>
+            </figure>
+            <ul className="grid gap-10 md:grid-cols-3 md:gap-6">
+              {SCREENS.map((screen) => (
+                <li key={screen.file} className="flex flex-col">
+                  <Screen file={screen.file} alt={screen.alt} />
+                  <h3 className="mt-4 font-medium">{screen.name}</h3>
+                  <p className="mt-1 text-sm text-pretty text-muted-foreground">{screen.line}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <section className={`${section} grid gap-4 py-16 md:grid-cols-2`} aria-label="Two tiers">
@@ -185,7 +278,9 @@ export function WelcomeRoute({
       </main>
 
       <footer className="border-t border-border">
-        <div className={`${section} flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-sm text-muted-foreground`}>
+        <div
+          className={`${section} flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-sm text-muted-foreground`}
+        >
           <span className="flex items-center gap-2">
             <TenantryMark className="size-5" />
             Tenantry, a Pengopal product

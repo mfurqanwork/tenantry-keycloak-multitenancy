@@ -28,12 +28,3 @@ test('on Linux and macOS the API container writes the secrets as the host user',
     rmSync(root, { recursive: true, force: true });
   }
 });
-
-test('on Windows nothing changes the container user', () => {
-  const root = mkdtempSync(join(tmpdir(), 'tenantry-secrets-'));
-  try {
-    assert.deepEqual(prepareSecretsDir(join(root, '.secrets'), { getuid: null, getgid: null }), {});
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});

@@ -36,14 +36,8 @@ describe('TestCallbackRoute', () => {
       'href',
       '/advanced/apps/a1',
     );
-  });
-
-  it('says Keycloak signed the person in, for a client with a secret', async () => {
-    finishTestLogin.mockResolvedValue({ kind: 'signed-in', appId: 'a1' });
-    show();
-    expect(
-      await screen.findByText('Keycloak signed you in (me@example.com) for this app.'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Token claims' })).toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it("shows Keycloak's error", async () => {

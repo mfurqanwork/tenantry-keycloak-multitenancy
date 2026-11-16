@@ -1,6 +1,7 @@
 {
   "realm": "corp-demo",
   "displayName": "Acme Corp sign-in (demo)",
+  "loginTheme": "tenantry",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,

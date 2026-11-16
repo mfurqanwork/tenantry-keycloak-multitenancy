@@ -14,9 +14,9 @@ All demo accounts use the password in `SEED_PASSWORD` (`.env`). They are local t
 
 | Account            | Where                                 |
 | ------------------ | ------------------------------------- |
-| `ada@example.test` | Owner of `acme`                       |
-| `cy@example.test`  | Member of `acme`                      |
-| `pat@example.test` | Member of `acme` and `globex`         |
+| `ada@example.test` | Owner of `pengopal`                       |
+| `cy@example.test`  | Member of `pengopal`                      |
+| `pat@example.test` | Member of `pengopal` and `globex`         |
 | `alice@acme.test`  | Signs in through Acme's company login |
 
 Use a private window, so no earlier session is signed in.
@@ -24,11 +24,11 @@ Use a private window, so no earlier session is signed in.
 ## 1. The front door (15 s)
 
 1. Open <http://tenantry.localhost>. The welcome page says what Tenantry is, with **Create a workspace**, **Go to your workspace** and the demo workspaces.
-2. Choose **acme**. The login page shows Acme's logo and blue.
+2. Choose **pengopal**. The login page shows Pengopal's logo and blue.
 
 ## 2. A new owner's first minute (30 s)
 
-1. Sign in as `ada@example.test`. Tenantry opens on **Home**, in Acme's colour, with the **Get started** checklist.
+1. Sign in as `ada@example.test`. Tenantry opens on **Home**, in Pengopal's colour, with the **Get started** checklist.
 2. Type a project name in the first step and press **Create**: the step is done.
 3. Choose **Invite a teammate**. **Admin** opens at **People** with the invite dialog already open, and with no login page: one sign-in across both apps.
 4. Close the dialog. The menu holds People, Branding, Sign-in & security and Audit log; **Advanced** keeps SCIM and the rest out of the way.
@@ -47,9 +47,9 @@ Use a private window, so no earlier session is signed in.
 
 ## 5. Company login (20 s)
 
-1. Sign out, then open <http://acme.tenantry.localhost>.
+1. Sign out, then open <http://pengopal.tenantry.localhost>.
 2. Type `alice@acme.test`, or choose **Acme Corp**. Keycloak sends her to the stand-in for her company's Entra or Okta.
-3. Sign in there. She is back in Acme.
+3. Sign in there. She is back in Pengopal.
 4. Explain the guard rail: an operator linked `acme.test` only after a DNS TXT record proved Acme owns it. Show the refusal:
 
 ```bash

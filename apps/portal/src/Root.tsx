@@ -1,13 +1,19 @@
-import { Tile } from '@carbon/react';
 import { TenantAuth } from '@tenantry/app-kit';
-import { AppShell, TenantryThemeProvider } from '@tenantry/ui';
+import { AppShell, EmptyState, Page, TenantryThemeProvider } from '@tenantry/ui';
+import { SearchX } from 'lucide-react';
 import { App } from './App.js';
 import { BASE_DOMAIN, portalSlugFromHost } from './lib/host.js';
 
 function NoWorkspace() {
   return (
     <AppShell productName="Tenantry Portal" navItems={[]} currentPath="/">
-      <Tile>There is no workspace at this address.</Tile>
+      <Page>
+        <EmptyState
+          icon={SearchX}
+          title="No workspace here"
+          body="There is no workspace at this address."
+        />
+      </Page>
     </AppShell>
   );
 }
