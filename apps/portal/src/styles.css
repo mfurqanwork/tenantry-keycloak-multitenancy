@@ -1,0 +1,4 @@
+/* Admin's stylesheet: Tenantry's tokens and components, plus the shared app pieces in app-kit. */
+@import '@tenantry/ui/styles.css';
+
+@source '../../../packages/app-kit/src';

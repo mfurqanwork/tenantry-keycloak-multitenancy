@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src && stylelint \"src/**/*.scss\"",
+    "lint": "eslint src && stylelint \"src/**/*.{scss,css}\"",
     "test": "vitest run"
   },
   "dependencies": {

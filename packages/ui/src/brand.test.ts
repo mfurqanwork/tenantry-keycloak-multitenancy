@@ -1,6 +1,10 @@
 import { brandTokens } from '@tenantry/brand';
+import { render } from '@testing-library/react';
+import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { applyBrand, BRAND_PROPERTIES } from './brand.js';
+import { stubColorScheme } from './test/setup.js';
+import { TenantryThemeProvider } from './theme/ThemeProvider.js';
 
 afterEach(() => {
   applyBrand(null);
@@ -61,5 +65,15 @@ describe('applyBrand', () => {
     applyBrand(null, preview);
     expect(preview.dataset['brand']).toBeUndefined();
     preview.remove();
+  });
+
+  it('legacy Carbon pages keep the workspace colour', () => {
+    const tokens = brandTokens('#2b77c0');
+    applyBrand(tokens);
+    expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe(tokens.interactive);
+    stubColorScheme(true);
+    render(createElement(TenantryThemeProvider, null, null));
+    expect(document.documentElement.dataset['carbonTheme']).toBe('g100');
+    stubColorScheme(false);
   });
 });

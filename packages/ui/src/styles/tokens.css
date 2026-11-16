@@ -52,6 +52,7 @@
   --card-foreground: #12224a;
   --popover: #ffffff;
   --popover-foreground: #12224a;
+
   /* Tenantry's own primary is navy ink; a workspace colour replaces it (applyBrand). */
   --primary: #12224a;
   --primary-foreground: #ffffff;
@@ -66,6 +67,7 @@
   --accent-foreground: #12224a;
   --border: #dfe3ef;
   --input: #dfe3ef;
+
   /* Links, focus and selection: the logo's opal blue (4.7:1 on white). */
   --ring: #2b77c0;
   --link: #2b77c0;
@@ -81,6 +83,7 @@
   --warning-muted: #fffbeb;
   --ink: #12224a;
   --opal-mosaic: url('../../assets/brand/opal-mosaic.webp');
+
   /* Deepened on light grounds so opal type holds 3:1 on white. */
   --opal-mosaic-dim: brightness(0.7) saturate(1.25);
   --opal-text-fallback: #2b77c0;

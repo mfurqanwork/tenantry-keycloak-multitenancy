@@ -13,16 +13,17 @@
   "dependencies": {
     "@carbon/icons-react": "^11.91.0",
     "@carbon/react": "^1.119.0",
-    "@tenantry/ui": "workspace:*",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router": "^7.18.5",
     "@tenantry/app-kit": "workspace:*",
     "@tenantry/auth": "workspace:*",
     "@tenantry/brand": "workspace:*",
-    "@tenantry/oidc-client": "workspace:*"
+    "@tenantry/oidc-client": "workspace:*",
+    "@tenantry/ui": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^7.18.5"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

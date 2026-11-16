@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
@@ -7,7 +8,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, 'TENANTRY_');
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     // Carbon's own Sass still uses deprecated syntax; keep our build output to our own warnings.
     css: { preprocessorOptions: { scss: { quietDeps: true } } },
     server: {
