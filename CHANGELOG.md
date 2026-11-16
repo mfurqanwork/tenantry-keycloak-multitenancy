@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-16
+
 ### Added
 
 - Sign in with Tenantry for PengOPA: a `pengopa` client in the platform realm, with the workspace picker, the workspace's groups in the ID token and back-channel sign-out. Production needs `PENGOPA_CLIENT_SECRET` in the VM's `.env` (ADR-0032).
@@ -154,7 +156,8 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.1.0...v0.6.0
