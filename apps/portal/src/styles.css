@@ -1,4 +1,7 @@
-/* Admin's stylesheet: Tenantry's tokens and components, plus the shared app pieces in app-kit. */
+/* Admin's stylesheet: Tenantry's tokens and components, plus the shared app pieces in app-kit.
+   The legacy Carbon sheet goes in its own layer, above Tailwind's base and below its utilities (ADR-0031). */
+@layer theme, base, carbon, components, utilities;
+
 @import '@tenantry/ui/styles.css';
 
 @source '../../../packages/app-kit/src';
