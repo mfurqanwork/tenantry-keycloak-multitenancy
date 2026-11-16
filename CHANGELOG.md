@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-16
+
 ### Changed
 
 - The welcome page and signup start in the light theme, and the welcome page's header has a switch between light and dark. The README shows the light screenshots.
@@ -178,7 +180,8 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.2...v0.7.0
