@@ -1,5 +1,13 @@
 import { brandTokens } from '@tenantry/brand';
-import { applyBrand, buttonVariants, cn, TechLogo, TenantryMark, TenantryThemeProvider, type TechName } from '@tenantry/ui';
+import {
+  applyBrand,
+  buttonVariants,
+  cn,
+  TechLogo,
+  TenantryMark,
+  TenantryThemeProvider,
+  type TechName,
+} from '@tenantry/ui';
 import { kcSanitize } from 'keycloakify/lib/kcSanitize';
 import { useInitialize } from 'keycloakify/login/Template.useInitialize';
 import type { TemplateProps } from 'keycloakify/login/TemplateProps';
@@ -63,25 +71,31 @@ function Frame(props: TemplateProps<KcContext, I18n>) {
     document.title = documentTitle ?? msgStr('loginTitle', realm.displayName || realm.name);
   }, [documentTitle, msgStr, realm.displayName, realm.name]);
 
-  // The workspace this sign-in is for, when the app's address says so (ADR-0021).
-  const [brand, setBrand] = useState<TenantBrand | null>(null);
-  const frame = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const tenant = tenantFromLocation(
+  // The workspace this sign-in is for, when the app's address says so (ADR-0021). While its brand
+  // loads, the header stays empty; if it cannot be read, the workspace's address names it. Tenantry's
+  // own logo is only for sign-ins that belong to no workspace.
+  const [tenant] = useState(() =>
+    tenantFromLocation(
       window.location.search,
       window.sessionStorage,
       kcContext.properties.TENANTRY_BASE_DOMAIN,
-    );
+    ),
+  );
+  const [brand, setBrand] = useState<TenantBrand | 'loading' | null>(tenant ? 'loading' : null);
+  const frame = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!tenant) return;
     let current = true;
-    void loadTenantBrand(tenant).then((found) => {
-      if (current) setBrand(found);
-    });
+    void loadTenantBrand(tenant)
+      .catch(() => null)
+      .then((found) => {
+        if (current) setBrand(found ?? { name: tenant.slug, primaryColor: null, logoUrl: null });
+      });
     return () => {
       current = false;
     };
-  }, []);
-  const color = brand?.primaryColor ?? null;
+  }, [tenant]);
+  const color = brand && brand !== 'loading' ? brand.primaryColor : null;
   useEffect(() => {
     if (frame.current) applyBrand(color ? brandTokens(color) : null, frame.current);
   });
@@ -100,13 +114,15 @@ function Frame(props: TemplateProps<KcContext, I18n>) {
     <div
       ref={frame}
       data-tenantry-theme=""
-      className="tenantry-login flex min-h-dvh flex-col items-center bg-muted px-4 py-10 text-foreground sm:py-16"
+      className="tenantry-login flex min-h-dvh flex-col items-center bg-muted px-4 dark:bg-background py-10 text-foreground sm:py-16"
     >
       <main className="flex w-full max-w-sm flex-col gap-6">
         <header className="flex min-h-10 items-center justify-center gap-3">
-          {brand ? (
+          {brand === 'loading' ? null : brand ? (
             <>
-              {brand.logoUrl && <img className="h-10 w-auto max-w-40 object-contain" src={brand.logoUrl} alt={brand.name} />}
+              {brand.logoUrl && (
+                <img className="h-10 w-auto max-w-40 object-contain" src={brand.logoUrl} alt={brand.name} />
+              )}
               <span data-slot="workspace-name" className="text-lg font-semibold tracking-tight">
                 {brand.name}
               </span>
@@ -166,14 +182,18 @@ function Frame(props: TemplateProps<KcContext, I18n>) {
                         id={`social-${p.alias}`}
                         data-slot="provider"
                         href={p.loginUrl}
-                        className={cn(buttonVariants({ variant: 'outline' }), 'h-10 w-full gap-2.5 shadow-xs')}
+                        className={cn(buttonVariants({ variant: 'outline' }), 'h-10 w-full gap-2.5')}
                       >
                         {logo ? (
                           <span data-logo={logo} className="contents">
                             <TechLogo name={logo} size={18} decorative />
                           </span>
                         ) : (
-                          <KeyRound data-logo="key" aria-hidden="true" className="size-4.5 text-muted-foreground" />
+                          <KeyRound
+                            data-logo="key"
+                            aria-hidden="true"
+                            className="size-4.5 text-muted-foreground"
+                          />
                         )}
                         {`Continue with ${p.displayName}`}
                       </a>
@@ -184,7 +204,9 @@ function Frame(props: TemplateProps<KcContext, I18n>) {
               {'password' in realm && realm.password && (
                 <p className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span aria-hidden="true" className="h-px flex-1 bg-border" />
-                  or sign in with a password
+                  {kcContext.pageId === 'login-username.ftl'
+                    ? 'or continue with email'
+                    : 'or sign in with a password'}
                   <span aria-hidden="true" className="h-px flex-1 bg-border" />
                 </p>
               )}

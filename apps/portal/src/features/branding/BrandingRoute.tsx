@@ -32,12 +32,15 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
 
   const value = color ?? savedColor;
   const malformed = value !== '' && !HEX.test(value);
-  const dirty = value.toLowerCase() !== savedColor && !malformed;
+  const dirty = value.toLowerCase() !== savedColor.toLowerCase() && !malformed;
 
   // The preview shows the typed colour before it is saved; the rest of the page keeps the saved one.
   useEffect(() => {
     if (!preview.current) return;
-    applyBrand(HEX.test(value) ? brandTokens(value) : null, preview.current);
+    // Cleared, it shows the theme's own primary (on <html>), not the saved colour <body> carries.
+    const own = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    const shown = value === '' && HEX.test(own) ? own : value;
+    applyBrand(HEX.test(shown) ? brandTokens(shown) : null, preview.current);
   }, [value]);
 
   async function run(action: () => Promise<unknown>, busy: (on: boolean) => void) {
@@ -112,7 +115,10 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
         </div>
       )}
 
-      <section aria-labelledby="branding-colour" className="grid gap-6 rounded-xl border border-border bg-card p-5 lg:grid-cols-2">
+      <section
+        aria-labelledby="branding-colour"
+        className="grid gap-6 rounded-xl border border-border bg-card p-5 lg:grid-cols-2"
+      >
         <div className="flex flex-col gap-2">
           <h2 id="branding-colour" className="text-base font-semibold">
             Colour
@@ -126,7 +132,7 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
             />
             <Input
               id="primary-colour"
-              placeholder="#0f62fe"
+              placeholder="#2b77c0"
               autoComplete="off"
               spellCheck={false}
               className="font-mono"
@@ -139,7 +145,7 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
             />
           </div>
           {malformed ? (
-            <FieldError id="primary-colour-error">Use a colour like #0f62fe.</FieldError>
+            <FieldError id="primary-colour-error">Use a colour like #2b77c0.</FieldError>
           ) : (
             <p id="primary-colour-help" className="text-sm text-muted-foreground">
               Buttons, links and focus use this colour. White text must be readable on it.
@@ -181,7 +187,10 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
         </div>
       </section>
 
-      <section aria-labelledby="branding-logo" className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
+      <section
+        aria-labelledby="branding-logo"
+        className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5"
+      >
         <h2 id="branding-logo" className="text-base font-semibold">
           Logo
         </h2>
@@ -206,7 +215,8 @@ export function BrandingRoute({ onChanged }: { onChanged: () => void }) {
           >
             <ImageUp aria-hidden="true" className="size-6" />
             <span>
-              <span className="font-medium text-foreground">Upload a logo</span> (PNG, JPEG or WebP, up to 256 KB)
+              <span className="font-medium text-foreground">Upload a logo</span> (PNG, JPEG or WebP, up to 256
+              KB)
             </span>
             <input
               id="logo-file"

@@ -3,7 +3,7 @@ import { ApiErrorNotification, Loading, useApi, useMe, useResource } from '@tena
 import { FieldError, Input, Label, RadioGroup, RadioGroupItem, SettingsPage } from '@tenantry/ui';
 import { CircleCheck, Clock, KeyRound, Lock, ShieldCheck, Smartphone, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
+import { EnterpriseOnlyPage } from '../../lib/enterprise-only.js';
 
 type NumberField = keyof typeof SECURITY_BOUNDS;
 
@@ -79,18 +79,7 @@ const header = {
 export function SecurityRoute() {
   const me = useMe();
   if (me.tenant.tier !== 'enterprise') {
-    return (
-      <SettingsPage
-        breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        {...header}
-        dirty={false}
-        saving={false}
-        onSave={() => undefined}
-        onDiscard={() => undefined}
-      >
-        <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{ENTERPRISE_ONLY}</p>
-      </SettingsPage>
-    );
+    return <EnterpriseOnlyPage {...header} />;
   }
   return <EnterpriseSecurity />;
 }

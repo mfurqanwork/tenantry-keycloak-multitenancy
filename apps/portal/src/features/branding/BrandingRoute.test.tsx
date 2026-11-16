@@ -33,7 +33,7 @@ describe('BrandingRoute', () => {
     const { api, user } = setup();
     await user.clear(await colour());
     await user.type(await colour(), 'blue');
-    expect(screen.getByText('Use a colour like #0f62fe.')).toBeInTheDocument();
+    expect(screen.getByText('Use a colour like #2b77c0.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(api.put).not.toHaveBeenCalled();
   });
@@ -59,5 +59,17 @@ describe('BrandingRoute', () => {
     await waitFor(() => {
       expect(onChanged).toHaveBeenCalled();
     });
+  });
+
+  it("previews Tenantry's own colour when the field is cleared, not the saved one", async () => {
+    // The theme's own primary; the workspace's saved colour sits on <body>, not on <html>.
+    document.documentElement.style.setProperty('--primary', '#12224a');
+    const { user } = setup();
+    await user.clear(await colour());
+    const preview = screen.getByRole('group', { name: 'Preview' });
+    await waitFor(() => {
+      expect(preview.style.getPropertyValue('--primary')).toBe('#12224a');
+    });
+    document.documentElement.style.removeProperty('--primary');
   });
 });

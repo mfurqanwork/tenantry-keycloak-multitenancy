@@ -82,6 +82,11 @@
   --warning-foreground: #ffffff;
   --warning-muted: #fffbeb;
   --ink: #12224a;
+
+  /* The fill of Tenantry's own primary button, with its hover and pressed shades. */
+  --opal-fill: var(--ink);
+  --opal-fill-hover: #1c3166;
+  --opal-fill-active: #0b1633;
   --opal-mosaic: url('../../assets/brand/opal-mosaic.webp');
 
   /* Deepened on light grounds so opal type holds 3:1 on white. */
@@ -104,6 +109,11 @@
   --secondary: #172a5a;
   --secondary-foreground: #eef2ff;
   --muted: #172a5a;
+
+  /* Lifted off the dark card, so the framed button still reads as filled. */
+  --opal-fill: #22397a;
+  --opal-fill-hover: #2a4590;
+  --opal-fill-active: #1b2f63;
   --muted-foreground: #afc0f5;
   --accent: #1b3363;
   --accent-foreground: #eef2ff;
@@ -145,7 +155,9 @@
 
 /* Text clipped to the opal mosaic. */
 @utility opal-text {
-  background: var(--opal-mosaic) 0 0 / 420px auto, var(--opal-text-fallback);
+  background:
+    var(--opal-mosaic) 0 0 / 420px auto,
+    var(--opal-text-fallback);
   background-clip: text;
   color: transparent;
   filter: var(--opal-mosaic-dim);
@@ -156,11 +168,24 @@
 @utility opal-frame {
   :root:not([data-brand]) &:where(:not([data-brand] *)) {
     border: 2px solid transparent;
-    background-color: var(--ink);
-    background-image: linear-gradient(var(--ink), var(--ink)), var(--opal-mosaic);
+
+    --opal-paint: var(--opal-fill);
+
+    background-color: var(--opal-paint);
+    background-image: linear-gradient(var(--opal-paint), var(--opal-paint)), var(--opal-mosaic);
     background-origin: padding-box, border-box;
     background-clip: padding-box, border-box;
-    background-size: auto, 240px auto;
+    background-size:
+      auto,
+      240px auto;
     color: #ffffff;
+
+    &:hover {
+      --opal-paint: var(--opal-fill-hover);
+    }
+
+    &:active {
+      --opal-paint: var(--opal-fill-active);
+    }
   }
 }

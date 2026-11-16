@@ -77,4 +77,19 @@ describe('ScimRoute', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(api.put).toHaveBeenCalledWith('/api/scim/default-role', { role: 'none' });
   });
+
+  it('tells a Standard workspace it is Enterprise only, with nothing to save', () => {
+    const owner = makeMe('owner', OWNER);
+    const api = fakeApi();
+    renderPortal(<ScimRoute />, {
+      api,
+      me: { ...owner, tenant: { ...owner.tenant, tier: 'standard' } },
+      path: '/advanced/scim',
+    });
+    expect(
+      screen.getByText('Security settings and SCIM are available on Enterprise workspaces.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(api.get).not.toHaveBeenCalled();
+  });
 });

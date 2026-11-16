@@ -19,6 +19,12 @@ describe('slugFromHost', () => {
     expect(slugFromHost('acme.eviltenantry.localhost', base)).toBeNull();
     expect(slugFromHost('acme.tenantry.localhost.evil.com', base)).toBeNull();
   });
+
+  it('has no tenant on the apex host or without a host', () => {
+    expect(slugFromHost('tenantry.localhost:8080', base)).toBeNull();
+    expect(slugFromHost(undefined, base)).toBeNull();
+    expect(slugFromHost('', base)).toBeNull();
+  });
 });
 
 describe('tenantFromHost', () => {
@@ -28,5 +34,11 @@ describe('tenantFromHost', () => {
       app: 'portal',
     });
     expect(slugFromHost('ACME.portal.tenantry.localhost.', base)).toBe('acme');
+  });
+
+  it('has no tenant on the bare portal host or deeper names', () => {
+    expect(tenantFromHost('portal.tenantry.localhost', base)).toBeNull();
+    expect(tenantFromHost('a.b.portal.tenantry.localhost', base)).toBeNull();
+    expect(tenantFromHost('acme.portal.eviltenantry.localhost', base)).toBeNull();
   });
 });

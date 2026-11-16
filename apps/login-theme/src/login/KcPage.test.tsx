@@ -19,8 +19,20 @@ describe('KcPage', () => {
             social: {
               displayInfo: true,
               providers: [
-                { alias: 'acme-corp', providerId: 'oidc', displayName: 'Acme Corp', loginUrl: '/broker/acme', iconClasses: '' },
-                { alias: 'github', providerId: 'github', displayName: 'GitHub', loginUrl: '/broker/github', iconClasses: '' },
+                {
+                  alias: 'acme-corp',
+                  providerId: 'oidc',
+                  displayName: 'Acme Corp',
+                  loginUrl: '/broker/acme',
+                  iconClasses: '',
+                },
+                {
+                  alias: 'github',
+                  providerId: 'github',
+                  displayName: 'GitHub',
+                  loginUrl: '/broker/github',
+                  iconClasses: '',
+                },
               ],
             },
           },
@@ -36,7 +48,8 @@ describe('KcPage', () => {
     // Company sign-in comes first, above the password form.
     const username = screen.getByLabelText(/username/i);
     expect(acme.compareDocumentPosition(username) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('or sign in with a password')).toBeInTheDocument();
+    // Identity-first asks for the email next, not the password.
+    expect(screen.getByText('or continue with email')).toBeInTheDocument();
     expect(container.querySelector('#kc-social-providers')).toBeNull();
   });
 

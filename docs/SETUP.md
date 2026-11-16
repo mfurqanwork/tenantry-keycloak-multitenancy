@@ -26,7 +26,7 @@ pnpm seed
 
 `pnpm dev:stack` builds and starts everything in Docker, then prints the welcome page's address: <http://tenantry.localhost>. The first run creates `.env` from `.env.example`.
 
-`pnpm seed` adds the demo workspaces and people. Running it again changes nothing.
+`pnpm seed` adds the demo workspaces and people. Running it again changes nothing. A stack seeded before the demo workspace became Pengopal needs `pnpm stack:down -v` first: the old `acme` workspace still holds the company domain.
 
 ## Addresses
 
@@ -56,12 +56,12 @@ Then run `pnpm dev:stack` again.
 
 | Account              | Where                                                                       |
 | -------------------- | --------------------------------------------------------------------------- |
-| `ada@example.test`   | Owner of `pengopal` (Pengopal blue)                                                      |
-| `ben@example.test`   | Admin of `pengopal`                                                             |
-| `cy@example.test`    | Member of `pengopal`                                                            |
+| `ada@example.test`   | Owner of `pengopal` (Pengopal blue)                                         |
+| `ben@example.test`   | Admin of `pengopal`                                                         |
+| `cy@example.test`    | Member of `pengopal`                                                        |
 | `gil@example.test`   | Owner of `globex` (green)                                                   |
-| `pat@example.test`   | Member of `pengopal` and `globex`                                               |
-| `alice@acme.test`    | Signs in to `acme` through "Acme Corp" (company login)                      |
+| `pat@example.test`   | Member of `pengopal` and `globex`                                           |
+| `alice@acme.test`    | Signs in to `pengopal` through "Acme Corp" (company login)                  |
 | `owner@initech.test` | Owner of the Enterprise workspace `initech`, in its own realm `ent-initech` |
 
 The welcome page links the demo workspaces listed in `VITE_DEMO_WORKSPACES`.

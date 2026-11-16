@@ -51,4 +51,19 @@ describe('SecurityRoute', () => {
     expect(await screen.findByText('A session cannot sit idle longer than it may last.')).toBeInTheDocument();
     expect(save()).toBeDisabled();
   });
+
+  it('tells a Standard workspace it is Enterprise only, with nothing to save', () => {
+    const owner = makeMe('owner', OWNER);
+    const api = fakeApi();
+    renderPortal(<SecurityRoute />, {
+      api,
+      me: { ...owner, tenant: { ...owner.tenant, tier: 'standard' } },
+      path: '/security',
+    });
+    expect(
+      screen.getByText('Security settings and SCIM are available on Enterprise workspaces.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(api.get).not.toHaveBeenCalled();
+  });
 });

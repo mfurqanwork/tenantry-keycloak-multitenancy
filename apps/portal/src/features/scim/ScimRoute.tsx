@@ -16,7 +16,7 @@ import {
 } from '@tenantry/ui';
 import { CalendarClock, Clock, FolderSync, KeyRound, TriangleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
+import { EnterpriseOnlyPage } from '../../lib/enterprise-only.js';
 
 interface ScimView {
   url: string;
@@ -85,18 +85,7 @@ function ExpirySelect({ id, value, onChange }: { id: string; value: Days; onChan
 export function ScimRoute() {
   const me = useMe();
   if (me.tenant.tier !== 'enterprise') {
-    return (
-      <SettingsPage
-        breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        {...header}
-        dirty={false}
-        saving={false}
-        onSave={() => undefined}
-        onDiscard={() => undefined}
-      >
-        <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{ENTERPRISE_ONLY}</p>
-      </SettingsPage>
-    );
+    return <EnterpriseOnlyPage {...header} />;
   }
   return <EnterpriseScim />;
 }
@@ -190,14 +179,24 @@ function EnterpriseScim() {
               <>
                 <TileGrid>
                   {[
-                    <StatTile key="expires" icon={CalendarClock} label="Expires" value={date(view.token.expiresAt)} />,
+                    <StatTile
+                      key="expires"
+                      icon={CalendarClock}
+                      label="Expires"
+                      value={date(view.token.expiresAt)}
+                    />,
                     <StatTile
                       key="used"
                       icon={Clock}
                       label="Last used"
                       value={view.token.lastUsedAt ? date(view.token.lastUsedAt) : 'Never'}
                     />,
-                    <StatTile key="created" icon={KeyRound} label="Created" value={date(view.token.createdAt)} />,
+                    <StatTile
+                      key="created"
+                      icon={KeyRound}
+                      label="Created"
+                      value={date(view.token.createdAt)}
+                    />,
                   ]}
                 </TileGrid>
                 <div className="flex flex-wrap gap-2">
@@ -256,8 +255,8 @@ function EnterpriseScim() {
                 </SelectContent>
               </Select>
               <p id="scim-default-role-help" className="text-sm text-muted-foreground">
-                Groups tenantry-members and tenantry-admins give their role on top. Owners are never managed by
-                the directory.
+                Groups tenantry-members and tenantry-admins give their role on top. Owners are never managed
+                by the directory.
               </p>
             </div>
           </Card>
@@ -297,8 +296,8 @@ function EnterpriseScim() {
           }}
         >
           <p className="text-sm">
-            The token stops working at once and directory sync is turned off: your directory can no longer change
-            people in this workspace. People it already made stay.
+            The token stops working at once and directory sync is turned off: your directory can no longer
+            change people in this workspace. People it already made stay.
           </p>
         </FormDialog>
       )}
