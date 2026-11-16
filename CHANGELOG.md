@@ -4,6 +4,10 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+
+- Tenantry's mark wears the Pengopal brand: rounded tiles in navy ink, and the tile where the bar meets the stem cut from the opal mosaic in place of Carbon blue. New logos, favicon, app icons and social preview; `pnpm brand:icons` now writes the SVGs too.
+
 ### Removed
 
 - The example customer app (`examples/customer-app`, `pnpm example:customer-app`) and the "Initech HR" app the seed registered for it. Customer apps stay; the single sign-on check with an outside app moves to PengOPA, tested by hand.
