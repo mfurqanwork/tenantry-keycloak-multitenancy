@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { Folder, Rocket } from '@carbon/icons-react';
 import { describe, expect, it, vi } from 'vitest';
-import { Avatar } from './Avatar.js';
+import { Avatar } from '../components/avatar.js';
 import { EmptyState } from './EmptyState.js';
 import { PageHeader } from './PageHeader.js';
 import { SetupCard } from './SetupCard.js';

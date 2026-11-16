@@ -21,7 +21,7 @@ import {
 } from '@carbon/react';
 import { Enterprise, Switcher as SwitcherIcon, type CarbonIconType } from '@carbon/icons-react';
 import { Fragment, useState, type ElementType, type ReactNode } from 'react';
-import { initials } from '../patterns/Avatar.js';
+import { initials } from '../components/avatar.js';
 // The header is always dark (g100), so its mark has light tiles.
 import tenantryMark from '../../assets/brand/tenantry-mark-dark.svg';
 import { useThemePreference } from '../theme/ThemeProvider.js';
