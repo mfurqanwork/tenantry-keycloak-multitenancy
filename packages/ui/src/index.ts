@@ -60,3 +60,4 @@ export {
   type ThemePreference,
 } from './theme/preference.js';
 export { TenantryThemeProvider, useThemePreference, type ResolvedTheme } from './theme/ThemeProvider.js';
+export { TechLogo, type TechName } from './components/tech-logo.js';
