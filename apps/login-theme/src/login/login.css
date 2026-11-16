@@ -1,6 +1,7 @@
 /* The sign-in pages: Tenantry's tokens and components, plus the few elements Keycloak's own page bodies
    render without a class (remember me, the registration line). */
 @import '@tenantry/ui/styles.css';
+
 @source './';
 
 /* Keycloak's forms carry no class of their own: space their groups like our forms. */

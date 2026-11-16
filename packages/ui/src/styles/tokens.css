@@ -133,8 +133,6 @@
   --primary-subtle: color-mix(in oklab, var(--primary) 14%, var(--background));
   --link: var(--primary);
   --ring: var(--primary);
-  --cds-link-primary: var(--link);
-  --cds-focus: var(--ring);
 }
 
 /* In dark mode a colour that passes on white is too dark to read on navy, so links and the ring take a

@@ -1,9 +1,9 @@
 // Tokens only (ADR-0031): colour, spacing, size, radius and shadow come from the token file
-// (packages/ui/src/styles/tokens.css), or Carbon's tokens on the legacy pages, never raw values.
+// (packages/ui/src/styles/tokens.css), never raw values.
 const TAILWIND_AT_RULES = ['theme', 'utility', 'custom-variant', 'variant', 'source', 'apply', 'reference', 'plugin', 'config'];
 
 export default {
-  extends: ['stylelint-config-standard-scss'],
+  extends: ['stylelint-config-standard'],
   rules: {
     'color-no-hex': true,
     'color-named': 'never',
@@ -13,22 +13,16 @@ export default {
     },
     'property-disallowed-list': ['box-shadow', 'border-radius'],
     'function-disallowed-list': ['linear-gradient', 'radial-gradient'],
-    'selector-class-pattern': '^(tenantry|cds)-[a-z0-9-]+(__[a-z0-9-]+)?(--[a-z0-9-]+)?$',
-    'scss/at-use-no-unnamespaced': null,
+    // Tailwind's at-rules, and its own class names (`.dark`, utilities).
+    'at-rule-no-unknown': [true, { ignoreAtRules: TAILWIND_AT_RULES }],
+    // Tailwind's @apply and @utility take class names, which plain CSS cannot validate.
+    'at-rule-prelude-no-invalid': null,
+    'import-notation': 'string',
+    'selector-class-pattern': '^[a-z][a-z0-9-]*$',
+    // `&` inside @utility is scoped by Tailwind.
+    'nesting-selector-no-missing-scoping-root': null,
   },
   overrides: [
-    {
-      // Tailwind stylesheets: its at-rules, and its own class names (`.dark`, utilities).
-      files: ['**/*.css'],
-      rules: {
-        'scss/at-rule-no-unknown': [true, { ignoreAtRules: TAILWIND_AT_RULES }],
-        'at-rule-no-unknown': [true, { ignoreAtRules: TAILWIND_AT_RULES }],
-        'import-notation': 'string',
-        'selector-class-pattern': '^[a-z][a-z0-9-]*$',
-        // `&` inside @utility is scoped by Tailwind.
-        'nesting-selector-no-missing-scoping-root': null,
-      },
-    },
     {
       // The one place raw values live.
       files: ['**/styles/tokens.css'],

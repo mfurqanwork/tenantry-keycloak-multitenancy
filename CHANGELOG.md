@@ -4,6 +4,11 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+
+- Admin and the sign-in pages wear the Pengopal brand: People, Branding, Sign-in & security, Audit log, Directory sync and Customer apps on the new components, with icons and technology logos; sign-in shows company login first ("Continue with …"). Carbon is removed from every package (ADR-0031).
+- The demo workspace is Pengopal (`pengopal`, in Pengopal blue) in place of Acme. Set `VITE_DEMO_WORKSPACES=pengopal,globex,initech` in your `.env`.
+
 ## [0.8.0] - 2026-11-16
 
 ### Changed

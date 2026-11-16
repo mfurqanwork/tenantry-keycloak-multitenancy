@@ -52,7 +52,6 @@ function liveColorScheme(dark: boolean): (next: boolean) => void {
 
 afterEach(() => {
   document.documentElement.classList.remove('dark');
-  delete document.documentElement.dataset['carbonTheme'];
   stubColorScheme(false);
 });
 
@@ -77,8 +76,7 @@ describe('TenantryThemeProvider', () => {
     writePreference('dark');
     renderProvider();
     expect(document.documentElement).toHaveClass('dark');
-    // Admin and the login theme still read Carbon's attribute until they move (ADR-0031).
-    expect(document.documentElement.dataset['carbonTheme']).toBe('g100');
+    expect(document.documentElement).not.toHaveAttribute('data-carbon-theme');
   });
 
   it('system follows prefers-color-scheme', () => {
@@ -89,6 +87,6 @@ describe('TenantryThemeProvider', () => {
       setDark(false);
     });
     expect(document.documentElement).not.toHaveClass('dark');
-    expect(document.documentElement.dataset['carbonTheme']).toBe('g10');
+    expect(document.documentElement).not.toHaveAttribute('data-carbon-theme');
   });
 });

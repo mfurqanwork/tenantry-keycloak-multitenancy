@@ -6,7 +6,7 @@ afterEach(() => {
   cleanup();
 });
 
-// jsdom lacks matchMedia and ResizeObserver, which the theme provider and Carbon read.
+// jsdom lacks matchMedia and ResizeObserver, which the theme provider and Radix read.
 vi.stubGlobal('matchMedia', (query: string) => ({
   matches: false,
   media: query,

@@ -11,7 +11,8 @@
 [![NestJS](https://img.shields.io/badge/NestJS-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![React](https://img.shields.io/badge/React-087ea4?logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=white)](https://vite.dev/)
-[![IBM Carbon](https://img.shields.io/badge/IBM_Carbon-0f62fe?logo=ibm&logoColor=white)](https://carbondesignsystem.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06b6d4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Radix](https://img.shields.io/badge/Radix-161618?logo=radixui&logoColor=white)](https://www.radix-ui.com/)
 [![Keycloak](https://img.shields.io/badge/Keycloak-4d4d4d?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
 [![Keycloakify](https://img.shields.io/badge/Keycloakify-1a1a1a)](https://www.keycloakify.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169e1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -124,8 +125,8 @@ All 34 guarantees are in [tests/isolation](tests/isolation/README.md).
 ```mermaid
 flowchart LR
   browser[Browser] --> caddy[Caddy]
-  caddy -->|"&lt;slug&gt;.tenantry"| web[Tenantry<br/>React + Carbon]
-  caddy -->|"&lt;slug&gt;.portal.tenantry"| admin[Admin<br/>React + Carbon]
+  caddy -->|"&lt;slug&gt;.tenantry"| web[Tenantry<br/>React + Tailwind]
+  caddy -->|"&lt;slug&gt;.portal.tenantry"| admin[Admin<br/>React + Tailwind]
   caddy -->|/api, /scim| api[API<br/>NestJS]
   caddy -->|auth.tenantry| kc[Keycloak 26.8]
   api --> pg[(Postgres<br/>row-level security)]

@@ -1,12 +1,8 @@
 import { brandTokens } from '@tenantry/brand';
-import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { applyBrand, BRAND_PROPERTIES } from './brand.js';
-import { stubColorScheme } from './test/setup.js';
-import { TenantryThemeProvider } from './theme/ThemeProvider.js';
 
 afterEach(() => {
   applyBrand(null);
@@ -29,19 +25,18 @@ describe('applyBrand', () => {
     expect(document.documentElement.dataset['brand']).toBe('workspace');
   });
 
-  it("keeps Carbon's interactive tokens for the legacy pages", () => {
-    const tokens = brandTokens('#0f62fe');
-    applyBrand(tokens);
-    expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe('#0f62fe');
-    expect(document.body.style.getPropertyValue('--cds-interactive')).toBe('#0f62fe');
-    expect(document.body.style.getPropertyValue('--cds-button-primary-hover')).toBe(tokens.hover);
+  it('writes no Carbon tokens', () => {
+    applyBrand(brandTokens('#0f62fe'));
+    expect(BRAND_PROPERTIES.filter((name) => name.startsWith('--cds-'))).toEqual([]);
+    expect(document.body.getAttribute('style')).not.toContain('--cds-');
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+    expect(css).not.toContain('--cds-');
   });
 
   it('removes every property and the mark for null', () => {
     applyBrand(brandTokens('#0f62fe'));
     applyBrand(null);
     expect(BRAND_PROPERTIES).toContain('--primary');
-    expect(BRAND_PROPERTIES).toContain('--cds-button-primary');
     for (const name of BRAND_PROPERTIES) expect(document.body.style.getPropertyValue(name)).toBe('');
     expect(document.documentElement.dataset['brand']).toBeUndefined();
   });
@@ -64,7 +59,7 @@ describe('applyBrand', () => {
 
   it('leaves links and the focus ring to the theme, lighter in dark mode so they stay readable', () => {
     applyBrand(brandTokens('#0f62fe'));
-    for (const name of ['--link', '--ring', '--cds-link-primary', '--cds-focus']) {
+    for (const name of ['--link', '--ring']) {
       expect(document.body.style.getPropertyValue(name)).toBe('');
     }
     const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
@@ -85,15 +80,5 @@ describe('applyBrand', () => {
     applyBrand(null, preview);
     expect(preview.dataset['brand']).toBeUndefined();
     preview.remove();
-  });
-
-  it('legacy Carbon pages keep the workspace colour', () => {
-    const tokens = brandTokens('#2b77c0');
-    applyBrand(tokens);
-    expect(document.body.style.getPropertyValue('--cds-button-primary')).toBe(tokens.interactive);
-    stubColorScheme(true);
-    render(createElement(TenantryThemeProvider, null, null));
-    expect(document.documentElement.dataset['carbonTheme']).toBe('g100');
-    stubColorScheme(false);
   });
 });

@@ -29,7 +29,7 @@ describe('AppShell', () => {
     stubColorScheme(dark);
     renderShell();
     expect(document.documentElement.classList.contains('dark')).toBe(dark);
-    expect(screen.getByRole('banner').closest('body .dark, [data-theme], .cds--g100')).toBeNull();
+    expect(screen.getByRole('banner').closest('body .dark, [data-theme]')).toBeNull();
     stubColorScheme(false);
   });
 

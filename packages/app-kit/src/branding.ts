@@ -9,7 +9,7 @@ export interface Branding {
   logoUrl: string | null;
 }
 
-// The workspace's public branding; while mounted, its colour drives Carbon's interactive tokens.
+// The workspace's public branding; while mounted, its colour drives the interactive tokens.
 // reload() fetches it again, after the branding page saved a change.
 export function useBranding(slug: string): { branding: Branding | null; reload: () => void } {
   const { data, reload } = useResource<Branding>(`/api/tenants/${encodeURIComponent(slug)}/branding`);

@@ -1,6 +1,6 @@
 # ADR-0031: Tailwind and Radix on the Pengopal brand
 
-Status: Accepted · Date: 2026-11-16 · Supersedes ADR-0015's choice of Carbon
+Status: Accepted · Date: 2026-11-16 · Supersedes ADR-0015's choice of Carbon · Both releases done: Carbon is gone
 
 ## Context
 

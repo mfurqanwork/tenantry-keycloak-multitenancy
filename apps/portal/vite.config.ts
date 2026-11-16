@@ -9,8 +9,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, 'TENANTRY_');
   return {
     plugins: [react(), tailwindcss()],
-    // Carbon's own Sass still uses deprecated syntax; keep our build output to our own warnings.
-    css: { preprocessorOptions: { scss: { quietDeps: true } } },
     server: {
       host: true,
       port: 5174,
@@ -24,7 +22,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ['./src/test-setup.ts'],
       css: false,
-      // jsdom and Carbon render slowly on CI runners; a form test can pass 5 s there.
+      // jsdom renders slowly on CI runners; a form test can pass 5 s there.
       testTimeout: 15000,
     },
   };
