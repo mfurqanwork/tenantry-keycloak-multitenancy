@@ -127,7 +127,7 @@ export function WelcomeRoute({
           {TIERS.map((tier) => (
             <article
               key={tier.name}
-              className={`flex flex-col gap-4 rounded-xl border bg-card p-6 ${tier.opal ? 'border-transparent opal-frame' : 'border-border'}`}
+              className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6"
             >
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 {tier.name}
