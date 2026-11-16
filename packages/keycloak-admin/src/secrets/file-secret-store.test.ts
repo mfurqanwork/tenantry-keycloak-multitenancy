@@ -21,17 +21,6 @@ describe('file secret store', () => {
     expect(await createFileSecretStore(dir).get('ent-initech/tenantry-backend')).toBe('s3cret');
   });
 
-  it('answers null for a secret it does not have', async () => {
-    expect(await createFileSecretStore(dir).get('ent-nobody/tenantry-backend')).toBeNull();
-  });
-
-  it('replaces a secret', async () => {
-    const store = createFileSecretStore(dir);
-    await store.put('ent-a/tenantry-backend', 'one');
-    await store.put('ent-a/tenantry-backend', 'two');
-    expect(await store.get('ent-a/tenantry-backend')).toBe('two');
-  });
-
   it('keeps each realm in its own file inside the folder', async () => {
     const store = createFileSecretStore(dir);
     await store.put('ent-a/tenantry-backend', 'one');

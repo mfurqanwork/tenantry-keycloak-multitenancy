@@ -57,6 +57,7 @@ These keep tenant isolation intact. A change that breaks one of them is wrong, e
 
 - TypeScript strict everywhere. ESM with `.js` import specifiers.
 - Tests sit next to the code (`*.test.ts(x)`) and run with Vitest. Write the failing test first.
+- Test behaviour, not looks: a user flow, a rule across functions, or a security or isolation guarantee. No tests for icons, colours, copy, layout, a library's own behaviour, or the in-memory fakes; a unit test that an integration test already covers goes.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - A change to `apps/`, `packages/` or `infra/` adds a line under Unreleased in `CHANGELOG.md`; CI checks (ADR-0030).
 - Configuration comes from the environment and is validated at startup; add new variables to `.env.example`.

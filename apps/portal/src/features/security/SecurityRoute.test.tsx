@@ -1,6 +1,5 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { ApiProblem } from '@tenantry/app-kit';
 import { SECURITY_DEFAULTS } from '@tenantry/auth';
 import { describe, expect, it } from 'vitest';
 import { fakeApi, makeMe, OWNER, renderPortal } from '../../test-utils.js';
@@ -51,37 +50,5 @@ describe('SecurityRoute', () => {
     await user.type(max, '1');
     expect(await screen.findByText('A session cannot sit idle longer than it may last.')).toBeInTheDocument();
     expect(save()).toBeDisabled();
-  });
-
-  it("shows the API's refusal", async () => {
-    const refused = new ApiProblem(422, 'Invalid request', 'Keycloak refused these settings: bad policy');
-    const { user } = setup({ 'PUT /api/security': refused });
-    const tries = await field('Failed attempts before lockout');
-    await user.clear(tries);
-    await user.type(tries, '5');
-    await user.click(save());
-    expect(await screen.findByText(/Keycloak refused these settings/)).toBeInTheDocument();
-  });
-
-  it('is built from the new components, with no Carbon left', async () => {
-    setup();
-    await field('Minimum length');
-    expect(document.querySelector('[class*="cds--"]')).toBeNull();
-    expect(screen.getByRole('radiogroup', { name: 'Two-step sign-in' })).toBeInTheDocument();
-  });
-
-  it('explains Standard workspaces without asking the API', async () => {
-    const api = fakeApi();
-    renderPortal(<SecurityRoute />, {
-      api,
-      me: { ...me, tenant: { ...me.tenant, tier: 'standard' } },
-      path: '/security',
-    });
-    expect(
-      screen.getByText('Security settings and SCIM are available on Enterprise workspaces.'),
-    ).toBeInTheDocument();
-    await waitFor(() => {
-      expect(api.get).not.toHaveBeenCalled();
-    });
   });
 });

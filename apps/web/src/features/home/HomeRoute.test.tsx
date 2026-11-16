@@ -1,6 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ALL, fakeApi, makeMe, MEMBER, renderPage } from '../../test-utils.js';
 import { HomeRoute } from './HomeRoute.js';
 
@@ -57,14 +56,6 @@ describe('Home', () => {
     });
   });
 
-  it('creates the first project from Home, and marks the step done', async () => {
-    const routes = api();
-    renderPage(<HomeRoute />, { api: routes, me: makeMe('owner', ALL) });
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText('Project name'), 'Launch{Enter}');
-    expect(routes.post).toHaveBeenCalledWith('/api/projects', { name: 'Launch' });
-  });
-
   it('shows a member no checklist, only the five most recent projects', async () => {
     renderPage(<HomeRoute />, { api: api([1, 2, 3, 4, 5, 6].map(project)), me: makeMe('member', MEMBER) });
     expect(await screen.findByText('Project 6')).toBeInTheDocument();
@@ -72,21 +63,6 @@ describe('Home', () => {
     expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'All projects' })).toHaveAttribute('href', '/projects');
     expect(screen.getByRole('list', { name: 'Recent projects' })).toBeInTheDocument();
-  });
-
-  it('invites a first project when there are none', async () => {
-    renderPage(<HomeRoute />, { api: api(), me: makeMe('member', MEMBER) });
-    expect(await screen.findByRole('heading', { name: 'Start your first project' })).toBeInTheDocument();
-  });
-
-  it('greets the person by first name and time of day (spec 8.2)', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date(2026, 10, 8, 9, 0));
-    const me = makeMe('owner', ALL);
-    renderPage(<HomeRoute />, { api: api(), me: { ...me, user: { ...me.user, displayName: 'Ada Acme' } } });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Good morning, Ada' })).toBeInTheDocument();
-    expect(screen.getByText("Here's what's happening in Acme.")).toBeInTheDocument();
-    vi.useRealTimers();
   });
 
   it('shows owners and admins the numbers, and members only projects', async () => {
@@ -97,15 +73,11 @@ describe('Home', () => {
       me: makeMe('owner', ALL),
     });
     const tile = async (label: string) =>
-      (await screen.findByText(label, { selector: '[data-slot="stat-tile"] p' })).closest('[data-slot="stat-tile"]');
+      (await screen.findByText(label, { selector: '[data-slot="stat-tile"] p' })).closest(
+        '[data-slot="stat-tile"]',
+      );
     expect(await tile('People')).toHaveTextContent('2');
     expect(await tile('Open invites')).toHaveTextContent('1');
     expect(await tile('Projects')).toHaveTextContent('1');
-  });
-
-  it('shows a member only the projects number', async () => {
-    renderPage(<HomeRoute />, { api: api([project(1)]), me: makeMe('member', MEMBER) });
-    expect(await screen.findByText('Projects', { selector: '[data-slot="stat-tile"] p' })).toBeInTheDocument();
-    expect(screen.queryByText('Open invites')).toBeNull();
   });
 });

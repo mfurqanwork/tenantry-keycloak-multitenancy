@@ -52,25 +52,4 @@ describe('the login page brand', () => {
     // The logo carries the word; it is not written twice.
     expect(screen.queryByText('Tenantry', { selector: '[data-slot="workspace-name"]' })).toBeNull();
   });
-
-  it("keeps the workspace's own logo, never the Tenantry one, inside a workspace", async () => {
-    window.history.replaceState(
-      null,
-      '',
-      `/?redirect_uri=${encodeURIComponent('http://acme.tenantry.localhost:8080/auth/callback')}`,
-    );
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(
-            JSON.stringify({ name: 'Acme', primaryColor: null, logoUrl: '/api/tenants/acme/logo?v=1' }),
-          ),
-        ),
-    );
-    render(page());
-    expect(await screen.findByRole('img', { name: 'Acme' })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Tenantry' })).toBeNull();
-  });
 });

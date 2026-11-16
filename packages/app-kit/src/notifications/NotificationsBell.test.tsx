@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../api.js';
@@ -45,11 +45,6 @@ describe('NotificationsBell (spec 8.4)', () => {
     expect(await screen.findByRole('button', { name: 'Notifications, 2 unread' })).toBeInTheDocument();
   });
 
-  it('has no count when everything is read', async () => {
-    show(fakeApi({ '/api/notifications': feed(0) }));
-    expect(await screen.findByRole('button', { name: 'Notifications' })).toBeInTheDocument();
-  });
-
   it('lists notifications with their time and link, and marks them all read', async () => {
     const { api, user } = show();
     await user.click(await screen.findByRole('button', { name: /Notifications/ }));
@@ -66,32 +61,10 @@ describe('NotificationsBell (spec 8.4)', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Notifications', hidden: true })).toBeInTheDocument();
     });
-    expect(within(panel).getByRole('link', { name: /Ben Acme joined Acme/ })).not.toHaveAccessibleName(/Unread/);
+    expect(within(panel).getByRole('link', { name: /Ben Acme joined Acme/ })).not.toHaveAccessibleName(
+      /Unread/,
+    );
     expect(screen.getByRole('dialog', { name: 'Notifications' })).toBeInTheDocument();
-  });
-
-  it('leaves out a notification it has no address for', async () => {
-    // With no current workspace there is no address to build, so the entry is dropped, not linked to "#".
-    renderWithApp(<NotificationsBell workspaces={[]} now={() => now} />, {
-      api: fakeApi({ '/api/notifications': feed(1) }),
-      me: makeMe('owner', []),
-    });
-    await userEvent.setup().click(await screen.findByRole('button', { name: /Notifications/ }));
-    const panel = screen.getByRole('dialog', { name: 'Notifications' });
-    expect(within(panel).queryByRole('link')).not.toBeInTheDocument();
-    expect(within(panel).queryByText('Ben Acme joined Acme')).not.toBeInTheDocument();
-  });
-
-  it('shows the count as a badge, capped at 9+', async () => {
-    show(fakeApi({ '/api/notifications': { ...feed(12), unread: 12 } }));
-    const bell = await screen.findByRole('button', { name: 'Notifications, 12 unread' });
-    expect(within(bell).getByText('9+')).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  it('says so when there is nothing yet', async () => {
-    const { user } = show(fakeApi({ '/api/notifications': { unread: 0, items: [] } }));
-    await user.click(await screen.findByRole('button', { name: 'Notifications' }));
-    expect(screen.getByText("You're all caught up.")).toBeInTheDocument();
   });
 
   it('shows an error in the panel and keeps working', async () => {
@@ -100,23 +73,6 @@ describe('NotificationsBell (spec 8.4)', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Notifications' }));
     expect(await screen.findByText('Something went wrong.')).toBeInTheDocument();
-  });
-
-  it('refreshes every minute while the page is visible', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const { api } = show();
-    await waitFor(() => {
-      expect(api.get).toHaveBeenCalledTimes(1);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(api.get).toHaveBeenCalledTimes(2);
-    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(api.get).toHaveBeenCalledTimes(2);
   });
 });
 

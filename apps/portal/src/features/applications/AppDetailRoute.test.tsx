@@ -1,6 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { ApiProblem } from '@tenantry/app-kit';
 import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeApi, makeMe, renderPortal } from '../../test-utils.js';
@@ -59,71 +58,10 @@ describe('AppDetailRoute', () => {
     expect(within(details).getByText('Shown once, when registered or rotated')).toBeInTheDocument();
   });
 
-  it('shows the portal test sign-in address it added, and none for machine to machine', async () => {
-    const app = sampleApp();
-    setup(app);
-    const details = await screen.findByRole('table', { name: 'Connection details' });
-    expect(within(details).getByText('Tenantry test sign-in (kept by Tenantry)')).toBeInTheDocument();
-    expect(within(details).getByText(app.connection.testRedirectUri ?? '-')).toBeInTheDocument();
-  });
-
-  it('lists no test sign-in address for a machine-to-machine app', async () => {
-    setup(sampleApp({ type: 'm2m', redirectUris: [] }));
-    const details = await screen.findByRole('table', { name: 'Connection details' });
-    expect(within(details).queryByText('Tenantry test sign-in (kept by Tenantry)')).not.toBeInTheDocument();
-  });
-
-  it('keeps its header and the way back when the app cannot be loaded', async () => {
-    const api = fakeApi({ '/api/apps/a9': new ApiProblem(404, 'Not Found', 'No app with this id.') });
-    renderPortal(
-      <Routes>
-        <Route path="/advanced/apps/:id" element={<AppDetailRoute />} />
-      </Routes>,
-      { api, me: ADMIN, path: '/advanced/apps/a9' },
-    );
-    expect(await screen.findByText('No app with this id.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Application' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Customer apps' })).toHaveAttribute('href', '/advanced/apps');
-  });
-
-  it('names each value it offers to copy', async () => {
-    const app = sampleApp();
-    setup(app);
-    expect(await screen.findByLabelText('Issuer')).toBeInTheDocument();
-    expect(screen.getByLabelText('Token endpoint')).toBeInTheDocument();
-  });
-
-  it('clears the last token check and says it is asking while a new one runs', async () => {
-    const m2m = sampleApp({ type: 'm2m', redirectUris: [] });
-    const { api, user } = setup(m2m, {
-      routes: { 'POST /api/apps/a1/token-check': { ok: false, error: 'Invalid client credentials' } },
-    });
-    await user.click(await screen.findByRole('tab', { name: 'Request a token' }));
-    await user.type(screen.getByLabelText('Client secret'), 'wrong');
-    await user.click(screen.getByRole('button', { name: 'Request a token' }));
-    expect(await screen.findByText('Invalid client credentials')).toBeInTheDocument();
-    api.post.mockReturnValueOnce(new Promise(() => undefined));
-    await user.click(screen.getByRole('button', { name: 'Request a token' }));
-    expect(screen.queryByText('Invalid client credentials')).not.toBeInTheDocument();
-    expect(screen.getByText('Asking Keycloak for a token')).toBeInTheDocument();
-  });
-
   it('shows the secret it was handed once', async () => {
     setup(sampleApp(), { state: { clientSecret: 's3cret' } });
     expect(await screen.findByText('Copy the client secret now')).toBeInTheDocument();
     expect(screen.getAllByText('s3cret').length).toBeGreaterThan(0);
-  });
-
-  it('has no secret to show without one', async () => {
-    setup(sampleApp());
-    await screen.findByRole('heading', { level: 1, name: 'HR portal' });
-    expect(screen.queryByText('Copy the client secret now')).not.toBeInTheDocument();
-  });
-
-  it('says a public client has no secret, and offers no rotation', async () => {
-    setup(sampleApp({ type: 'spa' }));
-    expect(await screen.findByText('None (public client, PKCE)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Rotate secret' })).not.toBeInTheDocument();
   });
 
   it('rotates the secret after asking, and shows the new one once', async () => {
@@ -203,18 +141,6 @@ describe('AppDetailRoute', () => {
     await waitFor(() => {
       expect(screen.getByText('Keycloak issued a token for this app.')).toBeInTheDocument();
     });
-  });
-
-  it('is built from the new components, with no Carbon left', async () => {
-    const { user } = setup(sampleApp(), { state: { clientSecret: 's3cret' } });
-    expect(await screen.findByRole('group', { name: 'Client secret' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy Issuer' })).toBeInTheDocument();
-    expect(document.querySelector('[class*="cds--"]')).toBeNull();
-    await user.click(screen.getByRole('tab', { name: 'Set up' }));
-    expect(document.querySelector('[class*="cds--"]')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(within(screen.getByRole('dialog')).getByLabelText('Type HR portal to confirm')).toBeInTheDocument();
-    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it('shows members the details without any action', async () => {

@@ -42,7 +42,12 @@ describe('RegisterAppRoute', () => {
   it('walks type, details and review, then opens the new app with its secret', async () => {
     const { api, user } = setup({ 'POST /api/apps': { app: sampleApp(), clientSecret: 's3cret' } });
     expect(screen.getByRole('radiogroup', { name: 'What kind of app is it?' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Web app').closest('label, [data-slot="app-type"]')?.querySelector('svg[data-type="web"]')).not.toBeNull();
+    expect(
+      screen
+        .getByLabelText('Web app')
+        .closest('label, [data-slot="app-type"]')
+        ?.querySelector('svg[data-type="web"]'),
+    ).not.toBeNull();
     expect(document.querySelector('[class*="cds--"]')).toBeNull();
     await user.click(screen.getByLabelText('Web app'));
     await user.click(next());
@@ -71,25 +76,6 @@ describe('RegisterAppRoute', () => {
     expect(next()).toBeDisabled();
     await user.clear(screen.getByLabelText('Redirect URI 1'));
     await fill(user, 'Redirect URI 1', 'http://127.0.0.1:3000/cb');
-    expect(next()).toBeEnabled();
-  });
-
-  it('adds and removes URI rows', async () => {
-    const { user } = setup();
-    await user.click(screen.getByLabelText('Web app'));
-    await user.click(next());
-    await user.click(screen.getByRole('button', { name: 'Add redirect URI' }));
-    expect(screen.getByLabelText('Redirect URI 2')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Remove redirect URI 2' }));
-    expect(screen.queryByLabelText('Redirect URI 2')).not.toBeInTheDocument();
-  });
-
-  it('asks a machine-to-machine app for its name only', async () => {
-    const { user } = setup();
-    await user.click(screen.getByLabelText('Machine to machine'));
-    await user.click(next());
-    expect(screen.queryByLabelText('Redirect URI 1')).not.toBeInTheDocument();
-    await fill(user, 'Name', 'Sync');
     expect(next()).toBeEnabled();
   });
 

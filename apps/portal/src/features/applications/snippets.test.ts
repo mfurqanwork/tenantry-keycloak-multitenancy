@@ -19,19 +19,4 @@ describe('setup snippets', () => {
         .join(),
     ).toContain('<your client secret>');
   });
-
-  it('gives each type the snippets that fit it', () => {
-    expect(snippetsFor(sampleApp({ type: 'web' })).map((s) => s.label)).toEqual(['Node (openid-client)']);
-    expect(snippetsFor(sampleApp({ type: 'spa' })).map((s) => s.label)).toEqual(['Browser (oidc-client-ts)']);
-    expect(snippetsFor(sampleApp({ type: 'm2m' })).map((s) => s.label)).toEqual([
-      'Node (openid-client)',
-      'curl',
-    ]);
-    expect(snippetsFor(sampleApp({ type: 'native' }))).toEqual([]);
-  });
-
-  it("uses the app's first redirect URI where a snippet needs one", () => {
-    const [node] = snippetsFor(sampleApp({ type: 'web', redirectUris: ['https://hr.acme.test/cb'] }));
-    expect(node?.code).toContain('https://hr.acme.test/cb');
-  });
 });

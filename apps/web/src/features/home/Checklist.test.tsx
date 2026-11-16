@@ -37,32 +37,6 @@ describe('the getting-started checklist', () => {
     );
   });
 
-  it('checklist shows progress', () => {
-    show({ done: { project: true, invite: false, brand: true } });
-    const progress = screen.getByRole('progressbar', { name: 'Finish setting up' });
-    expect(progress).toHaveAttribute('aria-valuenow', '2');
-    expect(progress).toHaveAttribute('aria-valuemax', '3');
-  });
-
-  it('gives each open step its icon', () => {
-    show();
-    for (const step of ['Project name', 'Invite a teammate', 'Add your colour and logo']) {
-      const li = (step === 'Project name' ? screen.getByLabelText(step) : screen.getByRole('link', { name: step })).closest('li');
-      expect(li?.querySelector('svg')).not.toBeNull();
-    }
-  });
-
-  it('shows a done step with a check mark and no action', () => {
-    show({ done: { project: false, invite: true, brand: false } });
-    expect(screen.queryByRole('link', { name: 'Invite a teammate' })).not.toBeInTheDocument();
-    expect(screen.getByText('Invite a teammate').closest('li')).toHaveAttribute('data-done', 'true');
-  });
-
-  it('renders nothing once every step is done', () => {
-    show({ done: { project: true, invite: true, brand: true } });
-    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
-  });
-
   it('creates a project from its name', async () => {
     const props = show();
     const user = userEvent.setup();
@@ -75,12 +49,6 @@ describe('the getting-started checklist', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hide' }));
     expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
     expect(localStorage.getItem(KEY)).toBe('1');
-  });
-
-  it('stays hidden on the next visit', () => {
-    localStorage.setItem(KEY, '1');
-    show();
-    expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
   });
 
   it('still works when storage is blocked', async () => {

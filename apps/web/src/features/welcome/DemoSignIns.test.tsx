@@ -21,10 +21,4 @@ describe('the demo sign-ins', () => {
       expect.stringContaining('pengopal.tenantry.example'),
     );
   });
-
-  it('shows the password and says the demo resets', () => {
-    show();
-    expect(screen.getByText('public-demo')).toBeInTheDocument();
-    expect(screen.getByText(/resets every night/i)).toBeInTheDocument();
-  });
 });

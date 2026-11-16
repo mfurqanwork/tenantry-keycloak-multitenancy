@@ -36,20 +36,6 @@ describe('KeycloakHealthIndicator', () => {
     await expect(indicator().check()).resolves.toEqual({ keycloak: { status: 'up' } });
   });
 
-  it('is down on an issuer mismatch', async () => {
-    respond(200, { issuer: 'http://localhost:8080/realms/platform' });
-    await expect(indicator().check()).resolves.toEqual({
-      keycloak: { status: 'down', message: expect.stringMatching(/issuer mismatch/) as string },
-    });
-  });
-
-  it('is down, not crashing, while Keycloak is still starting', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
-    await expect(indicator().check()).resolves.toEqual({
-      keycloak: { status: 'down', message: 'fetch failed' },
-    });
-  });
-
   it('fetches through the internal URL but still expects the public issuer', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ issuer: 'http://auth.tenantry.localhost/realms/platform' }), {

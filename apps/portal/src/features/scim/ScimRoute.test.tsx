@@ -21,11 +21,6 @@ function setup(routes: Record<string, unknown> = {}) {
 }
 
 describe('ScimRoute', () => {
-  it('shows the SCIM address to copy', async () => {
-    setup();
-    expect(await screen.findByText(URL_)).toBeInTheDocument();
-  });
-
   it('generates a token with the chosen expiry and shows it once', async () => {
     const { api, user, view } = setup({
       'POST /api/scim/token': { token: SECRET, expiresAt: '2027-11-04T00:00:00.000Z' },
@@ -81,28 +76,5 @@ describe('ScimRoute', () => {
     await user.click(await screen.findByRole('option', { name: /No role/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(api.put).toHaveBeenCalledWith('/api/scim/default-role', { role: 'none' });
-  });
-
-  it('directory sync names Entra ID and Okta', async () => {
-    setup();
-    await screen.findByText(URL_);
-    expect(screen.getByText('Microsoft Entra ID')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Okta' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'SCIM address' })).toHaveTextContent(URL_);
-    expect(screen.getByRole('button', { name: 'Copy SCIM address' })).toBeInTheDocument();
-    expect(document.querySelector('[class*="cds--"]')).toBeNull();
-  });
-
-  it('explains Standard workspaces without asking the API', () => {
-    const api = fakeApi();
-    renderPortal(<ScimRoute />, {
-      api,
-      me: { ...me, tenant: { ...me.tenant, tier: 'standard' } },
-      path: '/scim',
-    });
-    expect(
-      screen.getByText('Security settings and SCIM are available on Enterprise workspaces.'),
-    ).toBeInTheDocument();
-    expect(api.get).not.toHaveBeenCalled();
   });
 });

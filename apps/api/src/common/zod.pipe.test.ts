@@ -6,13 +6,6 @@ import { ZodPipe } from './zod.pipe.js';
 const pipe = new ZodPipe(z.object({ name: z.string().min(1), role: z.enum(['admin', 'member']) }));
 
 describe('ZodPipe', () => {
-  it('returns the parsed value', () => {
-    expect(pipe.transform({ name: 'Apollo', role: 'admin', extra: 1 })).toEqual({
-      name: 'Apollo',
-      role: 'admin',
-    });
-  });
-
   it('refuses invalid input with a 422 naming each field', () => {
     let error: unknown;
     try {

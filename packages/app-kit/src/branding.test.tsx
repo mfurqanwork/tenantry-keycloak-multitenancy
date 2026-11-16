@@ -37,14 +37,4 @@ describe('useBranding', () => {
     unmount();
     expect(document.body.style.getPropertyValue('--primary')).toBe('');
   });
-
-  it("leaves Tenantry's colours without one", async () => {
-    render(
-      <ApiProvider api={api({ name: 'Acme', primaryColor: null, logoUrl: null })}>
-        <Show />
-      </ApiProvider>,
-    );
-    await screen.findByText('brand Acme');
-    expect(document.body.style.getPropertyValue('--primary')).toBe('');
-  });
 });

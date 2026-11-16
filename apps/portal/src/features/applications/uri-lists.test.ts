@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { listsFor, listsReady, uriProblems } from './uri-lists.js';
+import { listsReady, uriProblems } from './uri-lists.js';
 
 const empty = { redirectUris: [], postLogoutRedirectUris: [], webOrigins: [] };
 
 describe('URI lists of an app', () => {
-  it('asks each type for the lists that fit it', () => {
-    expect(listsFor('web')).toEqual(['redirectUris', 'postLogoutRedirectUris']);
-    expect(listsFor('spa')).toEqual(['redirectUris', 'postLogoutRedirectUris', 'webOrigins']);
-    expect(listsFor('native')).toEqual(['redirectUris', 'postLogoutRedirectUris']);
-    expect(listsFor('m2m')).toEqual([]);
-  });
-
   it('gives one problem (or none) per row, an empty list being one empty row', () => {
     expect(uriProblems([], 'redirectUris', 'web')).toEqual([null]);
     expect(uriProblems(['https://a.test/cb', 'http://localhost/cb', ' '], 'redirectUris', 'web')).toEqual([

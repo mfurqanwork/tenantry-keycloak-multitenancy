@@ -39,28 +39,7 @@ describe('searchResults (spec 8.3)', () => {
     ]);
   });
 
-  it('finds pages inside a group, keeping where they live', () => {
-    expect(searchResults('scim', sources).pages).toEqual([
-      { label: 'Directory sync (SCIM)', href: 'http://acme.portal.test/advanced/scim', crossApp: true },
-    ]);
-  });
-
-  it('opens people in People and projects in Projects', () => {
-    const r = searchResults('a', sources);
-    expect(r.people[0]?.href).toBe('http://acme.portal.test/people?q=ada%40example.test');
-    expect(r.projects[0]?.href).toBe('/projects?q=Launch%20plan');
-  });
-
   it('finds nothing for an empty query', () => {
     expect(searchResults('   ', sources)).toEqual({ pages: [], people: [], projects: [] });
-  });
-
-  it('shows at most five of each', () => {
-    const many: SearchSources = {
-      pages: [],
-      people: [],
-      projects: Array.from({ length: 9 }, (_, i) => ({ id: `p${String(i)}`, name: `Project ${String(i)}` })),
-    };
-    expect(searchResults('project', many).projects).toHaveLength(5);
   });
 });

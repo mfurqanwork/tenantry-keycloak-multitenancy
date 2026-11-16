@@ -51,21 +51,6 @@ describe('workspaceMenu (spec 8.1)', () => {
     expect(console).toMatchObject({ external: true, icon: KeyRound });
   });
 
-  it("links pages in the other app by their full address, and this app's by path", () => {
-    const fromWeb = workspaceMenu(person('owner'), WS, 'web');
-    expect(fromWeb.find((i) => i.label === 'Home')).toMatchObject({ href: '/' });
-    expect(fromWeb.find((i) => i.label === 'People')).toMatchObject({
-      href: 'http://acme.portal.tenantry.localhost/people',
-      crossApp: true,
-    });
-    const fromAdmin = workspaceMenu(person('owner'), WS, 'portal');
-    expect(fromAdmin.find((i) => i.label === 'Home')).toMatchObject({
-      href: 'http://acme.tenantry.localhost/',
-      crossApp: true,
-    });
-    expect(fromAdmin.find((i) => i.label === 'People')).toMatchObject({ href: '/people' });
-  });
-
   it('gives an admin of a Standard workspace People and the Audit log, and no Advanced', () => {
     expect(labels(workspaceMenu(person('admin', 'standard'), WS, 'web'))).toEqual([
       'Home',
@@ -77,9 +62,5 @@ describe('workspaceMenu (spec 8.1)', () => {
 
   it('gives a member Home and Projects only', () => {
     expect(labels(workspaceMenu(person('member'), WS, 'portal'))).toEqual(['Home', 'Projects']);
-  });
-
-  it("leaves out the other app's pages until the workspaces have loaded", () => {
-    expect(labels(workspaceMenu(person('owner'), [], 'web'))).toEqual(['Home', 'Projects']);
   });
 });

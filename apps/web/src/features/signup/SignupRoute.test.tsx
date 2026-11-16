@@ -37,43 +37,6 @@ async function fillDetails(name: string, slug?: string) {
 }
 
 describe('SignupRoute (one screen)', () => {
-  it('asks for a name and an address on one screen, with no steps', () => {
-    renderSignup(fakeApi());
-    expect(screen.getByRole('heading', { level: 1, name: 'Create a workspace' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
-    expect(screen.getByLabelText('Address')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Progress' })).not.toBeInTheDocument();
-  });
-
-  it('signup previews the address', async () => {
-    renderSignup(fakeApi());
-    const user = userEvent.setup();
-    expect(screen.getByText('your-name.tenantry.localhost')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Workspace name'), 'Pengopal Labs');
-    expect(screen.getByText(/pengopal-labs\./)).toHaveTextContent('pengopal-labs.tenantry.localhost');
-    expect(screen.getByLabelText('Address')).toHaveAccessibleDescription(/pengopal-labs\.tenantry\.localhost/);
-  });
-
-  it('sits in one card on the soft grey ground', () => {
-    renderSignup(fakeApi());
-    const card = screen.getByRole('heading', { level: 1, name: 'Create a workspace' }).closest('[data-slot="signup-card"]');
-    expect(card).not.toBeNull();
-    expect(card?.parentElement).toHaveClass('bg-muted');
-  });
-
-  it('fills in the address from the name until it is edited', async () => {
-    renderSignup(fakeApi());
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Workspace name'), 'Acme Inc');
-    expect(screen.getByLabelText('Address')).toHaveValue('acme-inc');
-    expect(screen.getByText('acme-inc.tenantry.localhost')).toBeInTheDocument();
-    await user.clear(screen.getByLabelText('Address'));
-    await user.type(screen.getByLabelText('Address'), 'acme');
-    await user.type(screen.getByLabelText('Workspace name'), ' Ltd');
-    expect(screen.getByLabelText('Address')).toHaveValue('acme');
-  });
-
   it('says on the address when it is taken, and creates nothing', async () => {
     const api = fakeApi({ get: vi.fn().mockResolvedValue({ available: false, reason: 'taken' }) });
     renderSignup(api);

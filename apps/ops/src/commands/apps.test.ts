@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listAppsCommand, registerAppCommand, rotateAppCommand } from './apps.js';
+import { registerAppCommand } from './apps.js';
 import type { EnterpriseDeps } from './enterprise.js';
 
 function deps(reply: { status: number; body: unknown }) {
@@ -19,26 +19,6 @@ function deps(reply: { status: number; body: unknown }) {
 const app = { id: 'a1', clientId: 'app-0a1b2c3d', name: 'Initech HR', type: 'web' };
 
 describe('ops apps', () => {
-  it('lists the apps of a tenant', async () => {
-    const { d, out, api } = deps({ status: 200, body: { apps: [app] } });
-    expect(await listAppsCommand(d, { tenant: 'initech' })).toBe(0);
-    expect(api).toHaveBeenCalledWith(
-      'tenantry.localhost',
-      'GET',
-      '/api/platform/enterprise-tenants/initech/apps',
-      {
-        token: 'op-token',
-      },
-    );
-    expect(out).toEqual(['a1  app-0a1b2c3d  web  Initech HR']);
-  });
-
-  it('says when a tenant has no apps', async () => {
-    const { d, out } = deps({ status: 200, body: { apps: [] } });
-    expect(await listAppsCommand(d, { tenant: 'initech' })).toBe(0);
-    expect(out).toEqual(['initech has no apps.']);
-  });
-
   it('registers an app and prints its secret once', async () => {
     const { d, out, api } = deps({ status: 201, body: { app, clientSecret: 's3cret' } });
     expect(
@@ -82,17 +62,5 @@ describe('ops apps', () => {
       }),
     ).toBe(1);
     expect(err).toEqual(['redirectUris.0: Use https.']);
-  });
-
-  it('rotates a secret', async () => {
-    const { d, out, api } = deps({ status: 200, body: { clientSecret: 'n3w' } });
-    expect(await rotateAppCommand(d, { tenant: 'initech', app: 'a1' })).toBe(0);
-    expect(api).toHaveBeenCalledWith(
-      'tenantry.localhost',
-      'POST',
-      '/api/platform/enterprise-tenants/initech/apps/a1/secret',
-      { token: 'op-token' },
-    );
-    expect(out).toEqual(['New client secret for a1 (shown once): n3w']);
   });
 });

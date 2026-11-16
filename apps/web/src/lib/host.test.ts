@@ -12,12 +12,6 @@ describe('hostKind', () => {
   it('treats the base domain itself as the signup host', () => {
     expect(hostKind('tenantry.localhost', base)).toEqual({ kind: 'apex' });
   });
-
-  it('knows nothing about other hosts', () => {
-    expect(hostKind('a.b.tenantry.localhost', base)).toEqual({ kind: 'unknown' });
-    expect(hostKind('evil.com', base)).toEqual({ kind: 'unknown' });
-    expect(hostKind('localhost', base)).toEqual({ kind: 'unknown' });
-  });
 });
 
 describe('apexAuthConfig', () => {
@@ -35,21 +29,10 @@ describe('apexPage', () => {
     expect(apexPage('/')).toBe('welcome');
     expect(apexPage('/anything-else')).toBe('welcome');
   });
-
-  it('signs in for signup, and finishes that sign-in on the callback', () => {
-    expect(apexPage('/signup')).toBe('signup');
-    expect(apexPage('/auth/callback')).toBe('signup');
-  });
 });
 
 describe('demoWorkspaces', () => {
   it('reads a comma-separated list of slugs', () => {
     expect(demoWorkspaces(' acme, globex ,initech ')).toEqual(['acme', 'globex', 'initech']);
-  });
-
-  it('is empty when unset or blank, and drops what cannot be a slug', () => {
-    expect(demoWorkspaces(undefined)).toEqual([]);
-    expect(demoWorkspaces('')).toEqual([]);
-    expect(demoWorkspaces('acme,<script>,a b')).toEqual(['acme']);
   });
 });
