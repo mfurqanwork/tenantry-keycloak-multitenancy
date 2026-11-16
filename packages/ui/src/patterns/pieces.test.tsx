@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { Folder, Rocket } from '@carbon/icons-react';
+import { Folder, Rocket } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { Avatar } from '../components/avatar.js';
 import { EmptyState } from './EmptyState.js';
@@ -72,6 +72,6 @@ describe('shared pieces (spec §8.2)', () => {
 
   it('StatTile: an optional icon above the number', () => {
     render(<StatTile label="Projects" value={3} icon={Folder} />);
-    expect(screen.getByText('Projects').closest('.tenantry-stat')?.querySelector('svg')).not.toBeNull();
+    expect(screen.getByText('Projects').closest('[data-slot="stat-tile"]')?.querySelector('svg')).not.toBeNull();
   });
 });
