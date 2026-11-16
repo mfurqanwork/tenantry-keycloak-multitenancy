@@ -1,9 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { Folder, Home, UserMultiple } from '@carbon/icons-react';
+import { Folder, House, Users } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { TenantryThemeProvider } from '../theme/ThemeProvider.js';
 import { AppShell } from './AppShell.js';
+import { TenantryMark } from './TenantryMark.js';
 
 const wrapper = TenantryThemeProvider;
 
@@ -25,23 +26,18 @@ describe('AppShell, redesigned (spec §8.2)', () => {
 
   it("shows the workspace's logo instead of the letter when it has one", () => {
     render(
-      <AppShell productName="Acme" logoUrl="/api/tenants/acme/logo" navItems={[]} currentPath="/">
+      <AppShell productName="Acme" appName="Admin" logoUrl="/api/tenants/acme/logo" navItems={[]} currentPath="/">
         <p>content</p>
       </AppShell>,
       { wrapper },
     );
     expect(screen.queryByTestId('workspace-badge')).toBeNull();
-    expect(document.querySelector('.tenantry-header__logo')).toHaveAttribute('src', '/api/tenants/acme/logo');
+    expect(screen.getByRole('banner').querySelector('img')).toHaveAttribute('src', '/api/tenants/acme/logo');
   });
 
-  it('puts the header actions (search, notifications) in the global bar', () => {
+  it('puts the header actions (search, notifications) in the top bar', () => {
     render(
-      <AppShell
-        productName="Acme"
-        navItems={[]}
-        currentPath="/"
-        headerActions={<button type="button">Search</button>}
-      >
+      <AppShell productName="Acme" navItems={[]} currentPath="/" headerActions={<button type="button">Search</button>}>
         <p>content</p>
       </AppShell>,
       { wrapper },
@@ -53,7 +49,7 @@ describe('AppShell, redesigned (spec §8.2)', () => {
     render(
       <AppShell
         productName="Acme"
-        navItems={[]}
+        navItems={[{ label: 'Home', href: '/' }]}
         currentPath="/"
         user={{ email: 'ada@example.test', name: 'Ada Acme', onSignOut: vi.fn() }}
       >
@@ -63,11 +59,10 @@ describe('AppShell, redesigned (spec §8.2)', () => {
     );
     const account = screen.getByRole('button', { name: 'Account' });
     expect(account).toHaveTextContent('AA');
-    // Three theme buttons no longer crowd the header.
-    expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Dark theme' })).toBeNull();
+    expect(within(screen.getByRole('complementary')).getByRole('button', { name: 'Account' })).toBe(account);
     await userEvent.setup().click(account);
-    expect(screen.getByText('Ada Acme')).toBeVisible();
-    expect(screen.getByRole('radio', { name: 'Dark' })).toBeInTheDocument();
+    expect(within(screen.getByRole('menu')).getByText('Ada Acme')).toBeVisible();
+    expect(screen.getByRole('menuitemradio', { name: 'Dark' })).toBeInTheDocument();
   });
 
   it('shows an icon on each menu item and groups items under their section', () => {
@@ -75,14 +70,9 @@ describe('AppShell, redesigned (spec §8.2)', () => {
       <AppShell
         productName="Acme"
         navItems={[
-          { label: 'Home', href: '/', icon: Home },
+          { label: 'Home', href: '/', icon: House },
           { label: 'Projects', href: '/projects', icon: Folder },
-          {
-            label: 'People',
-            href: 'http://acme.portal.test/people',
-            icon: UserMultiple,
-            section: 'Workspace',
-          },
+          { label: 'People', href: 'http://acme.portal.test/people', icon: Users, section: 'Workspace', crossApp: true },
         ]}
         currentPath="/"
       >
@@ -91,27 +81,26 @@ describe('AppShell, redesigned (spec §8.2)', () => {
       { wrapper },
     );
     const nav = within(screen.getByRole('navigation', { name: 'Side navigation' }));
-    expect(nav.getByText('Workspace')).toBeInTheDocument();
-    for (const name of ['Home', 'Projects', 'People']) {
+    for (const name of ['Home', 'Projects', /People/]) {
       expect(nav.getByRole('link', { name }).querySelector('svg')).not.toBeNull();
     }
-    const items = nav.getAllByRole('listitem').map((li) => li.textContent);
-    expect(items.indexOf('Workspace')).toBeLessThan(items.indexOf('People'));
-    expect(items.indexOf('Projects')).toBeLessThan(items.indexOf('Workspace'));
+    const workspace = nav.getByRole('list', { name: 'Workspace' });
+    expect(within(workspace).getByRole('link', { name: /People/ })).toHaveAttribute('href', 'http://acme.portal.test/people');
+    expect(within(workspace).queryByRole('link', { name: 'Projects' })).toBeNull();
   });
 });
 
 describe('AppShell version', () => {
   const user = { email: 'ada@example.test', onSignOut: vi.fn() };
 
-  it('shows the running version in the account panel', async () => {
+  it('shows the running version in the account menu', async () => {
     render(
       <AppShell productName="Acme" navItems={[]} currentPath="/" user={user} version="0.6.0">
         <p>content</p>
       </AppShell>,
       { wrapper },
     );
-    await userEvent.setup().click(screen.getByRole('button', { name: /account/i }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.getByText('Tenantry 0.6.0')).toBeInTheDocument();
   });
 
@@ -122,7 +111,26 @@ describe('AppShell version', () => {
       </AppShell>,
       { wrapper },
     );
-    await userEvent.setup().click(screen.getByRole('button', { name: /account/i }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.queryByText(/^Tenantry \d/)).toBeNull();
+  });
+});
+
+describe('TenantryMark', () => {
+  it('shows the light or dark artwork by the resolved theme', () => {
+    const { container } = render(<TenantryMark variant="logo" />, { wrapper });
+    const img = () => container.querySelector('img');
+    expect(img()).toHaveAttribute('data-theme', 'light');
+    const light = img()?.getAttribute('src');
+    localStorage.setItem('tenantry.theme', 'dark');
+    const { container: dark } = render(<TenantryMark variant="logo" />, { wrapper });
+    expect(dark.querySelector('img')).toHaveAttribute('data-theme', 'dark');
+    expect(dark.querySelector('img')?.getAttribute('src')).not.toBe(light);
+  });
+
+  it('is the mark alone by default, hidden from assistive tech', () => {
+    const { container } = render(<TenantryMark />, { wrapper });
+    expect(container.querySelector('img')).toHaveAttribute('data-variant', 'mark');
+    expect(container.querySelector('img')).toHaveAttribute('alt', '');
   });
 });

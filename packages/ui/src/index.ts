@@ -42,6 +42,7 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './comp
 export { applyBrand } from './brand.js';
 export { AppShell, type NavItem, type WorkspaceEntry } from './shell/AppShell.js';
 export type { SwitcherEntry } from './shell/HeaderSwitcher.js';
+export { TenantryMark } from './shell/TenantryMark.js';
 export { BRAND_PROPERTIES } from './brand.js';
 export { Avatar, initials } from './components/avatar.js';
 export { DashboardPage } from './patterns/DashboardPage.js';
