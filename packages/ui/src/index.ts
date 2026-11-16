@@ -19,4 +19,4 @@ export {
   writePreference,
   type ThemePreference,
 } from './theme/preference.js';
-export { TenantryThemeProvider, useThemePreference, type CarbonTheme } from './theme/ThemeProvider.js';
+export { TenantryThemeProvider, useThemePreference, type ResolvedTheme } from './theme/ThemeProvider.js';
