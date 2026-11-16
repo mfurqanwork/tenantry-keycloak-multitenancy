@@ -1,9 +1,10 @@
-import { Modal, Stack } from '@carbon/react';
-import { useState, type ReactNode } from 'react';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@tenantry/ui';
+import { LoaderCircle } from 'lucide-react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { ApiErrorNotification } from './ApiErrorNotification.js';
 
-// A Carbon modal that runs one API call: the button stays disabled while it runs, a refusal is shown
-// inside the dialog, and the dialog closes only on success.
+// A dialog that runs one API call: the button stays disabled while it runs, a refusal is shown inside the
+// dialog, and the dialog closes only on success.
 export function FormDialog({
   heading,
   submitLabel,
@@ -24,7 +25,9 @@ export function FormDialog({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  async function submit() {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit || sending) return;
     setSending(true);
     setError(null);
     try {
@@ -37,23 +40,30 @@ export function FormDialog({
   }
 
   return (
-    <Modal
+    <Dialog
       open
-      danger={danger}
-      modalHeading={heading}
-      primaryButtonText={submitLabel}
-      secondaryButtonText="Cancel"
-      primaryButtonDisabled={!canSubmit || sending}
-      loadingStatus={sending ? 'active' : 'inactive'}
-      loadingDescription="Sending"
-      onRequestSubmit={() => void submit()}
-      onRequestClose={onClose}
-      size="sm"
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <Stack gap={6}>
-        <ApiErrorNotification error={error} />
-        {children}
-      </Stack>
-    </Modal>
+      <DialogContent aria-describedby={undefined}>
+        <form className="flex flex-col gap-5" onSubmit={(event) => void submit(event)} noValidate>
+          <DialogHeader>
+            <DialogTitle>{heading}</DialogTitle>
+          </DialogHeader>
+          <ApiErrorNotification error={error} />
+          <div className="flex flex-col gap-4">{children}</div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant={danger ? 'destructive' : 'primary'} disabled={!canSubmit || sending}>
+              {sending && <LoaderCircle aria-hidden="true" className="animate-spin" />}
+              {submitLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -53,15 +53,24 @@ describe('NotificationsBell (spec 8.4)', () => {
   it('lists notifications with their time and link, and marks them all read', async () => {
     const { api, user } = show();
     await user.click(await screen.findByRole('button', { name: /Notifications/ }));
-    const panel = screen.getByRole('region', { name: 'Notifications' });
-    const link = within(panel).getByRole('link', { name: /Ben Acme joined Acme/ });
+    const panel = screen.getByRole('menu', { name: 'Notifications' });
+    const link = within(panel).getByRole('menuitem', { name: /Ben Acme joined Acme/ });
     expect(link).toHaveAttribute('href', 'http://acme.portal.tenantry.localhost/people');
     expect(within(panel).getByText('5 min ago')).toBeInTheDocument();
-    await user.click(within(panel).getByRole('button', { name: 'Mark all as read' }));
+    await user.click(within(panel).getByRole('menuitem', { name: 'Mark all as read' }));
     expect(api.post).toHaveBeenCalledWith('/api/notifications/read', {});
+    // The menu stays open after marking; the bell behind it (hidden from the tree while the menu is
+    // modal) loses its count.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Notifications', hidden: true })).toBeInTheDocument();
     });
+    expect(screen.getByRole('menu', { name: 'Notifications' })).toBeInTheDocument();
+  });
+
+  it('shows the count as a badge, capped at 9+', async () => {
+    show(fakeApi({ '/api/notifications': { ...feed(12), unread: 12 } }));
+    const bell = await screen.findByRole('button', { name: 'Notifications, 12 unread' });
+    expect(within(bell).getByText('9+')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('says so when there is nothing yet', async () => {

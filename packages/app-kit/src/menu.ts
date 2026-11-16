@@ -1,18 +1,17 @@
 import {
-  Application,
-  ColorPalette,
-  DataShare,
+  AppWindow,
   Folder,
-  Home,
-  Launch,
-  RecentlyViewed,
-  Security,
+  FolderSync,
+  History,
+  House,
+  KeyRound,
+  Palette,
   Settings,
-  UserMultiple,
-  type CarbonIconType,
-} from '@carbon/icons-react';
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import type { Permission } from '@tenantry/auth';
-import type { NavItem } from '@tenantry/ui';
+import type { IconComponent, NavItem } from '@tenantry/ui';
 import type { Workspace } from './workspaces.js';
 
 export type App = 'web' | 'portal';
@@ -28,7 +27,7 @@ interface Page {
   label: string;
   path: string;
   app: App;
-  icon: CarbonIconType;
+  icon: IconComponent;
   shown: (me: MenuPerson) => boolean;
 }
 
@@ -37,34 +36,34 @@ const can = (permission: Permission) => (me: MenuPerson) => me.can(permission);
 // One menu for Tenantry and Admin (spec 8.1, ADR-0027). The API checks every call again; this only
 // decides what is shown.
 const TOP: Page[] = [
-  { label: 'Home', path: '/', app: 'web', icon: Home, shown: () => true },
+  { label: 'Home', path: '/', app: 'web', icon: House, shown: () => true },
   { label: 'Projects', path: '/projects', app: 'web', icon: Folder, shown: can('projects:read') },
 ];
 const WORKSPACE: Page[] = [
-  { label: 'People', path: '/people', app: 'portal', icon: UserMultiple, shown: can('members:invite') },
-  { label: 'Branding', path: '/branding', app: 'portal', icon: ColorPalette, shown: can('tenant:settings') },
+  { label: 'People', path: '/people', app: 'portal', icon: Users, shown: can('members:invite') },
+  { label: 'Branding', path: '/branding', app: 'portal', icon: Palette, shown: can('tenant:settings') },
   {
     label: 'Sign-in & security',
     path: '/security',
     app: 'portal',
-    icon: Security,
+    icon: ShieldCheck,
     shown: can('tenant:settings'),
   },
-  { label: 'Audit log', path: '/audit', app: 'portal', icon: RecentlyViewed, shown: can('audit:read') },
+  { label: 'Audit log', path: '/audit', app: 'portal', icon: History, shown: can('audit:read') },
 ];
 const ADVANCED: Page[] = [
   {
     label: 'Directory sync (SCIM)',
     path: '/advanced/scim',
     app: 'portal',
-    icon: DataShare,
+    icon: FolderSync,
     shown: can('tenant:settings'),
   },
   {
     label: 'Customer apps',
     path: '/advanced/apps',
     app: 'portal',
-    icon: Application,
+    icon: AppWindow,
     shown: (me) => me.tenant.tier === 'enterprise' && me.can('apps:register'),
   },
 ];
@@ -87,7 +86,7 @@ export function workspaceMenu(me: MenuPerson, workspaces: Workspace[], app: App)
   const present = (x: NavItem | null): x is NavItem => x !== null;
   const advanced = ADVANCED.map((p) => item(p)).filter(present);
   if (me.consoleUrl) {
-    advanced.push({ label: 'Keycloak console', href: me.consoleUrl, icon: Launch, external: true });
+    advanced.push({ label: 'Keycloak console', href: me.consoleUrl, icon: KeyRound, external: true });
   }
   return [
     ...TOP.map((p) => item(p)).filter(present),

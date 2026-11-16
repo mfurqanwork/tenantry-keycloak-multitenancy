@@ -1,18 +1,17 @@
-import { Button, HeaderGlobalAction, HeaderPanel, InlineLoading } from '@carbon/react';
 import {
-  Email,
-  Enterprise,
-  Notification as BellIcon,
-  NotificationNew,
-  Security,
-  Time,
-  User,
-  UserMultiple,
-  type CarbonIconType,
-} from '@carbon/icons-react';
-import { useCallback, useEffect, useState } from 'react';
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  type IconComponent,
+} from '@tenantry/ui';
+import { Bell, Building2, Clock, Mail, ShieldCheck, User, Users } from 'lucide-react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { ApiErrorNotification } from '../ApiErrorNotification.js';
 import { useApi } from '../api.js';
+import { Loading } from '../Loading.js';
 import type { Workspace } from '../workspaces.js';
 
 export interface NotificationLink {
@@ -36,13 +35,13 @@ interface Feed {
   unread: number;
 }
 
-const ICONS: Record<NotificationItem['kind'], CarbonIconType> = {
+const ICONS: Record<NotificationItem['kind'], IconComponent> = {
   you: User,
-  team: UserMultiple,
-  workspace: Enterprise,
-  security: Security,
-  expiring: Time,
-  invite: Email,
+  team: Users,
+  workspace: Building2,
+  security: ShieldCheck,
+  expiring: Clock,
+  invite: Mail,
 };
 
 const REFRESH_MS = 60_000;
@@ -70,7 +69,7 @@ export function timeAgo(iso: string, now: Date): string {
   return `${String(days)} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
-// The bell in the header (spec 8.4): an unread count, the latest notifications, and "Mark all as read".
+// The bell in the top bar (spec 8.4): an unread count, the latest notifications, and "Mark all as read".
 // It refreshes every minute while the page is visible.
 export function NotificationsBell({
   workspaces,
@@ -81,6 +80,7 @@ export function NotificationsBell({
 }) {
   const api = useApi();
   const [open, setOpen] = useState(false);
+  const headingId = useId();
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -119,64 +119,73 @@ export function NotificationsBell({
   };
 
   return (
-    <>
-      <HeaderGlobalAction
-        aria-label={unread > 0 ? `Notifications, ${String(unread)} unread` : 'Notifications'}
-        aria-expanded={open}
-        isActive={open}
-        onClick={() => {
-          setOpen(!open);
-        }}
-      >
-        {unread > 0 ? (
-          <span className="tenantry-bell">
-            <NotificationNew size={20} />
-            <span className="tenantry-bell__count" aria-hidden="true">
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={unread > 0 ? `Notifications, ${String(unread)} unread` : 'Notifications'}
+        >
+          <Bell aria-hidden="true" />
+          {unread > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] leading-none font-semibold text-primary-foreground"
+            >
               {unread > 9 ? '9+' : unread}
             </span>
-          </span>
-        ) : (
-          <BellIcon size={20} />
-        )}
-      </HeaderGlobalAction>
-      <HeaderPanel aria-label="Notifications" expanded={open} className="tenantry-notifications">
-        {/* Only while open: a collapsed panel would still take up width on small screens. */}
-        {open && (
-          <section aria-label="Notifications" className="tenantry-notifications__body">
-            <div className="tenantry-notifications__header">
-              <h2 className="tenantry-notifications__title">Notifications</h2>
-              {unread > 0 && (
-                <Button kind="ghost" size="sm" onClick={markAllRead}>
-                  Mark all as read
-                </Button>
-              )}
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent aria-labelledby={headingId} align="end" className="max-h-[28rem] w-[min(22rem,calc(100vw-2rem))] p-0">
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <h2 id={headingId} className="text-sm font-semibold">
+            Notifications
+          </h2>
+          {unread > 0 && (
+            <DropdownMenuItem
+              className="text-link"
+              onSelect={(event) => {
+                // Marking keeps the list open, so the person sees what changed.
+                event.preventDefault();
+                markAllRead();
+              }}
+            >
+              Mark all as read
+            </DropdownMenuItem>
+          )}
+        </div>
+        <DropdownMenuSeparator className="mx-0 my-0" />
+        <div className="flex flex-col gap-1 p-1">
+          {error !== null && (
+            <div className="p-2">
+              <ApiErrorNotification error={error} />
             </div>
-            <ApiErrorNotification error={error} />
-            {!feed && !error && <InlineLoading description="Loading notifications" />}
-            {feed?.items.length === 0 && (
-              <p className="tenantry-notifications__empty">You&apos;re all caught up.</p>
-            )}
-            <ul className="tenantry-notifications__list">
-              {feed?.items.map((item) => {
-                const Icon = ICONS[item.kind];
-                const href = linkHref(item.link, workspaces);
-                return (
-                  <li key={item.id} data-unread={item.unread ? 'true' : 'false'}>
-                    <a className="tenantry-notifications__item" href={href ?? '#'}>
-                      <Icon size={20} aria-hidden="true" className="tenantry-notifications__icon" />
-                      <span className="tenantry-notifications__text">
-                        <span className="tenantry-notifications__item-title">{item.title}</span>
-                        {item.body && <span className="tenantry-notifications__item-body">{item.body}</span>}
-                        <span className="tenantry-notifications__time">{timeAgo(item.createdAt, now())}</span>
-                      </span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-      </HeaderPanel>
-    </>
+          )}
+          {!feed && !error && <Loading description="Loading notifications" />}
+          {feed?.items.length === 0 && (
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
+          )}
+          {feed?.items.map((item) => {
+            const Icon = ICONS[item.kind];
+            const href = linkHref(item.link, workspaces);
+            return (
+              <DropdownMenuItem key={item.id} asChild data-unread={item.unread ? 'true' : 'false'}>
+                <a href={href ?? '#'} className="items-start gap-3 py-2">
+                  <Icon aria-hidden="true" className="mt-0.5" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="font-medium text-foreground">{item.title}</span>
+                    {item.body && <span className="text-muted-foreground">{item.body}</span>}
+                    <span className="text-xs text-muted-foreground">{timeAgo(item.createdAt, now())}</span>
+                  </span>
+                  {item.unread && <span aria-label="Unread" className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                </a>
+              </DropdownMenuItem>
+            );
+          })}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

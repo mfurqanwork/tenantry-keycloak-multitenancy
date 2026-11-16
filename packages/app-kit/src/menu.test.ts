@@ -1,5 +1,5 @@
 import { ROLE_PERMISSIONS, type Permission } from '@tenantry/auth';
-import { Folder, Home, Launch, UserMultiple } from '@carbon/icons-react';
+import { Folder, House, KeyRound, Users } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import { workspaceMenu, type MenuPerson } from './menu.js';
 import type { Workspace } from './workspaces.js';
@@ -43,12 +43,12 @@ describe('workspaceMenu (spec 8.1)', () => {
       'Audit log',
       'Advanced[Directory sync (SCIM),Customer apps,Keycloak console]',
     ]);
-    expect(menu.find((i) => i.label === 'Home')?.icon).toBe(Home);
+    expect(menu.find((i) => i.label === 'Home')?.icon).toBe(House);
     expect(menu.find((i) => i.label === 'Projects')?.icon).toBe(Folder);
-    expect(menu.find((i) => i.label === 'People')?.icon).toBe(UserMultiple);
+    expect(menu.find((i) => i.label === 'People')?.icon).toBe(Users);
     expect(menu.find((i) => i.label === 'People')?.section).toBe('Workspace');
     const console = menu.find((i) => i.children)?.children?.find((c) => c.label === 'Keycloak console');
-    expect(console).toMatchObject({ external: true, icon: Launch });
+    expect(console).toMatchObject({ external: true, icon: KeyRound });
   });
 
   it("links pages in the other app by their full address, and this app's by path", () => {

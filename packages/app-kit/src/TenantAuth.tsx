@@ -1,4 +1,3 @@
-import { InlineLoading } from '@carbon/react';
 import {
   AuthProvider,
   CALLBACK_PATH,
@@ -9,6 +8,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { LoadMe } from './me.js';
 import { SignedInApi } from './SignedInApi.js';
+import { Loading } from './Loading.js';
 
 export interface TenantSession {
   signOut: () => void;
@@ -48,9 +48,9 @@ export function TenantAuth({
   );
 
   if (config === null) return notFound;
-  if (!client) return <InlineLoading description="Loading" />;
+  if (!client) return <Loading description="Loading" />;
   return (
-    <AuthProvider client={client} fallback={<InlineLoading description="Signing in" />}>
+    <AuthProvider client={client} fallback={<Loading description="Signing in" />}>
       <SignedInApi>
         <LoadMe>
           {children({

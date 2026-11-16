@@ -125,17 +125,17 @@ describe('Admin (ADR-0027)', () => {
 
   it("switches to another workspace's Admin, and to this workspace's Tenantry", async () => {
     renderPortal(<App />, { api: api(), me: makeMe('owner', OWNER) });
-    await userEvent.click(await screen.findByRole('button', { name: 'Switch workspace' }));
-    expect(
-      within(screen.getByRole('navigation', { name: 'Switch workspace' })).getByRole('link', {
-        name: /Globex/,
-      }),
-    ).toHaveAttribute('href', 'http://globex.portal.tenantry.localhost/');
-    await userEvent.click(screen.getByRole('button', { name: 'Switch app' }));
-    expect(
-      within(screen.getByRole('navigation', { name: 'Switch app' })).getByRole('link', {
-        name: /^Tenantry$/,
-      }),
-    ).toHaveAttribute('href', 'http://acme.tenantry.localhost/');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Switch workspace' }));
+    expect(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Globex/ })).toHaveAttribute(
+      'href',
+      'http://globex.portal.tenantry.localhost/',
+    );
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Switch app' }));
+    expect(within(screen.getByRole('menu')).getByRole('menuitem', { name: /^Tenantry$/ })).toHaveAttribute(
+      'href',
+      'http://acme.tenantry.localhost/',
+    );
   });
 });

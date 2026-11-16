@@ -319,12 +319,6 @@ importers:
 
   packages/app-kit:
     dependencies:
-      '@carbon/icons-react':
-        specifier: ^11.91.0
-        version: 11.91.0(react@19.3.1)
-      '@carbon/react':
-        specifier: ^1.119.0
-        version: 1.119.0(react-dom@19.3.1(react@19.3.1))(react-is@18.3.1)(react@19.3.1)(sass@1.107.1)
       '@tenantry/auth':
         specifier: workspace:*
         version: link:../auth
@@ -337,6 +331,12 @@ importers:
       '@tenantry/ui':
         specifier: workspace:*
         version: link:../ui
+      cmdk:
+        specifier: ^1.1.1
+        version: 1.1.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      lucide-react:
+        specifier: ^1.73.0
+        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.2

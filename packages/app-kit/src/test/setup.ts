@@ -22,3 +22,10 @@ globalThis.ResizeObserver = class {
   unobserve(): void {}
   disconnect(): void {}
 };
+
+// jsdom lacks the pointer-capture and scrolling calls Radix menus and cmdk make.
+Object.assign(Element.prototype, {
+  hasPointerCapture: () => false,
+  releasePointerCapture: () => undefined,
+  scrollIntoView: () => undefined,
+});
