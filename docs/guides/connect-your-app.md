@@ -40,7 +40,7 @@ The app's page shows what to configure in your app:
 
 **The client secret is shown once**, when you register a web or machine-to-machine app and each time you rotate its secret. Tenantry does not keep it. If it is lost, rotate it: the old secret stops working at once.
 
-The **Set up** tab has snippets for Node (`openid-client`), the browser (`oidc-client-ts`) and `curl`, filled with your app's values. [`examples/customer-app`](../../examples/customer-app/README.md) is the Node snippet as a running app.
+The **Set up** tab has snippets for Node (`openid-client`), the browser (`oidc-client-ts`) and `curl`, filled with your app's values.
 
 ## Test it
 
@@ -55,4 +55,4 @@ Your app's tokens carry who signed in (`sub`, `email`, `name`), not their role i
 
 ## Operators
 
-`pnpm ops apps list|register|rotate --tenant <slug>` does the same through the API's operator routes, audited as coming from ops. `pnpm seed` uses it to register the demo's "Initech HR".
+`pnpm ops apps list|register|rotate --tenant <slug>` does the same through the API's operator routes, audited as coming from ops.

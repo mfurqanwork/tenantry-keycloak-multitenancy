@@ -15,7 +15,6 @@ import { linkIdp } from '../commands/idp.js';
 import type { OpsDeps } from '../deps.js';
 import { verificationRecord } from '../dns/txt.js';
 import type { ApiCall } from './http.js';
-import { ensureExampleApp, type ExampleAppDeps } from './example-app.js';
 import { solidPng } from './png.js';
 
 type Group = 'owners' | 'admins' | 'members';
@@ -77,10 +76,6 @@ export interface SeedDeps extends OpsDeps {
   setTxt: (name: string, value: string) => void;
   // A tenantry-ops client-credentials token, for the operator-only enterprise endpoints.
   operatorToken: () => Promise<string>;
-  // Where the example customer app reaches Keycloak, and its settings file (Phase 4).
-  authInternalUrl: string;
-  // Null in production: the example app's redirect is a local address.
-  exampleAppEnv: ExampleAppDeps['envFile'] | null;
 }
 
 // Creates or completes the demo; a second run changes nothing.
@@ -273,13 +268,5 @@ async function ensureEnterprise(deps: SeedDeps, changes: string[]) {
       });
     });
     changes.push(`${ENTERPRISE.slug} colour and logo`);
-  }
-  if (deps.exampleAppEnv) {
-    const exampleApp = await ensureExampleApp({
-      ...operator,
-      authInternalUrl: deps.authInternalUrl,
-      envFile: deps.exampleAppEnv,
-    });
-    if (exampleApp) changes.push(exampleApp);
   }
 }
