@@ -4,6 +4,10 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Removed
+
+- The example customer app (`examples/customer-app`, `pnpm example:customer-app`) and the "Initech HR" app the seed registered for it. Customer apps stay; the single sign-on check with an outside app moves to PengOPA, tested by hand.
+
 ## [0.6.2] - 2026-11-10
 
 ### Fixed

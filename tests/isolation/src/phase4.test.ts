@@ -1,5 +1,3 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { authorizeUrl, Browser, signInWithBrowser } from './helpers/browser-flow.js';
 import { BASE_DOMAIN, env, HTTP_PORT, KEYCLOAK_URL } from './helpers/env.js';
@@ -8,8 +6,8 @@ import { signupTenant, type TestTenant } from './helpers/tenants.js';
 
 // Phase 4 (ADR-0011): customer apps in the seeded enterprise demo, Initech.
 const INITECH = { slug: 'initech', realm: 'ent-initech', owner: 'owner@initech.test' };
-const EXAMPLE = { url: 'http://127.0.0.1:4000', redirect: 'http://127.0.0.1:4000/callback' };
-const EXAMPLE_DIR = fileURLToPath(new URL('../../../examples/customer-app/', import.meta.url));
+// A redirect for an app that never runs: the test stops at Keycloak's answer.
+const APP_REDIRECT = 'http://127.0.0.1:4000/callback';
 const port = HTTP_PORT === 80 ? '' : `:${String(HTTP_PORT)}`;
 const webRedirect = `http://${INITECH.slug}.${BASE_DOMAIN}${port}/`;
 
@@ -73,13 +71,13 @@ describe('guarantee: customer apps (Phase 4)', () => {
   });
 
   it("does not let a user of another tenant sign in to Initech's app", async () => {
-    const hr = await register({ name: 'Iso HR', type: 'web', redirectUris: [EXAMPLE.redirect] });
-    const browser = new Browser(EXAMPLE.redirect);
+    const hr = await register({ name: 'Iso HR', type: 'web', redirectUris: [APP_REDIRECT] });
+    const browser = new Browser(APP_REDIRECT);
     const login = await browser.open(
       authorizeUrl({
         realm: INITECH.realm,
         clientId: hr.app.clientId,
-        redirectUri: EXAMPLE.redirect,
+        redirectUri: APP_REDIRECT,
         challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
       }),
     );
@@ -87,7 +85,7 @@ describe('guarantee: customer apps (Phase 4)', () => {
       username: standard.owner.email,
       password: standard.owner.password,
     });
-    expect(done.url.startsWith(EXAMPLE.redirect)).toBe(false);
+    expect(done.url.startsWith(APP_REDIRECT)).toBe(false);
     expect(done.html).toMatch(/Invalid username or password/i);
   });
 
@@ -106,74 +104,4 @@ describe('guarantee: customer apps (Phase 4)', () => {
     const me = await api(tenantHost(INITECH.slug), 'GET', '/api/me', { token: access_token });
     expect(me.status).toBe(401);
   });
-});
-
-describe('single sign-on with the example customer app', () => {
-  let child: ChildProcess | null = null;
-
-  afterAll(() => {
-    child?.kill();
-  });
-
-  it('signs in without a login page after Tenantry, and its sign-out ends the Tenantry session', async () => {
-    const hr = await register({
-      name: 'Iso example',
-      type: 'web',
-      redirectUris: [EXAMPLE.redirect],
-      postLogoutRedirectUris: [`${EXAMPLE.url}/`],
-    });
-    const answering = await fetch(EXAMPLE.url).then(
-      () => true,
-      () => false,
-    );
-    if (answering) throw new Error(`Something already answers on ${EXAMPLE.url}; stop it and run again.`);
-    child = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], {
-      cwd: EXAMPLE_DIR,
-      env: {
-        ...process.env,
-        ISSUER: hr.app.connection.issuer,
-        CLIENT_ID: hr.app.clientId,
-        CLIENT_SECRET: hr.clientSecret ?? '',
-        AUTH_INTERNAL_URL: KEYCLOAK_URL,
-      },
-      stdio: 'ignore',
-    });
-    for (let i = 0; i < 60; i++) {
-      if (
-        await fetch(EXAMPLE.url).then(
-          (r) => r.ok,
-          () => false,
-        )
-      )
-        break;
-      await new Promise((r) => setTimeout(r, 500));
-    }
-
-    const browser = new Browser(webRedirect);
-    await signInWithBrowser({
-      realm: INITECH.realm,
-      clientId: 'tenantry-web',
-      redirectUri: webRedirect,
-      username: INITECH.owner,
-      password: env('SEED_PASSWORD'),
-      browser,
-    });
-    browser.stopAt = 'http://stop.invalid/';
-    const home = await browser.open(`${EXAMPLE.url}/login`);
-    expect(home.url).toBe(`${EXAMPLE.url}/`);
-    expect(home.html).toContain(`Signed in as ${INITECH.owner}`);
-
-    await browser.open(`${EXAMPLE.url}/logout`);
-    browser.stopAt = webRedirect;
-    const again = await browser.open(
-      authorizeUrl({
-        realm: INITECH.realm,
-        clientId: 'tenantry-web',
-        redirectUri: webRedirect,
-        challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-      }),
-    );
-    expect(again.url.startsWith(webRedirect)).toBe(false);
-    expect(again.status).toBe(200);
-  }, 60000);
 });

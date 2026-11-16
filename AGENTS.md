@@ -15,7 +15,6 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory`, `RealmProvisioner`, `RealmApps` (customer apps, ADR-0011), `RealmScim` (the native SCIM behind our gateway, ADR-0024), `RealmConsole` (console access, ADR-0026), and `RealmBridge` and `RealmIdps` (moving a workspace to Enterprise, ADR-0025); `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
 - `packages/oidc-client`: the only code that imports `oidc-client-ts`.
 - `tests/isolation`: the README guarantees, run against the whole stack.
-- `examples/customer-app`: an outside app on an enterprise realm (`pnpm example:customer-app`); `pnpm seed` writes its git-ignored `.env`.
 - `apps/ops`: the operator command line (`pnpm ops`). It calls Keycloak through `packages/keycloak-admin` with its own service account, `tenantry-ops`, and builds enterprise tenants through the API's operator endpoints.
 - `infra/prod/`: the live stack and its deploy scripts (ADR-0029); `docs/guides/deploy-azure.md` is the setup.
 - `infra/`: Compose, Caddy, the Keycloak realms (`platform`, and the dev-only `corp-demo`), CoreDNS (dev only) and the Postgres init script.

@@ -7,7 +7,7 @@ export interface Snippet {
 }
 
 // Copy-paste setup per app type, filled with this app's values (ADR-0011). The secret is never filled in:
-// it was shown once, and the person pastes it themselves. examples/customer-app is the Node one, running.
+// it was shown once, and the person pastes it themselves.
 export function snippetsFor(app: AppView, secretPlaceholder = '<your client secret>'): Snippet[] {
   const { issuer, clientId, scopes } = app.connection;
   const redirect = app.redirectUris[0] ?? '<your redirect URI>';

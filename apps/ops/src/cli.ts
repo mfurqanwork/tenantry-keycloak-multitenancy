@@ -1,6 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createAppPool, createDb } from '@tenantry/db';
@@ -52,8 +50,6 @@ const USAGE = `Usage: pnpm ops <command>
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const ZONE_FILE = fileURLToPath(new URL('../../../infra/dns/zones/test.db', import.meta.url));
-// The example customer app's settings, written by the seed (git-ignored; it holds a secret).
-const EXAMPLE_ENV = fileURLToPath(new URL('../../../examples/customer-app/.env', import.meta.url));
 
 // SIGUSR1 makes CoreDNS reload its configuration and zones, in place.
 function reloadDns(): void {
@@ -179,16 +175,6 @@ async function seedWith(deps: OpsDeps): Promise<number> {
       if (production) dns.setTxt(name, value);
       else setTxt(ZONE_FILE, name, value, zoneOut, reloadDns);
     },
-    authInternalUrl: internal,
-    exampleAppEnv: production
-      ? null
-      : {
-          read: () => (existsSync(EXAMPLE_ENV) ? readFileSync(EXAMPLE_ENV, 'utf8') : null),
-          write: (text) => {
-            mkdirSync(dirname(EXAMPLE_ENV), { recursive: true });
-            writeFileSync(EXAMPLE_ENV, text, { mode: 0o600 });
-          },
-        },
   });
 }
 
