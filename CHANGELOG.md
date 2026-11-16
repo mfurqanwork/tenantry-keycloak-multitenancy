@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-16
+
 ### Changed
 
 - Tenantry and the welcome page wear the Pengopal brand: new components, sidebar shell, Geist, Lucide and technology logos (ADR-0031). Admin's pages keep Carbon inside the new shell until they move.
@@ -160,7 +162,8 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.6.0...v0.6.1
