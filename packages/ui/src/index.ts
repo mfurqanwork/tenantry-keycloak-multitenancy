@@ -1,3 +1,4 @@
+export { cn } from './lib/cn.js';
 export { applyBrand } from './brand.js';
 export { AppShell, type NavItem, type WorkspaceEntry } from './shell/AppShell.js';
 export type { SwitcherEntry } from './shell/HeaderSwitcher.js';
