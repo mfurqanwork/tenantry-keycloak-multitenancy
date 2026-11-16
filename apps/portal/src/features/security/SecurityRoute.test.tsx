@@ -63,6 +63,13 @@ describe('SecurityRoute', () => {
     expect(await screen.findByText(/Keycloak refused these settings/)).toBeInTheDocument();
   });
 
+  it('is built from the new components, with no Carbon left', async () => {
+    setup();
+    await field('Minimum length');
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
+    expect(screen.getByRole('radiogroup', { name: 'Two-step sign-in' })).toBeInTheDocument();
+  });
+
   it('explains Standard workspaces without asking the API', async () => {
     const api = fakeApi();
     renderPortal(<SecurityRoute />, {

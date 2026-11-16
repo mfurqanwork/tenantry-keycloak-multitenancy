@@ -67,11 +67,10 @@ describe('PeopleRoute', () => {
     renderPage(<PeopleRoute />, { api, me: makeMe('owner', ALL) });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Actions for bob@example.com' }));
-    // jsdom does no layout, so Carbon's floating menu stays visibility: hidden (no accessible names);
-    // pick the item by its text. The browser check covers the real menu.
-    await user.click(await screen.findByText('Change role'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Change role' }));
     const dialog = await screen.findByRole('dialog', { name: 'Change role' });
-    await user.selectOptions(within(dialog).getByLabelText('Role'), 'admin');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Role' }));
+    await user.click(await screen.findByRole('option', { name: 'Admin' }));
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(api.patch).toHaveBeenCalledWith('/api/members/u-bob', { role: 'admin' });
     expect(await within(dialog).findByText('A workspace needs at least one owner.')).toBeInTheDocument();
@@ -110,11 +109,11 @@ describe('PeopleRoute: console access (enterprise)', () => {
   it('shows who has console access', async () => {
     renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
     const tag = await screen.findByText('Console access');
-    expect(tag.closest('.cds--tag')).not.toBeNull();
+    expect(tag.closest('[data-slot="badge"]')).not.toBeNull();
     expect(
       within(tag.closest('td') as HTMLElement)
         .getByText('Admin')
-        .closest('.cds--tag'),
+        .closest('[data-slot="badge"]'),
     ).not.toBeNull();
   });
 
@@ -126,12 +125,12 @@ describe('PeopleRoute: console access (enterprise)', () => {
     });
     renderPage(<PeopleRoute />, { api, me: enterpriseOwner() });
     let user = await menu('me@example.com');
-    await user.click(await screen.findByText('Give console access'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Give console access' }));
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/api/members/u-me/console', {});
     });
     user = await menu('ann@example.com');
-    await user.click(await screen.findByText('Take console access away'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Take console access away' }));
     await waitFor(() => {
       expect(api.del).toHaveBeenCalledWith('/api/members/u-ann/console');
     });
@@ -142,25 +141,25 @@ describe('PeopleRoute: console access (enterprise)', () => {
     const api = fakeApi({ '/api/members': ENT, 'POST /api/members/u-me/console': never });
     renderPage(<PeopleRoute />, { api, me: enterpriseOwner() });
     let user = await menu('me@example.com');
-    await user.click(await screen.findByText('Give console access'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Give console access' }));
     user = await menu('me@example.com');
-    const item = (await screen.findByText('Give console access')).closest('button');
-    expect(item).toBeDisabled();
+    const item = await screen.findByRole('menuitem', { name: 'Give console access' });
+    expect(item).toHaveAttribute('aria-disabled', 'true');
     expect(api.post).toHaveBeenCalledTimes(1);
   });
 
   it("offers nothing for a member's row", async () => {
     renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': ENT }), me: enterpriseOwner() });
     await menu('bob@example.com');
-    expect(await screen.findByText('Change role')).toBeInTheDocument();
-    expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Change role' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /console access/ })).not.toBeInTheDocument();
   });
 
   it('offers nothing on a Standard workspace', async () => {
     renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
     await menu('bob@example.com');
-    expect(await screen.findByText('Change role')).toBeInTheDocument();
-    expect(screen.queryByText(/console access/)).not.toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Change role' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /console access/ })).not.toBeInTheDocument();
   });
 
   it("shows the API's refusal", async () => {
@@ -174,7 +173,7 @@ describe('PeopleRoute: console access (enterprise)', () => {
       me: enterpriseOwner(),
     });
     const user = await menu('ann@example.com');
-    await user.click(await screen.findByText('Take console access away'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Take console access away' }));
     expect(await screen.findByText(/The identity service is unavailable/)).toBeInTheDocument();
   });
 });
@@ -191,7 +190,29 @@ describe('PeopleRoute, redesigned (spec 8.2)', () => {
     renderPage(<PeopleRoute />, { api: fakeApi({ '/api/members': LIST }), me: makeMe('owner', ALL) });
     const bob = (await screen.findByText('Bob')).closest('tr') as HTMLElement;
     expect(within(bob).getByText('BO')).toBeInTheDocument();
-    expect(within(bob).getByText('Member').closest('.cds--tag')).not.toBeNull();
+    expect(within(bob).getByText('Member').closest('[data-slot="badge"]')).not.toBeNull();
+  });
+
+  it('row menu offers change role, console access and remove', async () => {
+    const ENT = {
+      members: [
+        { userId: 'u-me', email: 'me@example.com', displayName: 'Me', role: 'owner', console: false },
+        { userId: 'u-ann', email: 'ann@example.com', displayName: 'Ann', role: 'admin', console: false },
+      ],
+      invites: [],
+    };
+    const me = makeMe('owner', [...ALL, 'tenant:settings']);
+    renderPage(<PeopleRoute />, {
+      api: fakeApi({ '/api/members': ENT }),
+      me: { ...me, tenant: { ...me.tenant, tier: 'enterprise' as const } },
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Actions for ann@example.com' }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((i) => i.textContent)).toEqual(['Change role', 'Give console access', 'Remove']);
+    for (const item of items) expect(item.querySelector('svg, img')).not.toBeNull();
+    expect(items[2]).toHaveAttribute('data-variant', 'destructive');
+    expect(screen.getByRole('button', { name: 'Invite member', hidden: true }).querySelector('svg')).not.toBeNull();
   });
 
   it('filters people by name or email, starting from the address (search results)', async () => {

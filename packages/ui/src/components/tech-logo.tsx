@@ -39,21 +39,25 @@ const TECH: Record<TechName, { label: string; icon?: SimpleIcon }> = {
 
 /**
  * A technology's logo, in one colour (`currentColor`) so it suits both themes. Alone it is an image named
- * after the technology; with `withLabel` the name is written after it and the glyph is decorative.
+ * after the technology; with `withLabel` the name is written after it and the glyph is decorative; with
+ * `decorative` the glyph is hidden because text beside it (a menu item, a button) already says what it is.
  */
 export function TechLogo({
   name,
   size = 16,
   withLabel = false,
+  decorative = false,
   className,
 }: {
   name: TechName;
   size?: number;
   withLabel?: boolean;
+  decorative?: boolean;
   className?: string;
 }) {
   const { label, icon } = TECH[name];
   if (!icon) {
+    if (decorative) return null;
     return <span className={cn('text-sm font-medium', className)}>{label}</span>;
   }
   const glyph = (
@@ -63,7 +67,7 @@ export function TechLogo({
       height={size}
       fill="currentColor"
       className={cn('shrink-0', !withLabel && className)}
-      {...(withLabel ? { 'aria-hidden': true } : { role: 'img', 'aria-label': label })}
+      {...(withLabel || decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': label })}
     >
       <path d={icon.path} />
     </svg>

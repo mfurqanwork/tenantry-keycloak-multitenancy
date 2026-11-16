@@ -24,6 +24,17 @@ describe('TechLogo', () => {
     expect(document.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('decorative hides the glyph beside text that already names it', () => {
+    render(
+      <button type="button">
+        <TechLogo name="keycloak" decorative />
+        Give console access
+      </button>,
+    );
+    expect(screen.getByRole('button', { name: 'Give console access' })).toBeInTheDocument();
+    expect(document.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('takes a size', () => {
     render(<TechLogo name="docker" size={24} />);
     expect(screen.getByRole('img', { name: 'Docker' })).toHaveAttribute('width', '24');

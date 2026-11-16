@@ -1,22 +1,11 @@
-import { Security } from '@carbon/icons-react';
-import {
-  FormGroup,
-  InlineLoading,
-  InlineNotification,
-  NumberInput,
-  RadioButton,
-  RadioButtonGroup,
-  Stack,
-  Tile,
-} from '@carbon/react';
 import { SECURITY_BOUNDS, securityProblems, type SecuritySettings, type TwoStep } from '@tenantry/auth';
-import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
-import { SettingsPage } from '@tenantry/ui';
-import { useState } from 'react';
+import { ApiErrorNotification, Loading, useApi, useMe, useResource } from '@tenantry/app-kit';
+import { FieldError, Input, Label, RadioGroup, RadioGroupItem, SettingsPage } from '@tenantry/ui';
+import { CircleCheck, Clock, KeyRound, Lock, ShieldCheck, Smartphone, type LucideIcon } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
 
 type NumberField = keyof typeof SECURITY_BOUNDS;
-
-import { ENTERPRISE_ONLY } from '../../lib/enterprise-only.js';
 
 const TWO_STEP: { value: TwoStep; label: string }[] = [
   { value: 'off', label: 'Off: a password is enough' },
@@ -26,10 +15,12 @@ const TWO_STEP: { value: TwoStep; label: string }[] = [
 
 const GROUPS: {
   legend: string;
+  icon: LucideIcon;
   fields: { key: NumberField; label: string; unit: string; help?: string }[];
 }[] = [
   {
     legend: 'Passwords',
+    icon: KeyRound,
     fields: [
       { key: 'passwordMinLength', label: 'Minimum length', unit: 'characters' },
       {
@@ -43,6 +34,7 @@ const GROUPS: {
   },
   {
     legend: 'Sessions',
+    icon: Clock,
     fields: [
       { key: 'sessionIdleMinutes', label: 'Idle timeout (minutes)', unit: 'minutes' },
       { key: 'sessionMaxHours', label: 'Longest session (hours)', unit: 'hours' },
@@ -50,6 +42,7 @@ const GROUPS: {
   },
   {
     legend: 'Lockout',
+    icon: Lock,
     fields: [
       { key: 'lockoutFailures', label: 'Failed attempts before lockout', unit: 'attempts' },
       { key: 'lockoutWaitMinutes', label: 'Wait after a lockout (minutes)', unit: 'minutes' },
@@ -62,6 +55,25 @@ const helper = (key: NumberField, unit: string, help?: string) => {
   return `From ${String(min)} to ${String(max)} ${unit}.${help ? ` ${help}` : ''}`;
 };
 
+// One settings group: a fieldset on a card, its legend with an icon.
+function Group({ legend, icon: Icon, children }: { legend: string; icon: LucideIcon; children: ReactNode }) {
+  return (
+    <fieldset className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
+      <legend className="float-left mb-1 flex w-full items-center gap-2 text-base font-semibold">
+        <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
+        {legend}
+      </legend>
+      {children}
+    </fieldset>
+  );
+}
+
+const header = {
+  title: 'Sign-in & security',
+  icon: ShieldCheck,
+  description: 'Two-step sign-in, passwords, sessions and lockout.',
+};
+
 // The sign-in rules of the workspace's own realm (owners: tenant:settings). The form checks with the
 // API's own rules (@tenantry/auth), and the API checks again.
 export function SecurityRoute() {
@@ -70,15 +82,13 @@ export function SecurityRoute() {
     return (
       <SettingsPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Sign-in & security"
-        icon={Security}
-        description="Two-step sign-in, passwords, sessions and lockout."
+        {...header}
         dirty={false}
         saving={false}
         onSave={() => undefined}
         onDiscard={() => undefined}
       >
-        <Tile>{ENTERPRISE_ONLY}</Tile>
+        <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{ENTERPRISE_ONLY}</p>
       </SettingsPage>
     );
   }
@@ -124,9 +134,7 @@ function EnterpriseSecurity() {
   return (
     <SettingsPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-      title="Sign-in & security"
-      icon={Security}
-      description="Two-step sign-in, passwords, sessions and lockout."
+      {...header}
       dirty={changed && valid}
       saving={saving}
       onSave={() => void save()}
@@ -135,59 +143,79 @@ function EnterpriseSecurity() {
         setError(null);
       }}
     >
-      <Stack gap={6}>
-        <ApiErrorNotification error={saved.error ?? error} />
+      <ApiErrorNotification error={saved.error ?? error} />
+      <div role="status">
         {done && (
-          <InlineNotification
-            kind="success"
-            lowContrast
-            hideCloseButton
-            title="Security settings saved."
-            subtitle="They apply to the next sign-in."
-          />
+          <p className="flex items-start gap-2 rounded-lg border border-success/40 bg-success-muted p-3 text-sm">
+            <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />
+            <span>
+              <span className="font-medium">Security settings saved.</span>{' '}
+              <span className="text-muted-foreground">They apply to the next sign-in.</span>
+            </span>
+          </p>
         )}
-        {!value && !saved.error && <InlineLoading description="Loading security settings" />}
-        {value && (
-          <>
-            <RadioButtonGroup
-              legendText="Two-step sign-in"
-              name="two-step"
-              orientation="vertical"
-              valueSelected={value.twoStep}
-              onChange={(v) => {
+      </div>
+      {!value && !saved.error && <Loading description="Loading security settings" />}
+      {value && (
+        <>
+          <Group legend="Two-step sign-in" icon={Smartphone}>
+            <RadioGroup
+              aria-label="Two-step sign-in"
+              value={value.twoStep}
+              onValueChange={(v) => {
                 set('twoStep', v as TwoStep);
               }}
+              className="flex flex-col gap-3"
             >
               {TWO_STEP.map((o) => (
-                <RadioButton key={o.value} id={`two-step-${o.value}`} value={o.value} labelText={o.label} />
+                <div key={o.value} className="flex items-center gap-2">
+                  <RadioGroupItem id={`two-step-${o.value}`} value={o.value} />
+                  <Label htmlFor={`two-step-${o.value}`} className="font-normal">
+                    {o.label}
+                  </Label>
+                </div>
               ))}
-            </RadioButtonGroup>
+            </RadioGroup>
+          </Group>
+          <div className="grid gap-6 lg:grid-cols-3">
             {GROUPS.map((group) => (
-              <FormGroup key={group.legend} legendText={group.legend}>
-                <Stack gap={5}>
-                  {group.fields.map((f) => (
-                    <NumberInput
-                      key={f.key}
-                      id={`security-${f.key}`}
-                      label={f.label}
-                      helperText={helper(f.key, f.unit, f.help)}
-                      min={SECURITY_BOUNDS[f.key].min}
-                      max={SECURITY_BOUNDS[f.key].max}
-                      allowEmpty
-                      value={Number.isNaN(value[f.key]) ? '' : value[f.key]}
-                      invalid={Boolean(problems[f.key])}
-                      invalidText={problems[f.key]}
-                      onChange={(_event, { value: v }) => {
-                        set(f.key, v === '' ? Number.NaN : Number(v));
-                      }}
-                    />
-                  ))}
-                </Stack>
-              </FormGroup>
+              <Group key={group.legend} legend={group.legend} icon={group.icon}>
+                {group.fields.map((f) => {
+                  const id = `security-${f.key}`;
+                  const problem = problems[f.key];
+                  return (
+                    <div key={f.key} className="flex flex-col gap-2">
+                      <Label htmlFor={id}>{f.label}</Label>
+                      <Input
+                        id={id}
+                        type="number"
+                        inputMode="numeric"
+                        className="tabular-nums"
+                        min={SECURITY_BOUNDS[f.key].min}
+                        max={SECURITY_BOUNDS[f.key].max}
+                        value={Number.isNaN(value[f.key]) ? '' : value[f.key]}
+                        aria-invalid={Boolean(problem)}
+                        aria-describedby={problem ? `${id}-error` : `${id}-help`}
+                        onChange={(event) => {
+                          const v = event.target.value;
+                          set(f.key, v === '' ? Number.NaN : Number(v));
+                        }}
+                      />
+                      {problem ? (
+                        <FieldError id={`${id}-error`}>{problem}</FieldError>
+                      ) : (
+                        <p id={`${id}-help`} className="text-sm text-muted-foreground">
+                          {helper(f.key, f.unit, f.help)}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </Group>
             ))}
-          </>
-        )}
-      </Stack>
+          </div>
+        </>
+      )}
     </SettingsPage>
   );
 }

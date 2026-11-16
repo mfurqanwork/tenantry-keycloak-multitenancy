@@ -1,6 +1,7 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ApiProblem } from '@tenantry/app-kit';
+import { brandTokens } from '@tenantry/brand';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeApi, makeMe, OWNER, renderPortal } from '../../test-utils.js';
 import { BrandingRoute } from './BrandingRoute.js';
@@ -60,7 +61,7 @@ describe('BrandingRoute', () => {
   it('uploads a logo', async () => {
     const { api, onChanged, user } = setup({ 'UPLOAD /api/branding/logo': {} });
     const file = new File([new Uint8Array([0x89, 0x50])], 'logo.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText(/Drag and drop a logo/), file);
+    await user.upload(screen.getByLabelText(/Upload a logo/), file);
     expect(api.upload).toHaveBeenCalledWith('/api/branding/logo', 'file', file);
     await waitFor(() => {
       expect(onChanged).toHaveBeenCalled();
@@ -70,8 +71,20 @@ describe('BrandingRoute', () => {
   it('refuses a logo over 256 KB before uploading it', async () => {
     const { api, user } = setup();
     const big = new File([new Uint8Array(262145)], 'big.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText(/Drag and drop a logo/), big);
+    await user.upload(screen.getByLabelText(/Upload a logo/), big);
     expect(await screen.findByText('The logo must be 256 KB or smaller.')).toBeInTheDocument();
     expect(api.upload).not.toHaveBeenCalled();
+  });
+
+  it('branding preview uses the chosen colour', async () => {
+    const { user } = setup();
+    await user.clear(await colour());
+    await user.type(await colour(), '#198038');
+    const preview = screen.getByRole('group', { name: 'Preview' });
+    expect(preview.style.getPropertyValue('--primary')).toBe(brandTokens('#198038').interactive);
+    // A colour applies, so the preview carries its own mark and Tenantry's opal frame stays off.
+    expect(preview).toHaveAttribute('data-brand', 'workspace');
+    expect(within(preview).getByRole('button', { name: 'Primary button' })).toBeInTheDocument();
+    expect(within(preview).getByRole('heading', { name: 'Sign in to Acme' })).toBeInTheDocument();
   });
 });

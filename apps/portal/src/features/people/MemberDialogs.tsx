@@ -1,5 +1,5 @@
-import { Select, SelectItem, TextInput } from '@carbon/react';
 import type { Role } from '@tenantry/auth';
+import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tenantry/ui';
 import { useState } from 'react';
 import { FormDialog, ROLE_LABELS, useApi } from '@tenantry/app-kit';
 
@@ -13,18 +13,26 @@ function RoleSelect({
   onChange: (role: Role) => void;
 }) {
   return (
-    <Select
-      id="member-role"
-      labelText="Role"
-      value={value}
-      onChange={(event) => {
-        onChange(event.target.value as Role);
-      }}
-    >
-      {roles.map((role) => (
-        <SelectItem key={role} value={role} text={ROLE_LABELS[role]} />
-      ))}
-    </Select>
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="member-role">Role</Label>
+      <Select
+        value={value}
+        onValueChange={(next) => {
+          onChange(next as Role);
+        }}
+      >
+        <SelectTrigger id="member-role">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {roles.map((role) => (
+            <SelectItem key={role} value={role}>
+              {ROLE_LABELS[role]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -51,16 +59,22 @@ export function InviteDialog({
       }}
       onClose={onClose}
     >
-      <TextInput
-        id="invite-email"
-        type="email"
-        labelText="Email"
-        helperText="They get an email with a link to join."
-        value={email}
-        onChange={(event) => {
-          setEmail(event.target.value);
-        }}
-      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="invite-email">Email</Label>
+        <Input
+          id="invite-email"
+          type="email"
+          autoComplete="off"
+          aria-describedby="invite-email-help"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+          }}
+        />
+        <p id="invite-email-help" className="text-sm text-muted-foreground">
+          They get an email with a link to join.
+        </p>
+      </div>
       <RoleSelect roles={roles} value={role} onChange={setRole} />
     </FormDialog>
   );
@@ -90,7 +104,7 @@ export function ChangeRoleDialog({
       }}
       onClose={onClose}
     >
-      <p>{member.email}</p>
+      <p className="text-sm text-muted-foreground">{member.email}</p>
       <RoleSelect roles={roles} value={role} onChange={setRole} />
     </FormDialog>
   );
@@ -120,7 +134,7 @@ export function RemoveMemberDialog({
       }}
       onClose={onClose}
     >
-      <p>
+      <p className="text-sm">
         Remove {member.email ?? 'this person'} from {tenantName}? They lose access at once.
       </p>
     </FormDialog>
