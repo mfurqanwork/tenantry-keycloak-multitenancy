@@ -32,6 +32,12 @@ export const WORKSPACES = [
   { slug: 'globex', name: 'Globex', color: '#198038', owner: 'gil@example.test' },
 ] as const;
 
+// A few projects, so Home and Projects show a workspace in use.
+export const PROJECTS: Record<string, string[]> = {
+  pengopal: ['Website relaunch', 'Mobile app', 'Partner portal', 'Security review'],
+  globex: ['Data warehouse'],
+};
+
 export const PEOPLE: Person[] = [
   { email: 'ada@example.test', firstName: 'Ada', lastName: 'Pengopal', workspaces: { pengopal: 'owners' } },
   { email: 'ben@example.test', firstName: 'Ben', lastName: 'Pengopal', workspaces: { pengopal: 'admins' } },
@@ -112,6 +118,13 @@ export async function seed(deps: SeedDeps): Promise<number> {
     if (!tenant?.kcOrgId) throw new Error(`workspace ${w.slug} has no organization`);
     await ensureMembers(deps, tenant, changes);
     await ensureBranding(deps, tenant, w, changes);
+    const added = await ensureProjects(
+      deps.api,
+      `${tenant.slug}.${deps.baseDomain}`,
+      await deps.tokenFor(w.owner, tenant.slug),
+      PROJECTS[w.slug] ?? [],
+    );
+    if (added > 0) changes.push(`${String(added)} project${added === 1 ? '' : 's'} in ${tenant.slug}`);
   }
 
   const demo = await platform.findTenantBySlug(COMPANY.tenant);
@@ -138,6 +151,26 @@ async function ensureMembers(deps: SeedDeps, tenant: TenantRecord, changes: stri
       changes.push(`${p.email} in ${tenant.slug} as ${group}`);
     }
   }
+}
+
+// Creates the named projects a workspace does not have yet; returns how many it created.
+export async function ensureProjects(
+  api: ApiCall,
+  host: string,
+  token: string,
+  names: string[],
+): Promise<number> {
+  const res = await api<{ projects: { name: string }[] }>(host, 'GET', '/api/projects', { token });
+  if (res.status !== 200) throw new Error(`projects ${host}: ${String(res.status)}`);
+  const have = new Set(res.body.projects.map((p) => p.name));
+  let added = 0;
+  for (const name of names) {
+    if (have.has(name)) continue;
+    const made = await api(host, 'POST', '/api/projects', { token, body: { name } });
+    if (made.status !== 201) throw new Error(`project ${name} in ${host}: ${String(made.status)}`);
+    added += 1;
+  }
+  return added;
 }
 
 async function ensureBranding(
