@@ -1,12 +1,4 @@
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  type IconComponent,
-} from '@tenantry/ui';
+import { Button, Popover, PopoverContent, PopoverTrigger, type IconComponent } from '@tenantry/ui';
 import { Bell, Building2, Clock, Mail, ShieldCheck, User, Users } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { ApiErrorNotification } from '../ApiErrorNotification.js';
@@ -118,9 +110,17 @@ export function NotificationsBell({
     );
   };
 
+  // Entries with no address (no current workspace to build one from) are left out rather than linked to "#".
+  const entries = (feed?.items ?? []).flatMap((item) => {
+    const href = linkHref(item.link, workspaces);
+    return href ? [{ item, href }] : [];
+  });
+
+  // A panel, not a menu (Review Focus 3): a screen reader reads its heading, status text and unread marks in
+  // order, which a menu's item-to-item movement skips.
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
@@ -137,26 +137,18 @@ export function NotificationsBell({
             </span>
           )}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent aria-labelledby={headingId} align="end" className="max-h-[28rem] w-[min(22rem,calc(100vw-2rem))] p-0">
-        <div className="flex items-center justify-between gap-2 px-3 py-2">
+      </PopoverTrigger>
+      <PopoverContent aria-labelledby={headingId} align="end" className="max-h-[28rem] w-[min(22rem,calc(100vw-2rem))]">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <h2 id={headingId} className="text-sm font-semibold">
             Notifications
           </h2>
           {unread > 0 && (
-            <DropdownMenuItem
-              className="text-link"
-              onSelect={(event) => {
-                // Marking keeps the list open, so the person sees what changed.
-                event.preventDefault();
-                markAllRead();
-              }}
-            >
+            <Button variant="ghost" size="sm" className="text-link" onClick={markAllRead}>
               Mark all as read
-            </DropdownMenuItem>
+            </Button>
           )}
         </div>
-        <DropdownMenuSeparator className="mx-0 my-0" />
         <div className="flex flex-col gap-1 p-1">
           {error !== null && (
             <div className="p-2">
@@ -164,28 +156,39 @@ export function NotificationsBell({
             </div>
           )}
           {!feed && !error && <Loading description="Loading notifications" />}
-          {feed?.items.length === 0 && (
+          {feed && entries.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
           )}
-          {feed?.items.map((item) => {
-            const Icon = ICONS[item.kind];
-            const href = linkHref(item.link, workspaces);
-            return (
-              <DropdownMenuItem key={item.id} asChild data-unread={item.unread ? 'true' : 'false'}>
-                <a href={href ?? '#'} className="items-start gap-3 py-2">
-                  <Icon aria-hidden="true" className="mt-0.5" />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="font-medium text-foreground">{item.title}</span>
-                    {item.body && <span className="text-muted-foreground">{item.body}</span>}
-                    <span className="text-xs text-muted-foreground">{timeAgo(item.createdAt, now())}</span>
-                  </span>
-                  {item.unread && <span aria-label="Unread" className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
-                </a>
-              </DropdownMenuItem>
-            );
-          })}
+          {entries.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {entries.map(({ item, href }) => {
+                const Icon = ICONS[item.kind];
+                return (
+                  <li key={item.id} data-unread={item.unread ? 'true' : 'false'}>
+                    <a
+                      href={href}
+                      className="focus-ring flex items-start gap-3 rounded-md px-2 py-2 text-sm outline-none hover:bg-accent"
+                    >
+                      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="font-medium text-foreground">{item.title}</span>
+                        {item.body && <span className="text-muted-foreground">{item.body}</span>}
+                        <span className="text-xs text-muted-foreground">{timeAgo(item.createdAt, now())}</span>
+                      </span>
+                      {item.unread && (
+                        <>
+                          <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
+                          <span className="sr-only">Unread</span>
+                        </>
+                      )}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   );
 }

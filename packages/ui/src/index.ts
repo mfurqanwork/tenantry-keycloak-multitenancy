@@ -33,6 +33,7 @@ export {
   DropdownMenuTrigger,
 } from './components/dropdown-menu.js';
 export { Kbd } from './components/kbd.js';
+export { Popover, PopoverContent, PopoverTrigger } from './components/popover.js';
 export { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from './components/sheet.js';
 export { Skeleton } from './components/skeleton.js';
 export { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from './components/table.js';
