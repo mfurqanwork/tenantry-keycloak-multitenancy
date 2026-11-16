@@ -4,13 +4,17 @@ export const THEME_STORAGE_KEY = 'tenantry.theme';
 
 const VALUES: readonly ThemePreference[] = ['system', 'light', 'dark'];
 
-// Storage can be missing or throw (private windows, blocked site data); the OS theme is the fallback.
-export function readPreference(storage: Storage = globalThis.localStorage): ThemePreference {
+// Storage can be missing or throw (private windows, blocked site data); then the fallback applies,
+// the OS theme unless the page says otherwise.
+export function readPreference(
+  storage: Storage = globalThis.localStorage,
+  fallback: ThemePreference = 'system',
+): ThemePreference {
   try {
     const value = storage.getItem(THEME_STORAGE_KEY);
-    return VALUES.find((v) => v === value) ?? 'system';
+    return VALUES.find((v) => v === value) ?? fallback;
   } catch {
-    return 'system';
+    return fallback;
   }
 }
 

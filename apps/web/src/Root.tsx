@@ -12,7 +12,8 @@ export function Root() {
   const port = window.location.port ? `:${window.location.port}` : '';
   const signupUrl = `${window.location.protocol}//${BASE_DOMAIN}${port}/`;
   return (
-    <TenantryThemeProvider>
+    // The welcome page and signup start light; workspaces follow the system until the person picks.
+    <TenantryThemeProvider fallback={host.kind === 'apex' ? 'light' : 'system'}>
       {host.kind === 'apex' &&
         (apexPage(window.location.pathname) === 'signup' ? (
           <SignupApp baseDomain={BASE_DOMAIN} />

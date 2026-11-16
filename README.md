@@ -25,10 +25,7 @@
 
 </div>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/welcome-dark.webp">
-  <img src="docs/images/welcome-light.webp" alt="The Tenantry welcome page">
-</picture>
+<img src="docs/images/welcome-light.webp" alt="The Tenantry welcome page">
 
 ## The problem
 
@@ -73,52 +70,31 @@ The application code never needs to know which tier a workspace is on.
 
 Sign up and create a workspace in one screen. Invite people by email, give them a role (owner, admin, member), and see every change in the audit log. Home shows the workspace's numbers and the latest projects; a new owner first gets a setup card that walks them through the first minute.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/home-dark.webp">
-  <img src="docs/images/home-light.webp" alt="Home in the Pengopal workspace: people, open invites, projects and the latest projects">
-</picture>
+<img src="docs/images/home-light.webp" alt="Home in the Pengopal workspace: people, open invites, projects and the latest projects">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/audit-log-dark.webp">
-  <img src="docs/images/audit-log-light.webp" alt="Admin › Audit log: every change to people, sign-in and settings, newest first">
-</picture>
+<img src="docs/images/audit-log-light.webp" alt="Admin › Audit log: every change to people, sign-in and settings, newest first">
 
 ### Search and notifications
 
 Search pages, people and projects from the header, or press Ctrl+K. The bell tells you what changed: who joined, your role, security settings, a directory token about to expire, and invites from other workspaces. Each person sees only what their role allows.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.webp">
-  <img src="docs/images/search-light.webp" alt="Search across the workspace">
-</picture>
+<img src="docs/images/search-light.webp" alt="Search across the workspace">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/notifications-dark.webp">
-  <img src="docs/images/notifications-light.webp" alt="Notifications">
-</picture>
+<img src="docs/images/notifications-light.webp" alt="Notifications">
 
 ### One sign-in, two apps
 
 **Tenantry** is the product people use; **Admin** is where owners and admins manage the workspace. They share one menu and one sign-in, live on separate addresses, and signing out of one signs you out of both.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/admin-people-dark.webp">
-  <img src="docs/images/admin-people-light.webp" alt="Admin › People">
-</picture>
+<img src="docs/images/admin-people-light.webp" alt="Admin › People">
 
 ### Branding
 
 Each workspace sets a colour and a logo. Tenantry refuses a colour that white text can't be read on, and suggests a darker shade. The apps and the workspace's own login page take the brand.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/branding-dark.webp">
-  <img src="docs/images/branding-light.webp" alt="Admin › Branding: the colour, a live preview and the logo">
-</picture>
+<img src="docs/images/branding-light.webp" alt="Admin › Branding: the colour, a live preview and the logo">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/login-branded-dark.webp">
-  <img src="docs/images/login-branded-light.webp" alt="Pengopal's sign-in page in its own colour, with company login first">
-</picture>
+<img src="docs/images/login-branded-light.webp" alt="Pengopal's sign-in page in its own colour, with company login first">
 
 ### Company login
 

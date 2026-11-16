@@ -27,9 +27,16 @@ function useSystemDark(): boolean {
   return dark;
 }
 
-// Light or dark, following the OS unless the person picked one. The `dark` class on <html> drives the tokens.
-export function TenantryThemeProvider({ children }: { children: ReactNode }) {
-  const [preference, setStored] = useState<ThemePreference>(() => readPreference());
+// Light or dark, following the OS unless the person picked one; `fallback` is the theme before they pick
+// (the welcome page starts light). The `dark` class on <html> drives the tokens.
+export function TenantryThemeProvider({
+  children,
+  fallback = 'system',
+}: {
+  children: ReactNode;
+  fallback?: ThemePreference;
+}) {
+  const [preference, setStored] = useState<ThemePreference>(() => readPreference(undefined, fallback));
   const systemDark = useSystemDark();
   const resolved: ResolvedTheme =
     preference === 'dark' || (preference === 'system' && systemDark) ? 'dark' : 'light';

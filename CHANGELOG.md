@@ -4,6 +4,10 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+
+- The welcome page and signup start in the light theme, and the welcome page's header has a switch between light and dark. The README shows the light screenshots.
+
 ## [1.0.0] - 2026-11-17
 
 ### Changed

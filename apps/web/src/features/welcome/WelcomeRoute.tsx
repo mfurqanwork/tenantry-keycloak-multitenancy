@@ -1,5 +1,5 @@
-import { Badge, Button, TechLogo, TenantryMark, type TechName } from '@tenantry/ui';
-import { Database, KeyRound, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { Badge, Button, TechLogo, TenantryMark, useThemePreference, type TechName } from '@tenantry/ui';
+import { Database, KeyRound, Moon, ShieldCheck, Sun, type LucideIcon } from 'lucide-react';
 import { DemoSignIns } from './DemoSignIns.js';
 import { GoToWorkspace, workspaceUrl } from './GoToWorkspace.js';
 
@@ -95,6 +95,25 @@ function Screen({ file, alt, eager = false }: { file: string; alt: string; eager
   );
 }
 
+// Light or dark for the welcome page; the choice is kept for the next visit.
+function ThemeSwitch() {
+  const { resolved, setPreference } = useThemePreference();
+  const next = resolved === 'dark' ? 'light' : 'dark';
+  const Icon = resolved === 'dark' ? Sun : Moon;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Switch to ${next} theme`}
+      onClick={() => {
+        setPreference(next);
+      }}
+    >
+      <Icon aria-hidden="true" className="size-4" />
+    </Button>
+  );
+}
+
 // The base domain's front page (spec §4): what Tenantry is, and the ways in. No sign-in until one is chosen.
 export function WelcomeRoute({
   baseDomain,
@@ -125,6 +144,7 @@ export function WelcomeRoute({
           <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
             <a href="#go">Go to your workspace</a>
           </Button>
+          <ThemeSwitch />
           <Button asChild size="sm">
             <a href="/signup">Create a workspace</a>
           </Button>
