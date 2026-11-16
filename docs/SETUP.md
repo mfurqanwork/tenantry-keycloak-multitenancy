@@ -26,7 +26,7 @@ pnpm seed
 
 `pnpm dev:stack` builds and starts everything in Docker, then prints the welcome page's address: <http://tenantry.localhost>. The first run creates `.env` from `.env.example`.
 
-`pnpm seed` adds the demo workspaces and people. Running it again changes nothing. A stack seeded before the demo workspace became Pengopal needs `pnpm stack:down -v` first: the old `acme` workspace still holds the company domain.
+`pnpm seed` adds the demo workspaces, people and a few projects. Running it again changes nothing. A stack seeded before the demo workspace became Pengopal needs `pnpm stack:down -v` first: the old `acme` workspace still holds the company domain.
 
 ## Addresses
 
