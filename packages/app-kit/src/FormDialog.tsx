@@ -47,12 +47,21 @@ export function FormDialog({
       }}
     >
       <DialogContent aria-describedby={undefined}>
-        <form className="flex flex-col gap-5" onSubmit={(event) => void submit(event)} noValidate>
+        <form
+          className="flex flex-col gap-5"
+          onSubmit={(event) => void submit(event)}
+          noValidate
+          aria-busy={sending}
+        >
           <DialogHeader>
             <DialogTitle>{heading}</DialogTitle>
           </DialogHeader>
           <ApiErrorNotification error={error} />
           <div className="flex flex-col gap-4">{children}</div>
+          {/* Always present, so a screen reader announces the change when sending starts. */}
+          <p role="status" className="sr-only">
+            {sending ? 'Sending' : ''}
+          </p>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel

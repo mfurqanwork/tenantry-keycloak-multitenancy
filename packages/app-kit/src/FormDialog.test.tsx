@@ -67,6 +67,21 @@ describe('FormDialog', () => {
     finish();
   });
 
+  it('says it is sending, for a screen reader too', async () => {
+    let finish: () => void = () => undefined;
+    const { user } = dialog(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Sending');
+    expect(screen.getByRole('dialog').querySelector('form')).toHaveAttribute('aria-busy', 'true');
+    finish();
+  });
+
   it('Cancel and Escape close it', async () => {
     const { onClose, user } = dialog(vi.fn(() => Promise.resolve()));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
