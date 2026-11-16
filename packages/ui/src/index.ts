@@ -1,4 +1,13 @@
 export { cn } from './lib/cn.js';
+export { Button, buttonVariants, type ButtonProps } from './components/button.js';
+export { Checkbox } from './components/checkbox.js';
+export { FieldError } from './components/field-error.js';
+export { fieldClass, Input } from './components/input.js';
+export { Label } from './components/label.js';
+export { RadioGroup, RadioGroupItem } from './components/radio-group.js';
+export { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from './components/select.js';
+export { Switch } from './components/switch.js';
+export { Textarea } from './components/textarea.js';
 export { applyBrand } from './brand.js';
 export { AppShell, type NavItem, type WorkspaceEntry } from './shell/AppShell.js';
 export type { SwitcherEntry } from './shell/HeaderSwitcher.js';
