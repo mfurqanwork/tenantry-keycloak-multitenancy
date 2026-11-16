@@ -16,7 +16,10 @@ export function DemoSignIns({ baseDomain, password }: { baseDomain: string; pass
           <li key={email} className="flex flex-wrap items-baseline gap-x-2">
             <code className="font-mono text-foreground">{email}</code>
             <span className="text-muted-foreground">{role}</span>
-            <a className="text-link hover:underline" href={workspaceUrl(slug, baseDomain)}>{`Open ${workspace}`}</a>
+            <a
+              className="text-link hover:underline"
+              href={workspaceUrl(slug, baseDomain)}
+            >{`Open ${workspace}`}</a>
           </li>
         ))}
       </ul>

@@ -48,5 +48,4 @@ describe('TenantryThemeProvider', () => {
     expect(screen.getByTestId('resolved')).toHaveTextContent('light');
     expect(document.documentElement).not.toHaveClass('dark');
   });
-
 });

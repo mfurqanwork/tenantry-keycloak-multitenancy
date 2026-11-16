@@ -46,7 +46,9 @@ export function GoToWorkspace({ baseDomain }: { baseDomain: string }) {
             <ArrowRight aria-hidden="true" />
           </Button>
         </div>
-        {invalid && <FieldError id="go-to-workspace-error">Enter a workspace address, such as pengopal</FieldError>}
+        {invalid && (
+          <FieldError id="go-to-workspace-error">Enter a workspace address, such as pengopal</FieldError>
+        )}
       </div>
     </form>
   );

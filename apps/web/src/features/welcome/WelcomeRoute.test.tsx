@@ -66,4 +66,31 @@ describe('the welcome page', () => {
       'http://globex.tenantry.localhost/',
     );
   });
+
+  it('starts light even on a dark system, and the header switch changes the theme and keeps it', async () => {
+    localStorage.clear();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('dark'),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    vi.stubGlobal('location', { href: realLocation.href, assign, protocol: 'http:', port: '' });
+    render(
+      <TenantryThemeProvider fallback="light">
+        <WelcomeRoute baseDomain="tenantry.localhost" demoWorkspaces={[]} />
+      </TenantryThemeProvider>,
+    );
+    expect(document.documentElement).not.toHaveClass('dark');
+    const user = userEvent.setup();
+    await user.click(
+      within(screen.getByRole('banner')).getByRole('button', { name: 'Switch to dark theme' }),
+    );
+    expect(document.documentElement).toHaveClass('dark');
+    expect(localStorage.getItem('tenantry.theme')).toBe('dark');
+    await user.click(screen.getByRole('button', { name: 'Switch to light theme' }));
+    expect(document.documentElement).not.toHaveClass('dark');
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
 });
