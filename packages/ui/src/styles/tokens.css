@@ -131,9 +131,9 @@
 }
 
 /* Tenantry's navy button framed by the mosaic. Only where no workspace colour applies: the frame never
-   mixes with a customer's colour (applyBrand sets data-brand on <html>). */
+   mixes with a customer's colour (applyBrand sets data-brand on <html>, or on a preview element). */
 @utility opal-frame {
-  :root:not([data-brand]) & {
+  :root:not([data-brand]) &:where(:not([data-brand] *)) {
     border: 2px solid transparent;
     background-color: var(--ink);
     background-image: linear-gradient(var(--ink), var(--ink)), var(--opal-mosaic);
