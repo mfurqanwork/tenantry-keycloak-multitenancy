@@ -1,0 +1,66 @@
+/* The sign-in pages: Tenantry's tokens and components, plus the few elements Keycloak's own page bodies
+   render without a class (remember me, the registration line). */
+@import '@tenantry/ui/styles.css';
+@source './';
+
+/* Keycloak's forms carry no class of their own: space their groups like our forms. */
+.tenantry-login form:not(#kc-select-try-another-way-form) {
+  @apply flex flex-col gap-4;
+}
+
+/* Keycloak's own rule above the password field, and its empty options row. */
+.tenantry-login form hr,
+#kc-form-options:empty,
+.tenantry-login div:has(> #kc-form-options:empty) {
+  @apply hidden;
+}
+
+#kc-form-options .checkbox label {
+  @apply inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground select-none;
+}
+
+#kc-form-options input[type='checkbox'] {
+  @apply size-4 accent-primary;
+}
+
+#kc-registration span,
+#kc-registration-container span {
+  @apply flex flex-wrap justify-center gap-1;
+}
+
+#kc-registration a,
+#kc-registration-container a,
+.tenantry-login a:not([data-slot]) {
+  @apply rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-ring;
+}
+
+/* Remember me on the left, "Forgot password?" on the right. */
+.tenantry-login div:has(> #kc-form-options) {
+  @apply flex-row flex-wrap items-center justify-between;
+}
+
+#kc-form-options a {
+  @apply text-sm;
+}
+
+/* Room for the show-password toggle inside the field. */
+.tenantry-login .relative > input[type='password'],
+.tenantry-login .relative > input[type='text'] {
+  @apply pr-11;
+}
+
+/* The show-password toggle: Keycloak gives it an empty <i>; Lucide's eye and eye-off, as masks. */
+.tenantry-eye,
+.tenantry-eye-off {
+  @apply block size-4 bg-current;
+
+  mask: var(--glyph) center / contain no-repeat;
+}
+
+.tenantry-eye {
+  --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+
+.tenantry-eye-off {
+  --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49'/%3E%3Cpath d='M14.084 14.158a3 3 0 0 1-4.242-4.242'/%3E%3Cpath d='M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143'/%3E%3Cpath d='m2 2 20 20'/%3E%3C/svg%3E");
+}
