@@ -12,3 +12,6 @@ infra/dns/zones/*.db
 # The deploy key made by docs/guides/deploy-azure.md; it never belongs in the repository.
 tenantry_deploy
 tenantry_deploy.pub
+
+# Impeccable design-tool state (sketches, payloads): local only
+.impeccable/
