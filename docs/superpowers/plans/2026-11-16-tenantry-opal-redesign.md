@@ -496,6 +496,8 @@ Commit: `feat(portal): audit log and advanced pages on the new components`.
 - Same tokens and Geist (`@tenantry/ui/styles.css`).
 - A centred card with the workspace's logo and colour, or `TenantryMark` and the opal-framed button when no workspace colour applies.
 - Identity provider buttons carry `TechLogo` for known aliases (`okta`, `github`, `entra`, `keycloak`), otherwise a `KeyRound` icon.
+- A provider button reads as a button, "Continue with Acme Corp", not an outlined box that looks like a field; when the workspace has company login, it comes first, above "or sign in with a password". (Found in the PR 1 visual check: the password step and an unlabelled "Acme Corp" box confused sign-in.)
+- The dev-only `corp-demo` realm uses the Tenantry theme too, so the demo's company sign-in does not jump to Keycloak's stock page.
 
 Tests:
 

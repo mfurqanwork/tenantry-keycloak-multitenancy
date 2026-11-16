@@ -4,6 +4,10 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+
+- Tenantry and the welcome page wear the Pengopal brand: new components, sidebar shell, Geist, Lucide and technology logos (ADR-0031). Admin's pages keep Carbon inside the new shell until they move.
+
 ## [0.7.0] - 2026-11-16
 
 ### Added
