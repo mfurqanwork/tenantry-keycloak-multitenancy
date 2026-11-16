@@ -105,4 +105,3 @@ describe('guarantee: customer apps (Phase 4)', () => {
     expect(me.status).toBe(401);
   });
 });
-
