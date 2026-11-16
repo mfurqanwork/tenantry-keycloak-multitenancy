@@ -53,3 +53,15 @@ test('the dev realm objects are left as they were', () => {
   productionRealms({ platform: dev, corp: read('corp-demo-realm.json'), baseDomain: 'x.example' });
   assert.equal(JSON.stringify(dev), before);
 });
+
+// PengOPA signs in with Tenantry (ADR-0032); Keycloak fills its address and secret at import.
+test('PengOPA signs in and is signed out at its production address', () => {
+  const pengopa = client(platform, 'pengopa');
+  assert.equal(pengopa.secret, '${PENGOPA_CLIENT_SECRET}');
+  assert.deepEqual(pengopa.redirectUris, ['${PENGOPA_URL}/api/auth/callback/tenantry']);
+  assert.equal(pengopa.attributes['post.logout.redirect.uris'], '${PENGOPA_URL}/*');
+  assert.equal(
+    pengopa.attributes['backchannel.logout.url'],
+    '${PENGOPA_URL}/api/tenantry/backchannel-logout',
+  );
+});

@@ -117,7 +117,7 @@ Every promise is an automated test that runs in CI against real Keycloak and Pos
 | A token issued to a customer's app, used on Tenantry's API | 401                                               |
 | A console user tries to change an owner                    | 403                                               |
 
-All 33 guarantees are in [tests/isolation](tests/isolation/README.md).
+All 34 guarantees are in [tests/isolation](tests/isolation/README.md).
 
 ## Architecture
 
@@ -161,7 +161,7 @@ Then open <http://tenantry.localhost> and pick a demo workspace. The accounts, t
 ## Documentation
 
 - [Setting up locally](docs/SETUP.md): addresses, demo accounts, commands, tests, common problems
-- Guides: [connect your app](docs/guides/connect-your-app.md), [connect SCIM](docs/guides/connect-scim.md), [move a workspace to Enterprise](docs/guides/move-to-enterprise.md)
+- Guides: [connect your app](docs/guides/connect-your-app.md), [connect SCIM](docs/guides/connect-scim.md), [move a workspace to Enterprise](docs/guides/move-to-enterprise.md), [Pengopal's apps: Sign in with Tenantry](docs/guides/pengopal-apps.md)
 - [Decision records](docs/decisions/README.md)
 - [Demo script](docs/demo-script.md)
 - [Known issues](docs/known-issues.md)

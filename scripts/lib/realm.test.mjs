@@ -210,3 +210,26 @@ test('tenantry-ops tokens carry the tenantry-api audience', () => {
   assert.equal(audience(ops)?.config['included.custom.audience'], 'tenantry-api');
   assert.equal(audience(ops)?.config['access.token.claim'], 'true');
 });
+
+// PengOPA (ADR-0032): a confidential code-flow client that gets the workspace and its groups in the ID
+// token, is told of every sign-out, and whose tokens our API refuses (no tenantry-api audience).
+test('the pengopa client signs in with code and PKCE and hears every sign-out', () => {
+  const realm = JSON.parse(
+    readFileSync(new URL('../../infra/keycloak/platform-realm.json', import.meta.url), 'utf8'),
+  );
+  const pengopa = realm.clients.find((c) => c.clientId === 'pengopa');
+  assert.ok(pengopa, 'pengopa is missing');
+  assert.equal(pengopa.publicClient, false);
+  assert.equal(pengopa.standardFlowEnabled, true);
+  assert.equal(pengopa.directAccessGrantsEnabled, false);
+  assert.equal(pengopa.implicitFlowEnabled, false);
+  assert.equal(pengopa.serviceAccountsEnabled ?? false, false);
+  assert.equal(pengopa.frontchannelLogout, false);
+  assert.equal(pengopa.attributes['pkce.code.challenge.method'], 'S256');
+  assert.equal(pengopa.attributes['backchannel.logout.session.required'], 'true');
+  const groups = pengopa.protocolMappers.find(
+    (m) => m.protocolMapper === 'oidc-organization-group-membership-mapper',
+  );
+  assert.equal(groups?.config['id.token.claim'], 'true');
+  assert.ok(!pengopa.protocolMappers.some((m) => m.protocolMapper === 'oidc-audience-mapper'));
+});

@@ -48,3 +48,17 @@ test('the production Keycloak keeps its caches local: one server, no cluster to 
   const dockerfile = readFileSync(new URL('../../infra/keycloak/Dockerfile', import.meta.url), 'utf8');
   assert.match(dockerfile, /kc\.sh build [^\n]*--cache=local/);
 });
+
+// A missing PengOPA secret must stop the deploy, not import a client whose secret is its own placeholder.
+test('production Keycloak requires the PengOPA secret and knows its address', () => {
+  const text = readFileSync(new URL('../../infra/prod/compose.prod.yml', import.meta.url), 'utf8');
+  const keycloak = /^ {2}keycloak:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(text)?.[1] ?? '';
+  assert.match(keycloak, /PENGOPA_CLIENT_SECRET: \$\{PENGOPA_CLIENT_SECRET:\?/);
+  assert.match(keycloak, /PENGOPA_URL: \$\{PENGOPA_URL:-https:\/\/opa\.pengopal\.com\}/);
+});
+
+// Keycloak calls PengOPA's server on the host for back-channel sign-out (Docker Desktop names it already).
+test('dev Keycloak can reach the host', () => {
+  const keycloak = /^ {2}keycloak:\r?\n([\s\S]*?)(?=^ {2}\S)/m.exec(compose)?.[1] ?? '';
+  assert.match(keycloak, /host\.docker\.internal:host-gateway/);
+});

@@ -132,17 +132,27 @@ export function authorizeUrl(o: {
 
 // Signs a person in through a realm's login page with the authorization code flow and PKCE,
 // the only way an enterprise realm hands out a token (it refuses the password grant).
-export async function signInWithBrowser(o: {
+export async function signInWithBrowser(o: SignInOptions): Promise<string> {
+  return (await signInForTokens(o)).access_token;
+}
+
+export interface SignInOptions {
   realm: string;
   clientId: string;
   redirectUri: string;
   username: string;
   password: string;
+  // A confidential client's secret (PengOPA, ADR-0032).
+  clientSecret?: string;
+  scope?: string;
   // A browser that keeps its cookies for later steps (single sign-on into another app).
   browser?: Browser;
   // Sign in through this identity provider (the bridge) instead of the realm's own form.
   via?: string;
-}): Promise<string> {
+}
+
+// The same sign-in, returning every token Keycloak answers with.
+export async function signInForTokens(o: SignInOptions): Promise<{ access_token: string; id_token: string }> {
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   const oidc = `${PUBLIC_AUTH}/realms/${o.realm}/protocol/openid-connect`;
@@ -154,6 +164,7 @@ export async function signInWithBrowser(o: {
       clientId: o.clientId,
       redirectUri: o.redirectUri,
       challenge,
+      ...(o.scope ? { scope: o.scope } : {}),
       ...(o.via ? { idpHint: o.via } : {}),
     }),
   );
@@ -172,10 +183,11 @@ export async function signInWithBrowser(o: {
       code,
       redirect_uri: o.redirectUri,
       code_verifier: verifier,
+      ...(o.clientSecret ? { client_secret: o.clientSecret } : {}),
     }),
   });
   if (!res.ok) throw new Error(`code exchange in ${o.realm}: ${String(res.status)} ${await res.text()}`);
-  return ((await res.json()) as { access_token: string }).access_token;
+  return (await res.json()) as { access_token: string; id_token: string };
 }
 
 // A person signing in to their realm's Keycloak admin console (its own security-admin-console client),
