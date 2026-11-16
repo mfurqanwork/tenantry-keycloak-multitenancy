@@ -71,6 +71,7 @@ describe('Home', () => {
     expect(screen.queryByText('Project 1')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Finish setting up' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'All projects' })).toHaveAttribute('href', '/projects');
+    expect(screen.getByRole('list', { name: 'Recent projects' })).toBeInTheDocument();
   });
 
   it('invites a first project when there are none', async () => {
@@ -95,7 +96,8 @@ describe('Home', () => {
       }),
       me: makeMe('owner', ALL),
     });
-    const tile = async (label: string) => (await screen.findByText(label)).closest('.tenantry-stat');
+    const tile = async (label: string) =>
+      (await screen.findByText(label, { selector: '[data-slot="stat-tile"] p' })).closest('[data-slot="stat-tile"]');
     expect(await tile('People')).toHaveTextContent('2');
     expect(await tile('Open invites')).toHaveTextContent('1');
     expect(await tile('Projects')).toHaveTextContent('1');
@@ -103,7 +105,7 @@ describe('Home', () => {
 
   it('shows a member only the projects number', async () => {
     renderPage(<HomeRoute />, { api: api([project(1)]), me: makeMe('member', MEMBER) });
-    expect(await screen.findByText('Projects', { selector: '.tenantry-stat__label' })).toBeInTheDocument();
+    expect(await screen.findByText('Projects', { selector: '[data-slot="stat-tile"] p' })).toBeInTheDocument();
     expect(screen.queryByText('Open invites')).toBeNull();
   });
 });

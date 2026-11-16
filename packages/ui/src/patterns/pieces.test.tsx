@@ -32,15 +32,19 @@ describe('shared pieces (spec §8.2)', () => {
         icon={Rocket}
         onHide={onHide}
         steps={[
-          { label: 'Create a project', done: false, content: <p>create here</p> },
+          { label: 'Create a project', done: false, icon: Rocket, content: <p>create here</p> },
           { label: 'Invite a teammate', done: true, content: null },
           { label: 'Add your colour and logo', done: true, content: null },
         ]}
       />,
     );
     expect(screen.getByText('2 of 3 done')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '67');
+    const progress = screen.getByRole('progressbar');
+    expect(progress).toHaveAttribute('aria-valuenow', '2');
+    expect(progress).toHaveAttribute('aria-valuemax', '3');
+    expect(progress).toHaveAttribute('aria-valuetext', '2 of 3 done');
     expect(screen.getByText('create here')).toBeInTheDocument();
+    expect(screen.getByText('create here').closest('li')?.querySelector('svg')).not.toBeNull();
     expect(screen.getByText('Invite a teammate').closest('[data-done]')).toHaveAttribute('data-done', 'true');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hide' }));
     expect(onHide).toHaveBeenCalled();

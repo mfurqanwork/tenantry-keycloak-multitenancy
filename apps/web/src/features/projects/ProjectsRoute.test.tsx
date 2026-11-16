@@ -13,7 +13,7 @@ describe('ProjectsRoute', () => {
     renderPage(<ProjectsRoute />, { api, me: makeMe('member', MEMBER) });
     expect(await screen.findByRole('heading', { name: 'Start your first project' })).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await user.click(screen.getByRole('button', { name: 'New project' }));
     const dialog = await screen.findByRole('dialog', { name: 'Create project' });
     await user.type(within(dialog).getByLabelText('Name'), 'Apollo');
     await user.click(within(dialog).getByRole('button', { name: 'Create' }));
@@ -29,7 +29,46 @@ describe('ProjectsRoute', () => {
       }),
       me: makeMe('member', MEMBER),
     });
-    expect(await screen.findByText('Apollo')).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Projects' });
+    expect(table).toHaveTextContent('Apollo');
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+  });
+
+  it('projects search filters rows', async () => {
+    renderPage(<ProjectsRoute />, {
+      api: fakeApi({
+        '/api/projects': {
+          projects: [
+            { id: 'p1', name: 'Apollo', createdAt: '2026-11-02T10:00:00Z' },
+            { id: 'p2', name: 'Gemini', createdAt: '2026-11-03T10:00:00Z' },
+          ],
+        },
+      }),
+      me: makeMe('member', MEMBER),
+    });
+    const table = await screen.findByRole('table', { name: 'Projects' });
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+    await userEvent.setup().type(screen.getByRole('searchbox', { name: 'Search projects' }), 'gem');
+    expect(within(table).getAllByRole('row')).toHaveLength(2);
+    expect(table).toHaveTextContent('Gemini');
+    expect(table).not.toHaveTextContent('Apollo');
+  });
+
+  it('says so when the search matches nothing', async () => {
+    renderPage(<ProjectsRoute />, {
+      api: fakeApi({ '/api/projects': { projects: [{ id: 'p1', name: 'Apollo', createdAt: '2026-11-02T10:00:00Z' }] } }),
+      me: makeMe('member', MEMBER),
+    });
+    await userEvent.setup().type(await screen.findByRole('searchbox', { name: 'Search projects' }), 'zzz');
+    expect(screen.getByText('No projects match "zzz".')).toBeInTheDocument();
+  });
+
+  it('marks the New project button with its icon', async () => {
+    renderPage(<ProjectsRoute />, {
+      api: fakeApi({ '/api/projects': { projects: [] } }),
+      me: makeMe('member', MEMBER),
+    });
+    expect((await screen.findByRole('button', { name: 'New project' })).querySelector('svg')).not.toBeNull();
   });
 
   it('has its icon and a line on what it is for', async () => {

@@ -37,6 +37,21 @@ describe('the getting-started checklist', () => {
     );
   });
 
+  it('checklist shows progress', () => {
+    show({ done: { project: true, invite: false, brand: true } });
+    const progress = screen.getByRole('progressbar', { name: 'Finish setting up' });
+    expect(progress).toHaveAttribute('aria-valuenow', '2');
+    expect(progress).toHaveAttribute('aria-valuemax', '3');
+  });
+
+  it('gives each open step its icon', () => {
+    show();
+    for (const step of ['Project name', 'Invite a teammate', 'Add your colour and logo']) {
+      const li = (step === 'Project name' ? screen.getByLabelText(step) : screen.getByRole('link', { name: step })).closest('li');
+      expect(li?.querySelector('svg')).not.toBeNull();
+    }
+  });
+
   it('shows a done step with a check mark and no action', () => {
     show({ done: { project: false, invite: true, brand: false } });
     expect(screen.queryByRole('link', { name: 'Invite a teammate' })).not.toBeInTheDocument();

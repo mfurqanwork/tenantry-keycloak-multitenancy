@@ -1,36 +1,27 @@
+import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
 import {
   Button,
-  DataTable,
-  DataTableSkeleton,
-  Stack,
+  EmptyState,
+  Input,
+  Label,
+  ListPage,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-  TableToolbar,
-  TableToolbarContent,
-  TableToolbarSearch,
-  TextInput,
-} from '@carbon/react';
-import { Add, Folder, FolderOpen } from '@carbon/icons-react';
-import { EmptyState, ListPage } from '@tenantry/ui';
+} from '@tenantry/ui';
+import { FolderKanban, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { ApiErrorNotification, FormDialog, useApi, useMe, useResource } from '@tenantry/app-kit';
 
 interface Project {
   id: string;
   name: string;
   createdAt: string;
 }
-
-const HEADERS = [
-  { key: 'name', header: 'Name' },
-  { key: 'createdAt', header: 'Created' },
-];
 
 function CreateProjectDialog({ onDone, onClose }: { onDone: () => void; onClose: () => void }) {
   const api = useApi();
@@ -46,15 +37,18 @@ function CreateProjectDialog({ onDone, onClose }: { onDone: () => void; onClose:
       }}
       onClose={onClose}
     >
-      <TextInput
-        id="project-name"
-        labelText="Name"
-        maxLength={120}
-        value={name}
-        onChange={(event) => {
-          setName(event.target.value);
-        }}
-      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="project-name">Name</Label>
+        <Input
+          id="project-name"
+          maxLength={120}
+          autoComplete="off"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+        />
+      </div>
     </FormDialog>
   );
 }
@@ -76,82 +70,85 @@ export function ProjectsRoute() {
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
         title="Projects"
-        icon={Folder}
+        icon={FolderKanban}
         description="Your team's work, kept to this workspace."
         primaryAction={
           me.can('projects:write') ? (
             <Button
-              renderIcon={Add}
               onClick={() => {
                 setCreating(true);
               }}
             >
-              Create project
+              <Plus aria-hidden="true" />
+              New project
             </Button>
           ) : undefined
         }
         isEmpty={list.data !== undefined && projects.length === 0}
         emptyState={
           <EmptyState
-            icon={FolderOpen}
+            icon={FolderKanban}
             title="Start your first project"
             body="Projects keep your team's work in one place, and only this workspace sees them."
           />
         }
       >
-        <Stack gap={6}>
-          <ApiErrorNotification error={list.error} />
-          {!list.data && !list.error && <DataTableSkeleton headers={HEADERS} rowCount={3} />}
-          {list.data && (
-            <DataTable
-              rows={shown.map((p) => ({
-                id: p.id,
-                name: p.name,
-                createdAt: new Date(p.createdAt).toLocaleDateString(),
-              }))}
-              headers={HEADERS}
-            >
-              {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-                <TableContainer>
-                  <TableToolbar aria-label="Projects toolbar">
-                    <TableToolbarContent>
-                      <TableToolbarSearch
-                        persistent
-                        labelText="Search projects"
-                        placeholder="Search projects"
-                        defaultValue={query}
-                        onChange={(_event, value) => {
-                          // Carbon reports the starting value as onChange('', value) on load.
-                          setQuery(value ?? '');
-                        }}
-                      />
-                    </TableToolbarContent>
-                  </TableToolbar>
-                  <Table {...getTableProps()} aria-label="Projects">
-                    <TableHead>
-                      <TableRow>
-                        {headers.map((header) => (
-                          <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                            {header.header}
-                          </TableHeader>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow {...getRowProps({ row })} key={row.id}>
-                          {row.cells.map((cell) => (
-                            <TableCell key={cell.id}>{cell.value as string}</TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </DataTable>
-          )}
-        </Stack>
+        <ApiErrorNotification error={list.error} />
+        {!list.data && !list.error && (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        )}
+        {list.data && (
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full sm:max-w-xs">
+              <Label htmlFor="project-search" className="sr-only">
+                Search projects
+              </Label>
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                id="project-search"
+                type="search"
+                placeholder="Search projects"
+                className="pl-8"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
+              />
+            </div>
+            <Table aria-label="Projects">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2">
+                        <FolderKanban aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                        {p.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {shown.length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">{`No projects match "${query.trim()}".`}</p>
+            )}
+          </div>
+        )}
       </ListPage>
       {creating && (
         <CreateProjectDialog

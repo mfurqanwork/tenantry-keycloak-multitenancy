@@ -1,6 +1,6 @@
 import {
   AppWindow,
-  Folder,
+  FolderKanban,
   FolderSync,
   History,
   House,
@@ -37,7 +37,7 @@ const can = (permission: Permission) => (me: MenuPerson) => me.can(permission);
 // decides what is shown.
 const TOP: Page[] = [
   { label: 'Home', path: '/', app: 'web', icon: House, shown: () => true },
-  { label: 'Projects', path: '/projects', app: 'web', icon: Folder, shown: can('projects:read') },
+  { label: 'Projects', path: '/projects', app: 'web', icon: FolderKanban, shown: can('projects:read') },
 ];
 const WORKSPACE: Page[] = [
   { label: 'People', path: '/people', app: 'portal', icon: Users, shown: can('members:invite') },

@@ -1,7 +1,6 @@
-import { Button, InlineLoading, Link, Stack, TextInput } from '@carbon/react';
-import { Rocket } from '@carbon/icons-react';
-import { SetupCard } from '@tenantry/ui';
-import { useMe } from '@tenantry/app-kit';
+import { Loading, useMe } from '@tenantry/app-kit';
+import { Button, Input, Label, SetupCard } from '@tenantry/ui';
+import { FolderPlus, Palette, Rocket, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
 export interface ChecklistProps {
@@ -42,25 +41,29 @@ function CreateProject({ onCreate }: { onCreate: (name: string) => Promise<void>
         });
       }}
     >
-      <Stack gap={4}>
-        <p className="tenantry-checklist__label">Create a project</p>
-        <TextInput
-          id="checklist-project-name"
-          labelText="Project name"
-          maxLength={120}
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-        />
-        {busy ? (
-          <InlineLoading description="Creating the project" />
-        ) : (
-          <Button type="submit" kind="tertiary" size="sm" disabled={name.trim() === ''}>
-            Create
-          </Button>
-        )}
-      </Stack>
+      <div className="flex flex-col gap-2">
+        <p className="font-medium">Create a project</p>
+        <Label htmlFor="checklist-project-name" className="text-muted-foreground">
+          Project name
+        </Label>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            id="checklist-project-name"
+            className="max-w-xs"
+            maxLength={120}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+            }}
+          />
+          {!busy && (
+            <Button type="submit" variant="secondary" disabled={name.trim() === ''}>
+              Create
+            </Button>
+          )}
+        </div>
+        {busy && <Loading description="Creating the project" />}
+      </div>
     </form>
   );
 }
@@ -84,28 +87,37 @@ export function Checklist({ done, inviteUrl, brandingUrl, onCreateProject }: Che
         {
           label: 'Create a project',
           done: done.project,
+          icon: FolderPlus,
           content: <CreateProject onCreate={onCreateProject} />,
         },
         {
           label: 'Invite a teammate',
           done: done.invite,
+          icon: UserPlus,
           content: (
-            <Stack gap={3}>
-              <p className="tenantry-checklist__label">Invite a teammate</p>
-              <p className="tenantry-checklist__hint">Bring someone into the workspace.</p>
-              {inviteUrl && <Link href={inviteUrl}>Invite a teammate</Link>}
-            </Stack>
+            <div className="flex flex-col gap-1">
+              <p className="text-muted-foreground">Bring someone into the workspace.</p>
+              {inviteUrl && (
+                <a className="w-fit font-medium text-link hover:underline" href={inviteUrl}>
+                  Invite a teammate
+                </a>
+              )}
+            </div>
           ),
         },
         {
           label: 'Add your colour and logo',
           done: done.brand,
+          icon: Palette,
           content: (
-            <Stack gap={3}>
-              <p className="tenantry-checklist__label">Add your colour and logo</p>
-              <p className="tenantry-checklist__hint">Make the sign-in page and the apps look like yours.</p>
-              {brandingUrl && <Link href={brandingUrl}>Add your colour and logo</Link>}
-            </Stack>
+            <div className="flex flex-col gap-1">
+              <p className="text-muted-foreground">Make the sign-in page and the apps look like yours.</p>
+              {brandingUrl && (
+                <a className="w-fit font-medium text-link hover:underline" href={brandingUrl}>
+                  Add your colour and logo
+                </a>
+              )}
+            </div>
           ),
         },
       ]}

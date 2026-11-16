@@ -1,17 +1,27 @@
-import { Button, TextInput, Tile } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
-import { DashboardPage, DetailPage, ListPage, SettingsPage, WizardPage } from '@tenantry/ui';
+import {
+  Button,
+  DashboardPage,
+  DetailPage,
+  EmptyState,
+  Input,
+  Label,
+  ListPage,
+  SettingsPage,
+  StatTile,
+  WizardPage,
+} from '@tenantry/ui';
+import { AppWindow, Plus, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 const noop = () => undefined;
 
 function Sample({ name, children }: { name: string; children: ReactNode }) {
   return (
-    <section className="tenantry-pattern-sample" aria-labelledby={`sample-${name}`}>
-      <h2 id={`sample-${name}`} className="tenantry-pattern-sample__name">
+    <section className="flex flex-col gap-2 px-4 py-6 sm:px-6 lg:px-8" aria-labelledby={`sample-${name}`}>
+      <h2 id={`sample-${name}`} className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {name}
       </h2>
-      <div className="tenantry-pattern-sample__frame">{children}</div>
+      <div className="rounded-xl border border-dashed border-border">{children}</div>
     </section>
   );
 }
@@ -26,9 +36,15 @@ export function PatternsRoute() {
         <ListPage
           breadcrumbs={[{ label: 'Acme', href: '/' }]}
           title="Members"
-          primaryAction={<Button renderIcon={Add}>Invite member</Button>}
+          icon={Users}
+          primaryAction={
+            <Button>
+              <Plus aria-hidden="true" />
+              Invite
+            </Button>
+          }
           isEmpty
-          emptyState={<Tile>No members yet. Invite someone to get started.</Tile>}
+          emptyState={<EmptyState icon={Users} title="No members yet" body="Invite someone to get started." />}
         >
           {null}
         </ListPage>
@@ -37,7 +53,7 @@ export function PatternsRoute() {
         <DetailPage
           breadcrumbs={[{ label: 'Members', href: '/' }]}
           title="Ada Lovelace"
-          summary={<Tile>Role: Admin</Tile>}
+          summary={<p className="text-sm text-muted-foreground">Role: Admin</p>}
           tabs={[
             { label: 'Overview', content: 'Overview content' },
             { label: 'Activity', content: 'Activity content' },
@@ -46,7 +62,7 @@ export function PatternsRoute() {
       </Sample>
       <Sample name="Settings page">
         <SettingsPage
-          title="Tenant settings"
+          title="Workspace settings"
           dirty={name !== 'Acme'}
           saving={false}
           onSave={noop}
@@ -54,26 +70,31 @@ export function PatternsRoute() {
             setName('Acme');
           }}
         >
-          <TextInput
-            id="tenant-name"
-            labelText="Tenant name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-          />
+          <div className="flex max-w-sm flex-col gap-2">
+            <Label htmlFor="tenant-name">Workspace name</Label>
+            <Input
+              id="tenant-name"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+              }}
+            />
+          </div>
         </SettingsPage>
       </Sample>
       <Sample name="Dashboard">
         <DashboardPage
           title="Overview"
-          tiles={[<Tile key="a">12 members</Tile>, <Tile key="b">3 apps</Tile>]}
+          tiles={[
+            <StatTile key="a" icon={Users} label="Members" value={12} />,
+            <StatTile key="b" icon={AppWindow} label="Apps" value={3} />,
+          ]}
         />
       </Sample>
       <Sample name="Wizard">
         <WizardPage
-          title="Create a tenant"
-          steps={['Account', 'Tenant', 'Review']}
+          title="Create a workspace"
+          steps={['Account', 'Workspace', 'Review']}
           currentStep={step}
           onBack={
             step > 0
@@ -86,7 +107,7 @@ export function PatternsRoute() {
             setStep(Math.min(step + 1, 2));
           }}
         >
-          Step {step + 1} content
+          <p className="text-sm">Step {step + 1} content</p>
         </WizardPage>
       </Sample>
     </>
