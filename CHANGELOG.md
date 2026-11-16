@@ -4,6 +4,10 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Added
+
+- Sign in with Tenantry for PengOPA: a `pengopa` client in the platform realm, with the workspace picker, the workspace's groups in the ID token and back-channel sign-out. Production needs `PENGOPA_CLIENT_SECRET` in the VM's `.env` (ADR-0032).
+
 ### Changed
 
 - Tenantry's mark wears the Pengopal brand: rounded tiles in navy ink, and the tile where the bar meets the stem cut from the opal mosaic in place of Carbon blue. New logos, favicon, app icons and social preview; `pnpm brand:icons` now writes the SVGs too.

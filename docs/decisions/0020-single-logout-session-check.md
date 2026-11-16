@@ -26,3 +26,4 @@ Keycloak offers two ways to tell other apps. Back-channel logout calls each clie
 - A tab that stays in front, with no API call, keeps working until its access token expires (at most five minutes) and then signs out. Switching to the tab signs out at once.
 - No extra servers, and nothing for Keycloak to call.
 - The guarantee test in `tests/isolation` proves the server side: after logout, a refresh with that session's refresh token fails.
+- An app with its own server session can use back-channel logout instead; Pengopal's apps do (ADR-0032).

@@ -98,6 +98,12 @@ sudo nano /opt/tenantry/.env
 | `SEED_PASSWORD`        | the same as `TENANTRY_DEMO_PASSWORD` |
 | `GHCR_TOKEN`           | from step 4                          |
 
+The script also writes `PENGOPA_CLIENT_SECRET`, the secret PengOPA signs in with ([Pengopal's apps](pengopal-apps.md)); give PengOPA the same value. A VM set up before it existed needs one added before the next deploy, which refuses to start without it:
+
+```bash
+echo "PENGOPA_CLIENT_SECRET=$(openssl rand -hex 24)" | sudo tee -a /opt/tenantry/.env
+```
+
 Allow the deploy key to run the deploy, and nothing else. Replace the end of this line with the contents of `tenantry_deploy.pub`:
 
 ```bash

@@ -34,3 +34,4 @@ One short record per decision: context, choice, alternatives, consequences.
 | [0028](0028-notifications.md)               | Notifications read from the audit log                        |
 | [0029](0029-production-on-one-vm.md)        | Production on one VM, rebuilt on each release                |
 | [0030](0030-releases.md)                    | One version and a hand-written changelog                     |
+| [0032](0032-pengopal-apps-sign-in.md)       | Pengopal's own apps sign in with Tenantry                    |

@@ -70,6 +70,9 @@ services:
       KEYCLOAK_OPS_CLIENT_SECRET: ${KEYCLOAK_OPS_CLIENT_SECRET}
       TENANTRY_ISOLATION_CLIENT_SECRET: ${TENANTRY_ISOLATION_CLIENT_SECRET}
       CORP_DEMO_CLIENT_SECRET: ${CORP_DEMO_CLIENT_SECRET}
+      # PengOPA's sign-in with Tenantry (ADR-0032). No secret, no deploy: never import the placeholder.
+      PENGOPA_CLIENT_SECRET: ${PENGOPA_CLIENT_SECRET:?add PENGOPA_CLIENT_SECRET to .env (docs/guides/deploy-azure.md)}
+      PENGOPA_URL: ${PENGOPA_URL:-https://opa.pengopal.com}
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:

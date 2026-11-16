@@ -18,6 +18,16 @@ export function productionRealms({ platform, corp, baseDomain }) {
   seedClient.secret = '${TENANTRY_ISOLATION_CLIENT_SECRET}';
   seedClient.enabled = false;
 
+  // PengOPA signs in with Tenantry (ADR-0032); its address and secret come from Keycloak's environment.
+  const pengopa = find(prod, 'pengopa');
+  pengopa.secret = '${PENGOPA_CLIENT_SECRET}';
+  pengopa.redirectUris = ['${PENGOPA_URL}/api/auth/callback/tenantry'];
+  pengopa.attributes = {
+    ...pengopa.attributes,
+    'post.logout.redirect.uris': '${PENGOPA_URL}/*',
+    'backchannel.logout.url': '${PENGOPA_URL}/api/tenantry/backchannel-logout',
+  };
+
   const broker = find(company, 'tenantry-platform');
   broker.secret = '${CORP_DEMO_CLIENT_SECRET}';
   broker.redirectUris = [`https://auth.${baseDomain}/realms/platform/broker/*`];

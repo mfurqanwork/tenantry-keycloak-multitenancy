@@ -65,6 +65,9 @@ services:
       - ./keycloak/platform-realm.json:/opt/keycloak/data/import/platform-realm.json:ro
       # The stand-in company identity provider for company login (ADR-0022). Dev only.
       - ./keycloak/corp-demo-realm.json:/opt/keycloak/data/import/corp-demo-realm.json:ro
+    # PengOPA's back-channel sign-out goes to its server on the host (ADR-0032).
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
