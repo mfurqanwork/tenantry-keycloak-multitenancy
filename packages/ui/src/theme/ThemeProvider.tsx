@@ -1,12 +1,11 @@
-import { GlobalTheme } from '@carbon/react';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { readPreference, writePreference, type ThemePreference } from './preference.js';
 
-export type CarbonTheme = 'g10' | 'g100';
+export type ResolvedTheme = 'light' | 'dark';
 
 interface ThemeState {
   preference: ThemePreference;
-  resolved: CarbonTheme;
+  resolved: ResolvedTheme;
   setPreference: (preference: ThemePreference) => void;
 }
 
@@ -28,15 +27,19 @@ function useSystemDark(): boolean {
   return dark;
 }
 
-// Light (g10) or dark (g100), following the OS unless the user picked one.
+// Light or dark, following the OS unless the person picked one. The `dark` class on <html> drives the tokens;
+// `data-carbon-theme` keeps the legacy Carbon pages (Admin, the login theme) in step until they move (ADR-0031).
 export function TenantryThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setStored] = useState<ThemePreference>(() => readPreference());
   const systemDark = useSystemDark();
-  const resolved: CarbonTheme =
-    preference === 'dark' || (preference === 'system' && systemDark) ? 'g100' : 'g10';
+  const resolved: ResolvedTheme =
+    preference === 'dark' || (preference === 'system' && systemDark) ? 'dark' : 'light';
 
   useEffect(() => {
-    document.documentElement.dataset['carbonTheme'] = resolved;
+    const root = document.documentElement;
+    root.classList.toggle('dark', resolved === 'dark');
+    root.style.colorScheme = resolved;
+    root.dataset['carbonTheme'] = resolved === 'dark' ? 'g100' : 'g10';
   }, [resolved]);
 
   const value = useMemo<ThemeState>(
@@ -51,11 +54,7 @@ export function TenantryThemeProvider({ children }: { children: ReactNode }) {
     [preference, resolved],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>
-      <GlobalTheme theme={resolved}>{children}</GlobalTheme>
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useThemePreference(): ThemeState {

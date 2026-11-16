@@ -12,9 +12,9 @@ describe('tiles', () => {
         ]}
       </TileGrid>,
     );
-    expect(screen.getByText('Workspace')).toHaveClass('tenantry-stat__label');
-    expect(screen.getByText('Acme')).toHaveClass('tenantry-stat__value');
+    const tiles = screen.getAllByRole('listitem');
+    expect(tiles).toHaveLength(2);
+    expect(tiles[0]).toHaveTextContent(/^WorkspaceAcme$/);
     expect(screen.getByRole('link', { name: 'Open Tenantry' })).toHaveAttribute('href', '/x');
-    expect(document.querySelectorAll('.tenantry-dashboard__tiles .tenantry-stat')).toHaveLength(2);
   });
 });

@@ -1,35 +1,26 @@
-import { Column, Grid, Tile } from '@carbon/react';
-import type { CarbonIconType } from '@carbon/icons-react';
 import type { ReactNode } from 'react';
+import type { IconComponent } from '../icon.js';
 
 // One fact: a small label over its value. The value may be a link (where it leads).
-export function StatTile({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: ReactNode;
-  icon?: CarbonIconType;
-}) {
+export function StatTile({ label, value, icon: Icon }: { label: string; value: ReactNode; icon?: IconComponent }) {
   return (
-    <Tile className="tenantry-stat">
-      {Icon && <Icon size={20} aria-hidden="true" className="tenantry-stat__icon" />}
-      <p className="tenantry-stat__label">{label}</p>
-      <p className="tenantry-stat__value">{value}</p>
-    </Tile>
+    <div data-slot="stat-tile" className="flex h-full flex-col gap-1 rounded-xl border border-border bg-card p-4">
+      {Icon && <Icon size={18} aria-hidden="true" className="mb-1 text-muted-foreground" />}
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="text-xl font-semibold tracking-tight tabular-nums [&_a]:text-link [&_a]:hover:underline">
+        {value}
+      </p>
+    </div>
   );
 }
 
-// Tiles side by side, four columns each on Carbon's grid; they wrap on narrow screens.
+// Tiles side by side; they wrap on narrow screens.
 export function TileGrid({ children }: { children: ReactNode[] }) {
   return (
-    <Grid narrow className="tenantry-dashboard__tiles">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {children.map((tile, index) => (
-        <Column key={index} sm={4} md={4} lg={4}>
-          {tile}
-        </Column>
+        <li key={index}>{tile}</li>
       ))}
-    </Grid>
+    </ul>
   );
 }

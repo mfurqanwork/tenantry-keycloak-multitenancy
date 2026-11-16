@@ -1,8 +1,7 @@
-import { ComposedModal, HeaderGlobalAction, ModalBody, Search } from '@carbon/react';
-import { Application, Folder, Search as SearchIcon, User } from '@carbon/icons-react';
-import type { NavItem } from '@tenantry/ui';
+import { Button, Dialog, DialogContent, DialogTitle, Kbd, type NavItem } from '@tenantry/ui';
+import { Command } from 'cmdk';
+import { AppWindow, Folder, Search as SearchIcon, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { useApi } from '../api.js';
 import { useMe } from '../me.js';
@@ -10,28 +9,20 @@ import { searchResults, type Hit, type SearchSources } from './search.js';
 
 type Group = { name: 'Pages' | 'People' | 'Projects'; hits: Hit[] };
 
-const ICONS = { Pages: Application, People: User, Projects: Folder } as const;
+const ICONS = { Pages: AppWindow, People: User, Projects: Folder } as const;
 
-// Search across the pages, people and projects the person can already see (spec 8.3). A header button,
-// and Ctrl+K (Cmd+K on macOS), open it.
+const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+// Search across the pages, people and projects the person can already see (spec 8.3). A top-bar button,
+// and Ctrl+K (Cmd+K on macOS), open it; Escape closes it and puts focus back on the button.
 export function WorkspaceSearch({ pages }: { pages: NavItem[] }) {
   const me = useMe();
   const api = useApi();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [active, setActive] = useState(0);
   const [data, setData] = useState<Omit<SearchSources, 'pages'>>({ people: [], projects: [] });
-  const field = useRef<HTMLInputElement>(null);
-
-  // Focus the field once the dialog has opened, so typing starts at once.
-  useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => field.current?.focus(), 0);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [open]);
+  const button = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -80,16 +71,15 @@ export function WorkspaceSearch({ pages }: { pages: NavItem[] }) {
     ];
     return all.filter((g) => g.hits.length > 0);
   }, [query, pages, data]);
-  const flat = groups.flatMap((g) => g.hits);
+  const none = query.trim() !== '' && groups.length === 0;
 
-  const close = () => {
-    setOpen(false);
-    setQuery('');
-    setActive(0);
+  const setOpenAndReset = (next: boolean) => {
+    setOpen(next);
+    if (!next) setQuery('');
   };
-  const go = (hit: Hit | undefined) => {
-    if (!hit?.href) return;
-    close();
+  const go = (hit: Hit) => {
+    if (!hit.href) return;
+    setOpenAndReset(false);
     if (hit.external) window.open(hit.href, '_blank', 'noreferrer');
     else if (hit.crossApp || /^https?:/.test(hit.href)) window.location.assign(hit.href);
     else void navigate(hit.href);
@@ -97,89 +87,79 @@ export function WorkspaceSearch({ pages }: { pages: NavItem[] }) {
 
   return (
     <>
-      <HeaderGlobalAction
+      <Button
+        ref={button}
+        variant="outline"
+        size="sm"
         aria-label="Search"
+        aria-keyshortcuts="Control+K Meta+K"
+        className="gap-2 text-muted-foreground sm:w-56 sm:justify-start"
         onClick={() => {
           setOpen(true);
         }}
       >
-        <SearchIcon size={20} />
-      </HeaderGlobalAction>
-      {/* At the page's level: inside the always-dark header it would take the header's theme, and sit
-          under the side nav. */}
-      {createPortal(
-        <ComposedModal open={open} onClose={close} size="sm" aria-label="Search" className="tenantry-search">
-          <ModalBody>
-            {open && (
-              <Search
-                ref={field}
+        <SearchIcon aria-hidden="true" />
+        <span className="hidden sm:inline">Search</span>
+        <Kbd className="ml-auto hidden sm:inline-flex">{isMac() ? '⌘K' : 'Ctrl K'}</Kbd>
+      </Button>
+      <Dialog open={open} onOpenChange={setOpenAndReset}>
+        <DialogContent
+          aria-describedby={undefined}
+          showCloseButton={false}
+          className="top-[15vh] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl"
+          onCloseAutoFocus={(event) => {
+            // Opened from the keyboard, Radix would return focus to wherever it was; the button is where
+            // search lives.
+            event.preventDefault();
+            button.current?.focus();
+          }}
+        >
+          <DialogTitle className="sr-only">Search</DialogTitle>
+          <Command shouldFilter={false} loop label="Search pages, people and projects" className="flex flex-col">
+            <div className="flex items-center gap-2 border-b border-border px-4">
+              <SearchIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              <Command.Input
                 autoFocus
-                size="lg"
-                labelText="Search pages, people and projects"
                 placeholder="Search pages, people and projects"
                 value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActive(0);
-                }}
-                onKeyDown={(event) => {
-                  // Carbon's field takes Esc to clear itself; here Esc closes the search.
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    close();
-                  } else if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    setActive((i) => Math.min(i + 1, flat.length - 1));
-                  } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    setActive((i) => Math.max(i - 1, 0));
-                  } else if (event.key === 'Enter') {
-                    event.preventDefault();
-                    go(flat[active]);
-                  }
-                }}
+                onValueChange={setQuery}
+                className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
-            )}
-            {query.trim() && flat.length === 0 && (
-              <p className="tenantry-search__none">{`Nothing matches "${query.trim()}".`}</p>
-            )}
-            {groups.map((group) => {
-              const Icon = ICONS[group.name];
-              return (
-                <div key={group.name} role="group" aria-label={group.name} className="tenantry-search__group">
-                  <p className="tenantry-search__heading">{group.name}</p>
-                  <ul>
-                    {group.hits.map((hit) => {
-                      const index = flat.indexOf(hit);
-                      return (
-                        <li key={`${group.name}-${hit.label}-${hit.detail ?? ''}`}>
-                          <button
-                            type="button"
-                            className="tenantry-search__hit"
-                            data-active={index === active ? 'true' : 'false'}
-                            disabled={!hit.href}
-                            onMouseEnter={() => {
-                              setActive(index);
-                            }}
-                            onClick={() => {
-                              go(hit);
-                            }}
-                          >
-                            <Icon size={16} aria-hidden="true" />
-                            <span className="tenantry-search__label">{hit.label}</span>
-                            {hit.detail && <span className="tenantry-search__detail">{hit.detail}</span>}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </ModalBody>
-        </ComposedModal>,
-        document.body,
-      )}
+            </div>
+            <Command.List className="max-h-80 overflow-y-auto p-2">
+              {none && (
+                <p className="px-2 py-6 text-center text-sm text-muted-foreground">{`Nothing matches "${query.trim()}".`}</p>
+              )}
+              {groups.map((group) => {
+                const Icon = ICONS[group.name];
+                return (
+                  <Command.Group
+                    key={group.name}
+                    heading={group.name}
+                    className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+                  >
+                    {group.hits.map((hit) => (
+                      <Command.Item
+                        key={`${group.name}-${hit.label}-${hit.detail ?? ''}`}
+                        value={`${group.name}-${hit.label}-${hit.detail ?? ''}`}
+                        disabled={!hit.href}
+                        onSelect={() => {
+                          go(hit);
+                        }}
+                        className="flex cursor-default items-center gap-3 rounded-md px-2 py-2 text-sm outline-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                      >
+                        <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{hit.label}</span>
+                        {hit.detail && <span className="ml-auto truncate text-xs text-muted-foreground">{hit.detail}</span>}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                );
+              })}
+            </Command.List>
+          </Command>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

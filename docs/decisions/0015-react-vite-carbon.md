@@ -1,6 +1,6 @@
 # ADR-0015: React + Vite SPAs with IBM Carbon
 
-Status: Accepted · Date: 2026-11-02
+Status: Superseded by [ADR-0031](0031-tailwind-radix-opal.md) for the component system · Date: 2026-11-02
 
 ## Context
 

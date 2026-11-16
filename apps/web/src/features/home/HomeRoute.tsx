@@ -1,14 +1,4 @@
-import {
-  Button,
-  Link,
-  Stack,
-  StructuredListBody,
-  StructuredListCell,
-  StructuredListRow,
-  StructuredListWrapper,
-  Tile,
-} from '@carbon/react';
-import { ArrowRight, Email, Folder, FolderOpen, UserMultiple } from '@carbon/icons-react';
+import { ArrowRight, FolderKanban, FolderOpen, Mail, Users } from 'lucide-react';
 import {
   adminUrl,
   ApiErrorNotification,
@@ -19,7 +9,7 @@ import {
   useResource,
   useWorkspaces,
 } from '@tenantry/app-kit';
-import { DashboardPage, EmptyState, StatTile } from '@tenantry/ui';
+import { Button, DashboardPage, EmptyState, StatTile, TileGrid } from '@tenantry/ui';
 import { Checklist } from './Checklist.js';
 
 interface Project {
@@ -54,12 +44,12 @@ export function HomeRoute() {
   const tiles = [
     ...(guides && members.data
       ? [
-          <StatTile key="people" icon={UserMultiple} label="People" value={members.data.members.length} />,
-          <StatTile key="invites" icon={Email} label="Open invites" value={members.data.invites.length} />,
+          <StatTile key="people" icon={Users} label="People" value={members.data.members.length} />,
+          <StatTile key="invites" icon={Mail} label="Open invites" value={members.data.invites.length} />,
         ]
       : []),
     ...(projects.data
-      ? [<StatTile key="projects" icon={Folder} label="Projects" value={list.length} />]
+      ? [<StatTile key="projects" icon={FolderKanban} label="Projects" value={list.length} />]
       : []),
   ];
 
@@ -69,7 +59,7 @@ export function HomeRoute() {
       description={`Here's what's happening in ${me.tenant.name}.`}
       tiles={[]}
       activity={
-        <Stack gap={7}>
+        <div className="flex flex-col gap-6">
           <ApiErrorNotification error={projects.error ?? members.error} />
           {guides && projects.data && members.data && (
             <Checklist
@@ -86,49 +76,48 @@ export function HomeRoute() {
               }}
             />
           )}
-          {tiles.length > 0 && <div className="tenantry-home__stats">{tiles}</div>}
-          <section aria-label="Recent projects">
-            <Tile>
-              <div className="tenantry-home__section-header">
-                <h2 className="tenantry-home__heading">Recent projects</h2>
-                <Link as={RouterLink} href="/projects" renderIcon={ArrowRight}>
-                  All projects
-                </Link>
-              </div>
-              {projects.data && recent.length === 0 && (
-                <EmptyState
-                  icon={FolderOpen}
-                  title="Start your first project"
-                  body="Projects keep your team's work in one place."
-                  action={
-                    me.can('projects:write') ? (
-                      <Button as={RouterLink} href="/projects" kind="tertiary" size="sm">
-                        Go to Projects
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              )}
-              {recent.length > 0 && (
-                <StructuredListWrapper aria-label="Recent projects">
-                  <StructuredListBody>
-                    {recent.map((p) => (
-                      <StructuredListRow key={p.id}>
-                        <StructuredListCell>
-                          <span className="tenantry-home__project">
-                            <Folder size={16} aria-hidden="true" />
-                            {p.name}
-                          </span>
-                        </StructuredListCell>
-                        <StructuredListCell>{new Date(p.createdAt).toLocaleDateString()}</StructuredListCell>
-                      </StructuredListRow>
-                    ))}
-                  </StructuredListBody>
-                </StructuredListWrapper>
-              )}
-            </Tile>
+          {tiles.length > 0 && <TileGrid>{tiles}</TileGrid>}
+          <section aria-labelledby="recent-projects" className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 id="recent-projects" className="text-base font-semibold">
+                Recent projects
+              </h2>
+              <RouterLink href="/projects" className="inline-flex items-center gap-1 text-sm font-medium text-link hover:underline">
+                All projects
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </RouterLink>
+            </div>
+            {projects.data && recent.length === 0 && (
+              <EmptyState
+                icon={FolderOpen}
+                title="Start your first project"
+                body="Projects keep your team's work in one place."
+                action={
+                  me.can('projects:write') ? (
+                    <Button asChild variant="secondary" size="sm">
+                      <RouterLink href="/projects">Go to Projects</RouterLink>
+                    </Button>
+                  ) : undefined
+                }
+              />
+            )}
+            {recent.length > 0 && (
+              <ul aria-labelledby="recent-projects" className="flex flex-col divide-y divide-border">
+                {recent.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 font-medium">
+                      <FolderKanban aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{p.name}</span>
+                    </span>
+                    <span className="shrink-0 text-muted-foreground tabular-nums">
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
-        </Stack>
+        </div>
       }
     />
   );

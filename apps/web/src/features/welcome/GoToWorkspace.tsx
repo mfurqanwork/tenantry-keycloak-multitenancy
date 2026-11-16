@@ -1,5 +1,5 @@
-import { Button, Stack, TextInput } from '@carbon/react';
-import { ArrowRight } from '@carbon/icons-react';
+import { Button, FieldError, Input, Label } from '@tenantry/ui';
+import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { workspaceFromInput } from '../../lib/workspace-input.js';
 
@@ -26,23 +26,28 @@ export function GoToWorkspace({ baseDomain }: { baseDomain: string }) {
         window.location.assign(workspaceUrl(slug, baseDomain));
       }}
     >
-      <Stack gap={5}>
-        <TextInput
-          id="go-to-workspace"
-          labelText="Workspace address"
-          placeholder="acme"
-          value={input}
-          invalid={invalid}
-          invalidText="Enter a workspace address, such as acme"
-          onChange={(event) => {
-            setInput(event.target.value);
-            setInvalid(false);
-          }}
-        />
-        <Button type="submit" kind="primary" renderIcon={ArrowRight}>
-          Go
-        </Button>
-      </Stack>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="go-to-workspace">Workspace address</Label>
+        <div className="flex gap-2">
+          <Input
+            id="go-to-workspace"
+            placeholder="acme"
+            autoComplete="off"
+            value={input}
+            aria-invalid={invalid}
+            aria-describedby={invalid ? 'go-to-workspace-error' : undefined}
+            onChange={(event) => {
+              setInput(event.target.value);
+              setInvalid(false);
+            }}
+          />
+          <Button type="submit">
+            Go
+            <ArrowRight aria-hidden="true" />
+          </Button>
+        </div>
+        {invalid && <FieldError id="go-to-workspace-error">Enter a workspace address, such as acme</FieldError>}
+      </div>
     </form>
   );
 }

@@ -36,19 +36,19 @@ describe('WorkspaceSearch (spec 8.3)', () => {
   it('opens from the header button and with Ctrl+K, and closes with Esc', async () => {
     const user = open();
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(await screen.findByRole('searchbox')).toHaveFocus();
+    expect(await screen.findByRole('combobox', { name: 'Search pages, people and projects' })).toHaveFocus();
     await user.keyboard('{Escape}');
     await waitFor(() => {
-      expect(screen.queryByRole('searchbox')).toBeNull();
+      expect(screen.queryByRole('combobox')).toBeNull();
     });
     await user.keyboard('{Control>}k{/Control}');
-    expect(await screen.findByRole('searchbox')).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Search pages, people and projects' })).toBeInTheDocument();
   });
 
   it('groups what it finds into pages, people and projects', async () => {
     const user = open();
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    await user.type(await screen.findByRole('searchbox'), 'a');
+    await user.type(await screen.findByRole('combobox', { name: 'Search pages, people and projects' }), 'a');
     const people = await screen.findByRole('group', { name: 'People' });
     expect(within(people).getByText('Ada Acme')).toBeInTheDocument();
     expect(
@@ -59,7 +59,7 @@ describe('WorkspaceSearch (spec 8.3)', () => {
   it('says so when nothing matches', async () => {
     const user = open();
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    await user.type(await screen.findByRole('searchbox'), 'zzz');
+    await user.type(await screen.findByRole('combobox', { name: 'Search pages, people and projects' }), 'zzz');
     expect(await screen.findByText('Nothing matches "zzz".')).toBeInTheDocument();
   });
 
@@ -68,7 +68,7 @@ describe('WorkspaceSearch (spec 8.3)', () => {
     vi.stubGlobal('location', { href: realLocation.href, assign });
     const user = open();
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    await user.type(await screen.findByRole('searchbox'), 'peop');
+    await user.type(await screen.findByRole('combobox', { name: 'Search pages, people and projects' }), 'peop');
     await screen.findByText('People');
     await user.keyboard('{ArrowDown}{ArrowUp}{Enter}');
     expect(assign).toHaveBeenCalledWith('http://acme.portal.test/people');
@@ -78,12 +78,32 @@ describe('WorkspaceSearch (spec 8.3)', () => {
     const routes = api();
     const user = open(routes, 'member', pages.slice(0, 2));
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    await user.type(await screen.findByRole('searchbox'), 'peo');
+    await user.type(await screen.findByRole('combobox', { name: 'Search pages, people and projects' }), 'peo');
     expect(await screen.findByText('Nothing matches "peo".')).toBeInTheDocument();
     expect(routes.get).toHaveBeenCalledWith('/api/projects');
   });
 
-  it("opens at the page's level, never inside the dark header", async () => {
+  it('Ctrl+K opens search and Escape returns focus', async () => {
+    const user = open();
+    const button = screen.getByRole('button', { name: 'Search' });
+    button.focus();
+    await user.keyboard('{Control>}k{/Control}');
+    expect(screen.getByRole('dialog', { name: 'Search' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Search' })).toBeNull();
+    });
+    expect(button).toHaveFocus();
+  });
+
+  it('shows the shortcut on the search button', () => {
+    open();
+    const button = screen.getByRole('button', { name: 'Search' });
+    expect(button).toHaveAttribute('aria-keyshortcuts', 'Control+K Meta+K');
+    expect(button.querySelector('kbd')).not.toBeNull();
+  });
+
+  it("opens at the page's level, never inside the header", async () => {
     renderWithApp(
       <header>
         <WorkspaceSearch pages={pages} />
@@ -91,6 +111,6 @@ describe('WorkspaceSearch (spec 8.3)', () => {
       { api: api(), me: makeMe('owner', [...ROLE_PERMISSIONS.owner]) },
     );
     await userEvent.setup().click(screen.getByRole('button', { name: 'Search' }));
-    expect((await screen.findByRole('searchbox')).closest('header')).toBeNull();
+    expect((await screen.findByRole('combobox', { name: 'Search pages, people and projects' })).closest('header')).toBeNull();
   });
 });

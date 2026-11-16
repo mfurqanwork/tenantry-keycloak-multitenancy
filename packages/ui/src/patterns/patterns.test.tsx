@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { FolderKanban } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { DashboardPage } from './DashboardPage.js';
 import { DetailPage } from './DetailPage.js';
@@ -92,8 +93,8 @@ describe('page patterns', () => {
         c
       </WizardPage>,
     );
-    const current = screen.getByText('Tenant').closest('li');
-    expect(current).toHaveClass('cds--progress-step--current');
+    expect(screen.getByText('Tenant').closest('li')).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByText('Account').closest('li')).not.toHaveAttribute('aria-current');
     await userEvent.click(screen.getByRole('button', { name: 'Next' }));
     expect(onNext).toHaveBeenCalledOnce();
   });
@@ -145,7 +146,7 @@ describe('page patterns', () => {
   });
 
   it('WizardPage shows progress only for two or more steps', () => {
-    const { container, rerender } = render(
+    const { rerender } = render(
       <WizardPage
         title="Create a workspace"
         steps={['Workspace']}
@@ -156,19 +157,39 @@ describe('page patterns', () => {
         c
       </WizardPage>,
     );
-    expect(container.querySelector('.cds--progress')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Progress' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Create workspace' })).toBeInTheDocument();
     rerender(
       <WizardPage title="Register" steps={['Type', 'Review']} currentStep={0} onNext={vi.fn()}>
         c
       </WizardPage>,
     );
-    expect(container.querySelector('.cds--progress')).not.toBeNull();
+    expect(screen.getByRole('list', { name: 'Progress' })).toBeInTheDocument();
   });
 
   it('DashboardPage shows a line under its title when given one', () => {
     render(<DashboardPage title="Tenantry" description="Sign-in, teams and branding." tiles={[]} />);
     const title = screen.getByRole('heading', { level: 1, name: 'Tenantry' });
-    expect(title.closest('.tenantry-page-header')).toHaveTextContent('Sign-in, teams and branding.');
+    expect(title.closest('[data-slot="page-header"]')).toHaveTextContent('Sign-in, teams and branding.');
+  });
+
+  it('patterns accept a Lucide icon', () => {
+    render(
+      <ListPage title="Projects" icon={FolderKanban} isEmpty={false} emptyState={null}>
+        rows
+      </ListPage>,
+    );
+    const heading = screen.getByRole('heading', { level: 1, name: 'Projects' });
+    expect(heading.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('SettingsPage says Saving while it saves', () => {
+    render(
+      <SettingsPage title="Settings" dirty saving onSave={vi.fn()} onDiscard={vi.fn()}>
+        f
+      </SettingsPage>,
+    );
+    expect(screen.getByRole('button', { name: /Saving/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Discard' })).toBeDisabled();
   });
 });

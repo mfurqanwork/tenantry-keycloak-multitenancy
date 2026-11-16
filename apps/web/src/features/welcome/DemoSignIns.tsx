@@ -1,4 +1,3 @@
-import { Link, Stack } from '@carbon/react';
 import { workspaceUrl } from './GoToWorkspace.js';
 
 const ACCOUNTS = [
@@ -10,20 +9,23 @@ const ACCOUNTS = [
 // The live demo's public sign-ins (ADR-0029); shown only when a password is built in.
 export function DemoSignIns({ baseDomain, password }: { baseDomain: string; password: string }) {
   return (
-    <Stack gap={5}>
-      <h2 className="tenantry-welcome__heading">Sign in to the demo</h2>
-      <ul className="tenantry-welcome__demos">
+    <div className="flex flex-col gap-3 text-sm">
+      <h3 className="font-semibold">Sign in to the demo</h3>
+      <ul className="flex flex-col gap-1.5">
         {ACCOUNTS.map(({ email, role, slug, workspace }) => (
-          <li key={email}>
-            <code>{email}</code> {role}.{' '}
-            <Link href={workspaceUrl(slug, baseDomain)}>{`Open ${workspace}`}</Link>
+          <li key={email} className="flex flex-wrap items-baseline gap-x-2">
+            <code className="font-mono text-foreground">{email}</code>
+            <span className="text-muted-foreground">{role}</span>
+            <a className="text-link hover:underline" href={workspaceUrl(slug, baseDomain)}>{`Open ${workspace}`}</a>
           </li>
         ))}
       </ul>
       <p>
-        Password: <code>{password}</code>
+        Password: <code className="font-mono text-foreground">{password}</code>
       </p>
-      <p>Anyone can use these accounts. The demo resets every night, and whatever you create is removed.</p>
-    </Stack>
+      <p className="text-muted-foreground">
+        Anyone can use these accounts. The demo resets every night, and whatever you create is removed.
+      </p>
+    </div>
   );
 }

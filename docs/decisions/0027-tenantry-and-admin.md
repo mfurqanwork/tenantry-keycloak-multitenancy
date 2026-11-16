@@ -49,3 +49,5 @@ There was also a developer page in the main menu, and IT-admin features sat on t
 ## Update: one menu
 
 Both apps now show the same side menu (`workspaceMenu` in `@tenantry/app-kit`): Home and Projects, then a **Workspace** section with People, Branding, Sign-in & security and Audit log, then **Advanced**. Each item has an icon. Items that live in the other app link to its address; sign-in carries over (ADR-0020). Members see Home and Projects only. Both headers also carry search (Ctrl+K) and the notifications bell ([ADR-0028](0028-notifications.md)).
+
+The component system moved off Carbon in [ADR-0031](0031-tailwind-radix-opal.md); the app split is unchanged.

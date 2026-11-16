@@ -1,3 +1,5 @@
+// The new components and shell first, then Carbon for Admin's pages until they move (ADR-0031).
+import './styles.css';
 import '@tenantry/ui/styles.scss';
 import './app.scss';
 import { StrictMode } from 'react';

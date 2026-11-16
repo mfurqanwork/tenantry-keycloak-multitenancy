@@ -1,11 +1,12 @@
-import type { CarbonIconType } from '@carbon/icons-react';
 import type { ReactNode } from 'react';
+import type { IconComponent } from '../icon.js';
+import { Page } from './page.js';
 import { PageHeader, type Crumb } from './PageHeader.js';
 
 interface ListPageProps {
   breadcrumbs?: Crumb[];
   title: string;
-  icon?: CarbonIconType;
+  icon?: IconComponent;
   description?: ReactNode;
   primaryAction?: ReactNode;
   isEmpty: boolean;
@@ -13,7 +14,7 @@ interface ListPageProps {
   children: ReactNode;
 }
 
-// A collection: header with the primary action, then the DataTable (children) or the empty state.
+// A collection: header with the primary action, then the table (children) or the empty state.
 export function ListPage({
   breadcrumbs,
   title,
@@ -25,7 +26,7 @@ export function ListPage({
   children,
 }: ListPageProps) {
   return (
-    <div className="tenantry-page">
+    <Page>
       <PageHeader
         breadcrumbs={breadcrumbs}
         title={title}
@@ -33,7 +34,7 @@ export function ListPage({
         description={description}
         actions={primaryAction}
       />
-      <div className="tenantry-page__body">{isEmpty ? emptyState : children}</div>
-    </div>
+      <div className="flex flex-col gap-4">{isEmpty ? emptyState : children}</div>
+    </Page>
   );
 }

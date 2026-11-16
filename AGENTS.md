@@ -9,7 +9,7 @@ Guidance for AI coding agents and humans working in this repository. Read it bef
 - `apps/login-theme`: the Keycloakify login theme, built into the Keycloak image (ADR-0021).
 - `packages/app-kit`: what both apps share: `TenantAuth` (sign-in for a tenant host), the API client, `ApiErrorNotification`, `FormDialog`, `useMe`; `/testing` has the test helpers both apps use (`fakeApi`, `makeMe`, `renderWithApp`).
 - `packages/brand`: the colour maths for tenant branding (contrast, suggested shade, Carbon tokens).
-- `packages/ui`: Carbon setup, `AppShell`, the five page patterns, and `StatTile`/`TileGrid` for facts on tiles.
+- `packages/ui`: the tokens (Tailwind v4), our Radix-based components, `TechLogo`, `AppShell`, the five page patterns, and `StatTile`/`TileGrid` for facts on tiles (ADR-0031).
 - `packages/db`: the Drizzle schema, SQL migrations and row-level security policies.
 - `packages/auth`: `TenantContext`, the roles, and the role-to-permission map.
 - `packages/keycloak-admin`: the only code that calls Keycloak admin endpoints, behind `IdentityDirectory`, `MemberDirectory`, `RealmProvisioner`, `RealmApps` (customer apps, ADR-0011), `RealmScim` (the native SCIM behind our gateway, ADR-0024), `RealmConsole` (console access, ADR-0026), and `RealmBridge` and `RealmIdps` (moving a workspace to Enterprise, ADR-0025); `/testing` has the in-memory fakes, `/secrets` the secrets store, and `templates/` the versioned enterprise realm and product-client templates (ADR-0010).
@@ -48,10 +48,11 @@ These keep tenant isolation intact. A change that breaks one of them is wrong, e
 
 ## UI rules
 
-- Every new screen starts from a `@tenantry/ui` page pattern: `ListPage`, `DetailPage`, `SettingsPage`, `DashboardPage` or `WizardPage`.
-- Use Carbon components and `@carbon/icons-react` only. Don't add another component library.
-- Colour, spacing and type come from Carbon tokens (`$spacing-*`, theme tokens, `type-style`). stylelint rejects raw `px`/`rem` sizes, `box-shadow`, `border-radius` and gradients.
-- The header is always dark (`g100`). The page follows the user's light or dark choice.
+- Every screen starts from a `@tenantry/ui` page pattern.
+- Use `@tenantry/ui` components and Lucide icons only; technology logos only through `TechLogo`.
+- Colour, spacing, radius, shadow and type come from tokens. Stylelint and ESLint reject raw colours and sizes outside the token files, and imports of `@carbon/*`.
+- The header follows the page's light or dark theme.
+- Until the redesign's second release, Admin and the login theme still use the legacy Carbon stylesheet (ADR-0031).
 
 ## Conventions
 

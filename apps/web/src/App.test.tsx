@@ -106,8 +106,8 @@ describe('web app (Tenantry, ADR-0027)', () => {
   it("lists the person's workspaces, each at its web address", async () => {
     renderAt('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Switch workspace' }));
-    const panel = screen.getByRole('navigation', { name: 'Switch workspace' });
-    expect(within(panel).getByRole('link', { name: /Globex/ })).toHaveAttribute(
+    const panel = screen.getByRole('menu');
+    expect(within(panel).getByRole('menuitem', { name: /Globex/ })).toHaveAttribute(
       'href',
       'http://globex.tenantry.localhost/',
     );
@@ -116,8 +116,8 @@ describe('web app (Tenantry, ADR-0027)', () => {
   it('switches to the Admin of this workspace', async () => {
     renderAt('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Switch app' }));
-    const panel = screen.getByRole('navigation', { name: 'Switch app' });
-    expect(within(panel).getByRole('link', { name: /Admin/ })).toHaveAttribute(
+    const panel = screen.getByRole('menu');
+    expect(within(panel).getByRole('menuitem', { name: /Admin/ })).toHaveAttribute(
       'href',
       'http://acme.portal.tenantry.localhost/',
     );

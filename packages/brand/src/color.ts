@@ -4,13 +4,17 @@ export interface Rgb {
   b: number;
 }
 
-// The Carbon tokens a tenant colour drives (applied by @tenantry/ui's applyBrand).
+// The tokens a workspace colour drives (applied by @tenantry/ui's applyBrand).
 export interface BrandTokens {
   interactive: string;
   hover: string;
   active: string;
   focus: string;
   link: string;
+  /** The label colour on `interactive`: white where it reads at 4.5:1, otherwise navy ink, otherwise black. */
+  foreground: string;
+  /** A pale tint of the colour, for selected rows and the active menu item. */
+  subtle: string;
 }
 
 const HEX = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
@@ -96,6 +100,19 @@ export function darkerUntilContrast(hex: string, against = WHITE, min = MIN_CONT
   return current;
 }
 
+const INK = '#12224a';
+
+function labelOn(interactive: string): string {
+  return [WHITE, INK].find((label) => meetsContrast(label, interactive)) ?? '#000000';
+}
+
+// `amount` of the colour over white (0 is white, 1 the colour).
+function tint(hex: string, amount: number): string {
+  const { r, g, b } = rgbOf(hex);
+  const mix = (c: number) => 255 + (c - 255) * amount;
+  return toHex({ r: mix(r), g: mix(g), b: mix(b) });
+}
+
 export function brandTokens(hex: string): BrandTokens {
   const interactive = toHex(rgbOf(hex));
   return {
@@ -104,5 +121,7 @@ export function brandTokens(hex: string): BrandTokens {
     active: adjustLightness(interactive, -16),
     focus: interactive,
     link: interactive,
+    foreground: labelOn(interactive),
+    subtle: tint(interactive, 0.1),
   };
 }

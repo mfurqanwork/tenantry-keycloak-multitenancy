@@ -1,8 +1,8 @@
-import { InlineLoading } from '@carbon/react';
 import type { Permission, Role } from '@tenantry/auth';
 import { createContext, useContext, type ReactNode } from 'react';
 import { ApiErrorNotification } from './ApiErrorNotification.js';
 import { useResource } from './useResource.js';
+import { Loading } from './Loading.js';
 
 // Who is signed in, in which tenant, and what they may do: GET /api/me. The UI shows controls from
 // these permissions; the API decides again on every call.
@@ -30,6 +30,6 @@ export function useMe(): Me & { can: (permission: Permission) => boolean } {
 export function LoadMe({ children }: { children: ReactNode }) {
   const me = useResource<Me>('/api/me');
   if (me.error) return <ApiErrorNotification error={me.error} />;
-  if (!me.data) return <InlineLoading description="Loading your workspace" />;
+  if (!me.data) return <Loading description="Loading your workspace" />;
   return <MeProvider value={me.data}>{children}</MeProvider>;
 }

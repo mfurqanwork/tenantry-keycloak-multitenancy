@@ -1,12 +1,13 @@
-import type { CarbonIconType } from '@carbon/icons-react';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import type { ReactNode } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/tabs.js';
+import type { IconComponent } from '../icon.js';
+import { Page } from './page.js';
 import { PageHeader, type Crumb } from './PageHeader.js';
 
 interface DetailPageProps {
   breadcrumbs?: Crumb[];
   title: string;
-  icon?: CarbonIconType;
+  icon?: IconComponent;
   description?: ReactNode;
   actions?: ReactNode;
   summary: ReactNode;
@@ -14,37 +15,25 @@ interface DetailPageProps {
 }
 
 // One record: read-only summary tiles above, its sections in tabs below.
-export function DetailPage({
-  breadcrumbs,
-  title,
-  icon,
-  description,
-  actions,
-  summary,
-  tabs,
-}: DetailPageProps) {
+export function DetailPage({ breadcrumbs, title, icon, description, actions, summary, tabs }: DetailPageProps) {
   return (
-    <div className="tenantry-page">
-      <PageHeader
-        breadcrumbs={breadcrumbs}
-        title={title}
-        icon={icon}
-        description={description}
-        actions={actions}
-      />
-      <div className="tenantry-page__summary">{summary}</div>
-      <Tabs>
-        <TabList aria-label={`${title} sections`}>
+    <Page>
+      <PageHeader breadcrumbs={breadcrumbs} title={title} icon={icon} description={description} actions={actions} />
+      <div>{summary}</div>
+      <Tabs defaultValue={tabs[0]?.label}>
+        <TabsList aria-label={`${title} sections`}>
           {tabs.map((tab) => (
-            <Tab key={tab.label}>{tab.label}</Tab>
+            <TabsTrigger key={tab.label} value={tab.label}>
+              {tab.label}
+            </TabsTrigger>
           ))}
-        </TabList>
-        <TabPanels>
-          {tabs.map((tab) => (
-            <TabPanel key={tab.label}>{tab.content}</TabPanel>
-          ))}
-        </TabPanels>
+        </TabsList>
+        {tabs.map((tab) => (
+          <TabsContent key={tab.label} value={tab.label}>
+            {tab.content}
+          </TabsContent>
+        ))}
       </Tabs>
-    </div>
+    </Page>
   );
 }
