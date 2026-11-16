@@ -37,7 +37,7 @@ export function SheetContent({
         {children}
         <SheetPrimitive.Close
           aria-label="Close menu"
-          className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted focus-ring"
         >
           <X className="size-4" aria-hidden />
         </SheetPrimitive.Close>

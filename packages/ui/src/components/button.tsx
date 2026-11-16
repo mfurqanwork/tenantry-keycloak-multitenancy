@@ -6,7 +6,7 @@ import { cn } from '../lib/cn.js';
 export const buttonVariants = cva(
   [
     'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent text-sm font-medium whitespace-nowrap',
-    'transition-colors outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:border-ring',
+    'transition-colors outline-none select-none focus-ring',
     'disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive',
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ],

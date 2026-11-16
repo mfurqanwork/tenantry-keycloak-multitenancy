@@ -13,7 +13,7 @@ export function SelectTrigger({ className, children, ...props }: ComponentProps<
       data-slot="select-trigger"
       className={cn(
         'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm whitespace-nowrap outline-none',
-        'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-visible:border-ring focus-ring disabled:cursor-not-allowed disabled:opacity-50',
         'data-[placeholder]:text-muted-foreground aria-invalid:border-destructive dark:bg-muted/40',
         '[&>span]:line-clamp-1',
         className,

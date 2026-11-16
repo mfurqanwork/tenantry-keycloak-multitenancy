@@ -37,3 +37,8 @@
     cursor: pointer;
   }
 }
+
+/* The one focus indicator: a solid two-pixel ring, set off from the control (3:1 or more on the page). */
+@utility focus-ring {
+  @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}

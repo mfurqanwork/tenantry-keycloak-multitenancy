@@ -12,7 +12,7 @@ export function RadioGroupItem({ className, ...props }: ComponentProps<typeof Ra
       data-slot="radio-group-item"
       className={cn(
         'aspect-square size-4 shrink-0 rounded-full border border-input bg-background outline-none transition-colors',
-        'focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-ring disabled:cursor-not-allowed disabled:opacity-50',
         'data-[state=checked]:border-primary',
         className,
       )}

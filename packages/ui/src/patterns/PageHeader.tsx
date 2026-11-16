@@ -18,7 +18,7 @@ interface PageHeaderProps {
   icon?: IconComponent | undefined;
 }
 
-const crumbLink = 'rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50';
+const crumbLink = 'rounded-sm text-muted-foreground outline-none hover:text-foreground focus-ring';
 
 // Shared by all five page patterns: breadcrumb, the page's only h1, then its actions at the end.
 export function PageHeader({ breadcrumbs, title, actions, description, icon: Icon }: PageHeaderProps) {

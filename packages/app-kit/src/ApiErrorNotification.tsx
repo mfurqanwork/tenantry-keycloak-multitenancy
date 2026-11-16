@@ -21,7 +21,7 @@ export function ApiErrorNotification({ error, onClose }: { error: unknown; onClo
           type="button"
           aria-label="Dismiss"
           onClick={onClose}
-          className="-m-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="-m-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-ring"
         >
           <X aria-hidden="true" className="size-4" />
         </button>

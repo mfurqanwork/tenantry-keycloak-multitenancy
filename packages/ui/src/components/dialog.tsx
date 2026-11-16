@@ -46,7 +46,7 @@ export function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             aria-label="Close"
-            className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-ring"
           >
             <X className="size-4" aria-hidden />
           </DialogPrimitive.Close>

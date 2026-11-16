@@ -86,7 +86,7 @@ function bySection(items: NavItem[]): { section: string | null; items: NavItem[]
 
 const navRow = cn(
   'flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground outline-none transition-colors',
-  'hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50',
+  'hover:bg-accent hover:text-foreground focus-ring',
   'aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground',
   '[&_svg]:size-4 [&_svg]:shrink-0',
 );
@@ -218,7 +218,7 @@ function Identity(props: IdentityProps) {
 }
 
 const identityRow =
-  'flex min-w-0 items-center gap-2.5 rounded-md p-1.5 outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50';
+  'flex min-w-0 items-center gap-2.5 rounded-md p-1.5 outline-none hover:bg-accent focus-ring';
 
 // The top of the sidebar: the workspace, and the menu of the person's other workspaces when there are any.
 function WorkspaceSwitcher({
@@ -286,7 +286,7 @@ function AccountMenu({
       <DropdownMenuTrigger
         aria-label="Account"
         className={cn(
-          'flex items-center gap-2.5 rounded-md outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50',
+          'flex items-center gap-2.5 rounded-md outline-none hover:bg-accent focus-ring',
           wide ? 'w-full p-1.5' : 'p-1',
         )}
       >
