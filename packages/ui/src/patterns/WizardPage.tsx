@@ -19,6 +19,8 @@ interface WizardPageProps {
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  // Extra classes for the page column (signup sits it in a card).
+  className?: string;
 }
 
 // A flow of one or more steps (signup, app registration): progress, the step's content, then Back and Next.
@@ -35,9 +37,10 @@ export function WizardPage({
   onNext,
   nextLabel = 'Next',
   nextDisabled = false,
+  className,
 }: WizardPageProps) {
   return (
-    <Page className="max-w-3xl">
+    <Page className={cn('max-w-3xl', className)}>
       <PageHeader breadcrumbs={breadcrumbs} title={title} icon={icon} description={description} actions={actions} />
       {/* One step is a plain form: no progress to show. */}
       {steps.length > 1 && (

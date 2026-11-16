@@ -1,7 +1,6 @@
-import { InlineLoading, Stack, TextInput } from '@carbon/react';
-import { WizardPage } from '@tenantry/ui';
+import { ApiErrorNotification, Loading, useApi } from '@tenantry/app-kit';
+import { FieldError, Input, Label, WizardPage } from '@tenantry/ui';
 import { useState } from 'react';
-import { ApiErrorNotification, useApi } from '@tenantry/app-kit';
 
 type Availability = { available: true } | { available: false; reason: 'format' | 'reserved' | 'taken' };
 
@@ -61,44 +60,59 @@ export function SignupRoute({
     }
   }
 
+  const preview = `${slug || 'your-name'}.${baseDomain}`;
   return (
-    <WizardPage
-      title="Create a workspace"
-      steps={STEPS}
-      currentStep={0}
-      onNext={() => void create()}
-      nextLabel="Create workspace"
-      nextDisabled={busy || name.trim() === '' || slug === ''}
-    >
-      <Stack gap={6}>
-        <ApiErrorNotification error={error} />
-        <TextInput
-          id="workspace-name"
-          labelText="Workspace name"
-          value={name}
-          maxLength={80}
-          onChange={(event) => {
-            setName(event.target.value);
-            if (!slugEdited) setSlug(suggestSlug(event.target.value));
-            setSlugError(null);
-          }}
-        />
-        <TextInput
-          id="workspace-address"
-          labelText="Address"
-          helperText={slug ? `${slug}.${baseDomain}` : `your-name.${baseDomain}`}
-          value={slug}
-          maxLength={32}
-          invalid={slugError !== null}
-          invalidText={slugError ?? ''}
-          onChange={(event) => {
-            setSlug(event.target.value.toLowerCase());
-            setSlugEdited(true);
-            setSlugError(null);
-          }}
-        />
-        {busy && <InlineLoading description="Creating your workspace" />}
-      </Stack>
-    </WizardPage>
+    <div className="flex min-h-[calc(100dvh-3.5rem)] justify-center bg-muted px-4 py-10 sm:py-16">
+      <div data-slot="signup-card" className="h-fit w-full max-w-md">
+        <WizardPage
+          title="Create a workspace"
+          description="Your team's own sign-in, people and brand."
+          steps={STEPS}
+          currentStep={0}
+          onNext={() => void create()}
+          nextLabel="Create workspace"
+          nextDisabled={busy || name.trim() === '' || slug === ''}
+          className="rounded-xl border border-border bg-card px-6 py-6 shadow-raised sm:px-8"
+        >
+          <ApiErrorNotification error={error} />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="workspace-name">Workspace name</Label>
+            <Input
+              id="workspace-name"
+              value={name}
+              maxLength={80}
+              autoComplete="organization"
+              onChange={(event) => {
+                setName(event.target.value);
+                if (!slugEdited) setSlug(suggestSlug(event.target.value));
+                setSlugError(null);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="workspace-address">Address</Label>
+            <Input
+              id="workspace-address"
+              value={slug}
+              maxLength={32}
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={slugError !== null}
+              aria-describedby={slugError ? 'workspace-address-preview workspace-address-error' : 'workspace-address-preview'}
+              onChange={(event) => {
+                setSlug(event.target.value.toLowerCase());
+                setSlugEdited(true);
+                setSlugError(null);
+              }}
+            />
+            <p id="workspace-address-preview" className="text-sm text-muted-foreground">
+              <span className="font-mono text-foreground">{preview}</span>
+            </p>
+            {slugError && <FieldError id="workspace-address-error">{slugError}</FieldError>}
+          </div>
+          {busy && <Loading description="Creating your workspace" />}
+        </WizardPage>
+      </div>
+    </div>
   );
 }

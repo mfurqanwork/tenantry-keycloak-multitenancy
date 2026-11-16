@@ -13,6 +13,7 @@ export { workspaceMenu, type App as AppName, type MenuPerson } from './menu.js';
 export { ApiErrorNotification } from './ApiErrorNotification.js';
 export { useBranding, type Branding } from './branding.js';
 export { FormDialog } from './FormDialog.js';
+export { Loading } from './Loading.js';
 export { LoadMe, MeProvider, useMe, type Me } from './me.js';
 export { assignableRoles, ROLE_LABELS } from './roles.js';
 export { RouterLink } from './RouterLink.js';

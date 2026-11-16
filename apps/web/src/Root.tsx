@@ -17,13 +17,12 @@ export function Root() {
         (apexPage(window.location.pathname) === 'signup' ? (
           <SignupApp baseDomain={BASE_DOMAIN} />
         ) : (
-          <AppShell productName="Tenantry" navItems={[]} currentPath="/">
-            <WelcomeRoute
-              baseDomain={BASE_DOMAIN}
-              demoWorkspaces={DEMO_WORKSPACES}
-              demoPassword={import.meta.env['VITE_DEMO_PASSWORD'] as string | undefined}
-            />
-          </AppShell>
+          // The welcome page brings its own top bar and footer.
+          <WelcomeRoute
+            baseDomain={BASE_DOMAIN}
+            demoWorkspaces={DEMO_WORKSPACES}
+            demoPassword={import.meta.env['VITE_DEMO_PASSWORD'] as string | undefined}
+          />
         ))}
       {host.kind === 'tenant' && <TenantApp slug={host.slug} signupUrl={signupUrl} />}
       {host.kind === 'unknown' && (

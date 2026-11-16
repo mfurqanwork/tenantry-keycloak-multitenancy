@@ -1,8 +1,7 @@
-import { InlineLoading } from '@carbon/react';
 import { AuthProvider, CALLBACK_PATH, createAuthClient } from '@tenantry/oidc-client';
 import { AppShell } from '@tenantry/ui';
 import { useMemo } from 'react';
-import { RouterLink, SignedInApi } from '@tenantry/app-kit';
+import { Loading, RouterLink, SignedInApi } from '@tenantry/app-kit';
 import { apexAuthConfig } from '../../lib/host.js';
 import { SignupRoute } from './SignupRoute.js';
 
@@ -20,7 +19,7 @@ export function SignupApp({ baseDomain }: { baseDomain: string }) {
   );
   return (
     <AppShell productName="Tenantry" navItems={[]} currentPath="/" linkAs={RouterLink}>
-      <AuthProvider client={client} fallback={<InlineLoading description="Signing in" />}>
+      <AuthProvider client={client} fallback={<Loading description="Signing in" />}>
         <SignedInApi>
           <SignupRoute
             baseDomain={baseDomain}

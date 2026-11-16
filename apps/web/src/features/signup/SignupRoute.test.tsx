@@ -43,7 +43,23 @@ describe('SignupRoute (one screen)', () => {
     expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
     expect(screen.getByLabelText('Address')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
-    expect(document.querySelector('.cds--progress')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Progress' })).not.toBeInTheDocument();
+  });
+
+  it('signup previews the address', async () => {
+    renderSignup(fakeApi());
+    const user = userEvent.setup();
+    expect(screen.getByText('your-name.tenantry.localhost')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Workspace name'), 'Pengopal Labs');
+    expect(screen.getByText(/pengopal-labs\./)).toHaveTextContent('pengopal-labs.tenantry.localhost');
+    expect(screen.getByLabelText('Address')).toHaveAccessibleDescription(/pengopal-labs\.tenantry\.localhost/);
+  });
+
+  it('sits in one card on the soft grey ground', () => {
+    renderSignup(fakeApi());
+    const card = screen.getByRole('heading', { level: 1, name: 'Create a workspace' }).closest('[data-slot="signup-card"]');
+    expect(card).not.toBeNull();
+    expect(card?.parentElement).toHaveClass('bg-muted');
   });
 
   it('fills in the address from the name until it is edited', async () => {
@@ -64,6 +80,7 @@ describe('SignupRoute (one screen)', () => {
     await fillDetails('Acme');
     expect(await screen.findByText('This address is taken.')).toBeInTheDocument();
     expect(screen.getByLabelText('Address')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('This address is taken.');
     expect(api.post).not.toHaveBeenCalled();
   });
 
