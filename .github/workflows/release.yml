@@ -87,7 +87,7 @@ jobs:
             TENANTRY_BASE_DOMAIN=${{ vars.TENANTRY_BASE_DOMAIN }}
             VITE_TENANTRY_VERSION=${{ needs.verify.outputs.version }}
             VITE_TENANTRY_BASE_DOMAIN=${{ vars.TENANTRY_BASE_DOMAIN }}
-            VITE_DEMO_WORKSPACES=acme,globex,initech
+            VITE_DEMO_WORKSPACES=pengopal,globex,initech
             VITE_DEMO_PASSWORD=${{ vars.TENANTRY_DEMO_PASSWORD }}
 
   publish:

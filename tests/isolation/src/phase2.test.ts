@@ -118,11 +118,11 @@ describe('branding and the portal host keep tenants apart', () => {
 });
 
 describe('the seeded demo (pnpm seed)', () => {
-  it('lets pat switch between acme and globex', async () => {
+  it('lets pat switch between pengopal and globex', async () => {
     const pat = { username: 'pat@example.test', password: env('SEED_PASSWORD') };
-    const token = await tokenFor({ ...pat, kcUserId: '', email: pat.username }, 'acme');
-    const res = await api<{ slug: string }[]>(tenantHost('acme'), 'GET', '/api/me/workspaces', { token });
+    const token = await tokenFor({ ...pat, kcUserId: '', email: pat.username }, 'pengopal');
+    const res = await api<{ slug: string }[]>(tenantHost('pengopal'), 'GET', '/api/me/workspaces', { token });
     expect(res.status).toBe(200);
-    expect(res.body.map((w) => w.slug)).toEqual(expect.arrayContaining(['acme', 'globex']));
+    expect(res.body.map((w) => w.slug)).toEqual(expect.arrayContaining(['pengopal', 'globex']));
   });
 });

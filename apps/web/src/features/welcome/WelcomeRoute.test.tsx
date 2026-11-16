@@ -84,7 +84,7 @@ describe('the welcome page', () => {
     renderWelcome();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText('Workspace address'), 'a b{Enter}');
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter a workspace address, such as acme');
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a workspace address, such as pengopal');
     expect(screen.getByLabelText('Workspace address')).toHaveAttribute('aria-invalid', 'true');
     expect(assign).not.toHaveBeenCalled();
   });

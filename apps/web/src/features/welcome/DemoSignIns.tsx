@@ -1,8 +1,8 @@
 import { workspaceUrl } from './GoToWorkspace.js';
 
 const ACCOUNTS = [
-  { email: 'ada@example.test', role: 'Owner', slug: 'acme', workspace: 'Acme' },
-  { email: 'cy@example.test', role: 'Member', slug: 'acme', workspace: 'Acme' },
+  { email: 'ada@example.test', role: 'Owner', slug: 'pengopal', workspace: 'Pengopal' },
+  { email: 'cy@example.test', role: 'Member', slug: 'pengopal', workspace: 'Pengopal' },
   { email: 'gil@example.test', role: 'Owner', slug: 'globex', workspace: 'Globex' },
 ];
 

@@ -10,7 +10,7 @@ import { newSlug } from './helpers/tenants.js';
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 // The seeded enterprise demo (pnpm seed) and the seeded Standard workspace with company login.
 const INITECH = { slug: 'initech', realm: 'ent-initech', owner: 'owner@initech.test' };
-const ACME = 'acme';
+const PENGOPAL = 'pengopal';
 const port = HTTP_PORT === 80 ? '' : `:${String(HTTP_PORT)}`;
 const webRedirect = (slug: string) => `http://${slug}.${BASE_DOMAIN}${port}/`;
 
@@ -100,7 +100,7 @@ describe('guarantee: an enterprise tenant accepts only its own realm’s tokens'
   });
 
   it("refuses the Initech owner's token on a Standard workspace", async () => {
-    expect((await me(tenantHost(ACME), initechOwner)).status).toBe(401);
+    expect((await me(tenantHost(PENGOPAL), initechOwner)).status).toBe(401);
   });
 
   it('refuses the password grant in an enterprise realm', async () => {
@@ -127,7 +127,7 @@ describe('guarantee: enterprise realms stay on their template', () => {
 
 describe("guarantee: a company login only admits the organization's own domains", () => {
   it('stops a company account whose email is outside acme.test', async () => {
-    // A corp-demo account that asserts an address Acme never verified.
+    // A corp-demo account that asserts an address Pengopal never verified.
     const outsider = await createUser('outsider', {
       realm: 'corp-demo',
       email: `${newSlug('pat')}@example.test`,

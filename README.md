@@ -45,7 +45,7 @@ flowchart TB
     direction LR
     subgraph platform["platform realm: Standard"]
       direction TB
-      acme["acme<br/>organization"]
+      pengopal["pengopal<br/>organization"]
       globex["globex<br/>organization"]
       more["…thousands more"]
     end

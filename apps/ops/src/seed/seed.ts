@@ -28,14 +28,14 @@ interface Person {
 
 // The demo (docs/demo-script.md). Local test accounts only, all with SEED_PASSWORD.
 export const WORKSPACES = [
-  { slug: 'acme', name: 'Acme', color: '#0f62fe', owner: 'ada@example.test' },
+  { slug: 'pengopal', name: 'Pengopal', color: '#2b77c0', owner: 'ada@example.test' },
   { slug: 'globex', name: 'Globex', color: '#198038', owner: 'gil@example.test' },
 ] as const;
 
 export const PEOPLE: Person[] = [
-  { email: 'ada@example.test', firstName: 'Ada', lastName: 'Acme', workspaces: { acme: 'owners' } },
-  { email: 'ben@example.test', firstName: 'Ben', lastName: 'Acme', workspaces: { acme: 'admins' } },
-  { email: 'cy@example.test', firstName: 'Cy', lastName: 'Acme', workspaces: { acme: 'members' } },
+  { email: 'ada@example.test', firstName: 'Ada', lastName: 'Pengopal', workspaces: { pengopal: 'owners' } },
+  { email: 'ben@example.test', firstName: 'Ben', lastName: 'Pengopal', workspaces: { pengopal: 'admins' } },
+  { email: 'cy@example.test', firstName: 'Cy', lastName: 'Pengopal', workspaces: { pengopal: 'members' } },
   { email: 'gil@example.test', firstName: 'Gil', lastName: 'Globex', workspaces: { globex: 'owners' } },
   { email: 'gwen@example.test', firstName: 'Gwen', lastName: 'Globex', workspaces: { globex: 'admins' } },
   { email: 'gus@example.test', firstName: 'Gus', lastName: 'Globex', workspaces: { globex: 'members' } },
@@ -43,7 +43,7 @@ export const PEOPLE: Person[] = [
     email: 'pat@example.test',
     firstName: 'Pat',
     lastName: 'Both',
-    workspaces: { acme: 'members', globex: 'members' },
+    workspaces: { pengopal: 'members', globex: 'members' },
   },
 ];
 
@@ -55,9 +55,10 @@ export const ENTERPRISE = {
   color: '#4d5358',
 } as const;
 
-// Company login for acme: people at acme.test sign in through the corp-demo realm (ADR-0022).
+// Company login for the Pengopal workspace: people at acme.test (a demo company's own identity provider)
+// sign in through the corp-demo realm (ADR-0022).
 export const COMPANY = {
-  tenant: 'acme',
+  tenant: 'pengopal',
   domain: 'acme.test',
   alias: 'acme-corp',
   person: 'alice@acme.test',
@@ -113,8 +114,8 @@ export async function seed(deps: SeedDeps): Promise<number> {
     await ensureBranding(deps, tenant, w, changes);
   }
 
-  const acme = await platform.findTenantBySlug(COMPANY.tenant);
-  if (acme) await ensureCompanyLogin(deps, quiet, acme, changes);
+  const demo = await platform.findTenantBySlug(COMPANY.tenant);
+  if (demo) await ensureCompanyLogin(deps, quiet, demo, changes);
   await ensureEnterprise(deps, changes);
 
   deps.out(
@@ -171,12 +172,12 @@ async function ensureBranding(
   }
 }
 
-async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, acme: TenantRecord, changes: string[]) {
+async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, demo: TenantRecord, changes: string[]) {
   const { tenant, domain, alias } = COMPANY;
-  const linked = await tenantTx(deps.db, acme.id, (tx) => listIdps(tx));
+  const linked = await tenantTx(deps.db, demo.id, (tx) => listIdps(tx));
   if (!linked.some((idp) => idp.alias === alias)) {
     await claimDomain(quiet, { tenant, domain });
-    const claimed = await tenantTx(deps.db, acme.id, (tx) => findDomain(tx, domain));
+    const claimed = await tenantTx(deps.db, demo.id, (tx) => findDomain(tx, domain));
     if (!claimed?.verifiedAt) {
       const record = verificationRecord(domain, claimed?.verificationToken ?? '');
       deps.setTxt(record.name, record.value);
@@ -201,10 +202,10 @@ async function ensureCompanyLogin(deps: SeedDeps, quiet: OpsDeps, acme: TenantRe
     changes.push(`company login button for ${domain}`);
   }
   // Alice gets the member role through an invite, claimed the first time she signs in (ADR-0019).
-  const members = await deps.directory.listMembers(acme.kcOrgId ?? '');
+  const members = await deps.directory.listMembers(demo.kcOrgId ?? '');
   if (!members.some((m) => m.email === COMPANY.person)) {
-    const res = await deps.api(`${acme.slug}.${deps.baseDomain}`, 'POST', '/api/members/invites', {
-      token: await deps.tokenFor('ada@example.test', acme.slug),
+    const res = await deps.api(`${demo.slug}.${deps.baseDomain}`, 'POST', '/api/members/invites', {
+      token: await deps.tokenFor('ada@example.test', demo.slug),
       body: { email: COMPANY.person, role: 'member' },
     });
     if (res.status === 201) changes.push(`invite for ${COMPANY.person}`);

@@ -56,11 +56,11 @@ Then run `pnpm dev:stack` again.
 
 | Account              | Where                                                                       |
 | -------------------- | --------------------------------------------------------------------------- |
-| `ada@example.test`   | Owner of `acme` (blue)                                                      |
-| `ben@example.test`   | Admin of `acme`                                                             |
-| `cy@example.test`    | Member of `acme`                                                            |
+| `ada@example.test`   | Owner of `pengopal` (Pengopal blue)                                                      |
+| `ben@example.test`   | Admin of `pengopal`                                                             |
+| `cy@example.test`    | Member of `pengopal`                                                            |
 | `gil@example.test`   | Owner of `globex` (green)                                                   |
-| `pat@example.test`   | Member of `acme` and `globex`                                               |
+| `pat@example.test`   | Member of `pengopal` and `globex`                                               |
 | `alice@acme.test`    | Signs in to `acme` through "Acme Corp" (company login)                      |
 | `owner@initech.test` | Owner of the Enterprise workspace `initech`, in its own realm `ent-initech` |
 
