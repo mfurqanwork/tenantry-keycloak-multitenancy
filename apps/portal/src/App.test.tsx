@@ -63,6 +63,7 @@ describe('Admin (ADR-0027)', () => {
     expect(screen.getByRole('heading', { level: 1, name: "You can't open Admin" })).toBeInTheDocument();
     // No pages of theirs, so no side nav at all.
     expect(screen.queryByRole('navigation', { name: 'Side navigation' })).not.toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it('opens on People for an owner', async () => {

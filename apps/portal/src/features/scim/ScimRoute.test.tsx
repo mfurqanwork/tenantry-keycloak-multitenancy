@@ -30,7 +30,8 @@ describe('ScimRoute', () => {
     const { api, user, view } = setup({
       'POST /api/scim/token': { token: SECRET, expiresAt: '2027-11-04T00:00:00.000Z' },
     });
-    await user.selectOptions(await screen.findByLabelText('Token expires after'), '365');
+    await user.click(await screen.findByRole('combobox', { name: 'Token expires after' }));
+    await user.click(await screen.findByRole('option', { name: '1 year' }));
     await user.click(screen.getByRole('button', { name: 'Generate token' }));
     expect(api.post).toHaveBeenCalledWith('/api/scim/token', { expiresInDays: 365 });
     expect(await screen.findByText('Copy the SCIM token now')).toBeInTheDocument();
@@ -74,11 +75,22 @@ describe('ScimRoute', () => {
 
   it('saves the default role', async () => {
     const { api, user } = setup({ 'PUT /api/scim/default-role': { ...none, defaultRole: 'none' } });
-    const role = await screen.findByLabelText('Role for people the directory creates');
+    const role = await screen.findByRole('combobox', { name: 'Role for people the directory creates' });
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-    await user.selectOptions(role, 'none');
+    await user.click(role);
+    await user.click(await screen.findByRole('option', { name: /No role/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(api.put).toHaveBeenCalledWith('/api/scim/default-role', { role: 'none' });
+  });
+
+  it('directory sync names Entra ID and Okta', async () => {
+    setup();
+    await screen.findByText(URL_);
+    expect(screen.getByText('Microsoft Entra ID')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Okta' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'SCIM address' })).toHaveTextContent(URL_);
+    expect(screen.getByRole('button', { name: 'Copy SCIM address' })).toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it('explains Standard workspaces without asking the API', () => {

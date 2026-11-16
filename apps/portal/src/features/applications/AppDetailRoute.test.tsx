@@ -205,6 +205,18 @@ describe('AppDetailRoute', () => {
     });
   });
 
+  it('is built from the new components, with no Carbon left', async () => {
+    const { user } = setup(sampleApp(), { state: { clientSecret: 's3cret' } });
+    expect(await screen.findByRole('group', { name: 'Client secret' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Issuer' })).toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
+    await user.click(screen.getByRole('tab', { name: 'Set up' }));
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(within(screen.getByRole('dialog')).getByLabelText('Type HR portal to confirm')).toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
+  });
+
   it('shows members the details without any action', async () => {
     setup(sampleApp(), { me: MEMBER });
     await screen.findByRole('heading', { level: 1, name: 'HR portal' });

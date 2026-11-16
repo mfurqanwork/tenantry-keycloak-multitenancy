@@ -41,6 +41,9 @@ async function fill(user: ReturnType<typeof userEvent.setup>, label: string, tex
 describe('RegisterAppRoute', () => {
   it('walks type, details and review, then opens the new app with its secret', async () => {
     const { api, user } = setup({ 'POST /api/apps': { app: sampleApp(), clientSecret: 's3cret' } });
+    expect(screen.getByRole('radiogroup', { name: 'What kind of app is it?' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Web app').closest('label, [data-slot="app-type"]')?.querySelector('svg[data-type="web"]')).not.toBeNull();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
     await user.click(screen.getByLabelText('Web app'));
     await user.click(next());
     await fill(user, 'Name', 'HR portal');

@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ALL, fakeApi, makeMe, renderPage } from '../../test-utils.js';
@@ -15,6 +15,23 @@ const entry = (id: string, action: string, targetLabel: string | null = null) =>
 });
 
 describe('AuditRoute', () => {
+  it('audit rows show an icon per event', async () => {
+    const actions = ['member.invited', 'app.registered', 'tenant.created', 'security.updated', 'scim.user_created'];
+    renderPage(<AuditRoute />, {
+      api: fakeApi({ '/api/audit': { entries: actions.map((a, i) => entry(String(i), a)), nextBefore: null } }),
+      me: makeMe('owner', ALL),
+    });
+    await screen.findByText('member.invited');
+    const icons = actions.map((action) => {
+      const row = screen.getByText(action).closest('tr') as HTMLElement;
+      const icon = within(row).getByText(action).closest('td')?.querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      return icon?.getAttribute('data-family');
+    });
+    expect(icons).toEqual(['member', 'app', 'tenant', 'security', 'scim']);
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
+  });
+
   it('shows entries in the order the API gives them, newest first', async () => {
     renderPage(<AuditRoute />, {
       api: fakeApi({

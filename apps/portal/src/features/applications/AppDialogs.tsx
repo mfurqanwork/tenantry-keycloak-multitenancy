@@ -1,6 +1,6 @@
-import { TextInput } from '@carbon/react';
 import { APP_LIMITS, normaliseUris } from '@tenantry/auth';
 import { FormDialog, useApi } from '@tenantry/app-kit';
+import { Input, Label } from '@tenantry/ui';
 import { useState } from 'react';
 import type { AppView } from './api.js';
 import { LISTS, listsFor, listsReady, uriProblems, type UriLists } from './uri-lists.js';
@@ -40,15 +40,17 @@ export function EditAppDialog({
       }}
       onClose={onClose}
     >
-      <TextInput
-        id="edit-app-name"
-        labelText="Name"
-        value={name}
-        maxLength={APP_LIMITS.nameMax}
-        onChange={(event) => {
-          setName(event.target.value);
-        }}
-      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="edit-app-name">Name</Label>
+        <Input
+          id="edit-app-name"
+          value={name}
+          maxLength={APP_LIMITS.nameMax}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+        />
+      </div>
       {listsFor(app.type).map((field) => (
         <UriListField
           key={field}
@@ -88,7 +90,7 @@ export function RotateSecretDialog({
       }}
       onClose={onClose}
     >
-      <p>
+      <p className="text-sm">
         {app.name} gets a new client secret, shown once. The current secret stops working at once, so update
         the app straight after.
       </p>
@@ -119,17 +121,20 @@ export function DeleteAppDialog({
       }}
       onClose={onClose}
     >
-      <p>
+      <p className="text-sm">
         {app.name} stops working at once: nobody can sign in to it, and its client is removed from your realm.
       </p>
-      <TextInput
-        id="delete-app-confirm"
-        labelText={`Type ${app.name} to confirm`}
-        value={typed}
-        onChange={(event) => {
-          setTyped(event.target.value);
-        }}
-      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="delete-app-confirm">{`Type ${app.name} to confirm`}</Label>
+        <Input
+          id="delete-app-confirm"
+          autoComplete="off"
+          value={typed}
+          onChange={(event) => {
+            setTyped(event.target.value);
+          }}
+        />
+      </div>
     </FormDialog>
   );
 }

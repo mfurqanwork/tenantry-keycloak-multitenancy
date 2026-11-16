@@ -1,25 +1,33 @@
-import { RecentlyViewed } from '@carbon/icons-react';
+import { ApiErrorNotification, Loading, useApi, useMe, useResource } from '@tenantry/app-kit';
 import {
   Button,
-  DataTable,
-  DataTableSkeleton,
-  InlineLoading,
-  Stack,
+  EmptyState,
+  Input,
+  Label,
+  ListPage,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-  TableToolbar,
-  TableToolbarContent,
-  TableToolbarSearch,
-} from '@carbon/react';
-import { EmptyState, ListPage } from '@tenantry/ui';
-import { useSearchParams } from 'react-router';
+} from '@tenantry/ui';
+import {
+  Activity,
+  AppWindow,
+  Building2,
+  FolderKanban,
+  History,
+  Palette,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  User,
+  type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ApiErrorNotification, useApi, useMe, useResource } from '@tenantry/app-kit';
+import { useSearchParams } from 'react-router';
 
 interface AuditEntry {
   id: string;
@@ -34,12 +42,25 @@ interface AuditPage {
   nextBefore: string | null;
 }
 
-const HEADERS = [
-  { key: 'createdAt', header: 'Time' },
-  { key: 'actor', header: 'Actor' },
-  { key: 'action', header: 'Action' },
-  { key: 'target', header: 'Target' },
-];
+// An icon per event family, from the action's prefix (`member.invited` is a member event).
+const FAMILIES: Record<string, { family: string; icon: LucideIcon }> = {
+  member: { family: 'member', icon: User },
+  invite: { family: 'member', icon: User },
+  console: { family: 'member', icon: User },
+  app: { family: 'app', icon: AppWindow },
+  tenant: { family: 'tenant', icon: Building2 },
+  branding: { family: 'tenant', icon: Palette },
+  project: { family: 'tenant', icon: FolderKanban },
+  security: { family: 'security', icon: ShieldCheck },
+  idp: { family: 'security', icon: ShieldCheck },
+  scim: { family: 'scim', icon: RefreshCw },
+};
+const OTHER = { family: 'other', icon: Activity };
+
+function EventIcon({ action }: { action: string }) {
+  const { family, icon: Icon } = FAMILIES[action.split('.')[0] ?? ''] ?? OTHER;
+  return <Icon aria-hidden="true" data-family={family} className="size-4 shrink-0 text-muted-foreground" />;
+}
 
 export function AuditRoute() {
   const me = useMe();
@@ -81,83 +102,88 @@ export function AuditRoute() {
     <ListPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
       title="Audit log"
-      icon={RecentlyViewed}
+      icon={History}
       description="Every change to people, sign-in and settings, newest first."
       isEmpty={first.data !== undefined && all.length === 0}
       emptyState={
         <EmptyState
-          icon={RecentlyViewed}
+          icon={History}
           title="Nothing has happened yet"
           body="Changes to people, sign-in and settings show up here as they happen."
         />
       }
     >
-      <Stack gap={6}>
-        <ApiErrorNotification error={first.error ?? error} />
-        {!first.data && !first.error && <DataTableSkeleton headers={HEADERS} rowCount={5} />}
-        {first.data && (
-          <DataTable
-            rows={entries.map((e) => ({
-              id: e.id,
-              createdAt: new Date(e.createdAt).toLocaleString(),
-              actor: e.actor.email ?? 'System',
-              action: e.action,
-              target: e.targetLabel ?? e.target,
-            }))}
-            headers={HEADERS}
-          >
-            {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-              <TableContainer>
-                <TableToolbar aria-label="Audit log toolbar">
-                  <TableToolbarContent>
-                    <TableToolbarSearch
-                      persistent
-                      labelText="Search the audit log"
-                      placeholder="Search by person, action or target"
-                      defaultValue={query}
-                      onChange={(_event, value) => {
-                        // Carbon reports the starting value as onChange('', value) on load.
-                        setQuery(value ?? '');
-                      }}
-                    />
-                  </TableToolbarContent>
-                </TableToolbar>
-                <Table {...getTableProps()} aria-label="Audit log">
-                  <TableHead>
-                    <TableRow>
-                      {headers.map((header) => (
-                        <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                          {header.header}
-                        </TableHeader>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row) => (
-                      <TableRow {...getRowProps({ row })} key={row.id}>
-                        {row.cells.map((cell) => (
-                          <TableCell key={cell.id}>{cell.value as string}</TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </DataTable>
-        )}
-        {next && (
-          <div>
-            {loading ? (
-              <InlineLoading description="Loading more" />
-            ) : (
-              <Button kind="ghost" onClick={() => void loadMore(next)}>
-                Load more
-              </Button>
-            )}
+      <ApiErrorNotification error={first.error ?? error} />
+      {!first.data && !first.error && (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-60 w-full" />
+        </div>
+      )}
+      {first.data && (
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full sm:max-w-sm">
+            <Label htmlFor="audit-search" className="sr-only">
+              Search the audit log
+            </Label>
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id="audit-search"
+              type="search"
+              placeholder="Search by person, action or target"
+              className="pl-8"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+            />
           </div>
-        )}
-      </Stack>
+          <Table aria-label="Audit log">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Target</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="py-2 whitespace-nowrap text-muted-foreground tabular-nums">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="py-2">{e.actor.email ?? 'System'}</TableCell>
+                  <TableCell className="py-2">
+                    <span className="flex items-center gap-2">
+                      <EventIcon action={e.action} />
+                      <span className="font-mono text-xs">{e.action}</span>
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2">{e.targetLabel ?? e.target}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {entries.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">{`Nothing matches "${query.trim()}".`}</p>
+          )}
+        </div>
+      )}
+      {next && (
+        <div>
+          {loading ? (
+            <Loading description="Loading more" />
+          ) : (
+            <Button variant="outline" onClick={() => void loadMore(next)}>
+              Load more
+            </Button>
+          )}
+        </div>
+      )}
     </ListPage>
   );
 }

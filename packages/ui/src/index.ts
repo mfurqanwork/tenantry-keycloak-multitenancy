@@ -32,6 +32,7 @@ export {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './components/dropdown-menu.js';
+export { CodeSnippet } from './components/code-snippet.js';
 export { Kbd } from './components/kbd.js';
 export { Popover, PopoverContent, PopoverTrigger } from './components/popover.js';
 export { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from './components/sheet.js';
@@ -51,6 +52,7 @@ export { EmptyState } from './patterns/EmptyState.js';
 export { SetupCard, type SetupStep } from './patterns/SetupCard.js';
 export { DetailPage } from './patterns/DetailPage.js';
 export { ListPage } from './patterns/ListPage.js';
+export { Page } from './patterns/page.js';
 export { PageHeader, type Crumb } from './patterns/PageHeader.js';
 export { SettingsPage } from './patterns/SettingsPage.js';
 export { StatTile, TileGrid } from './patterns/tiles.js';

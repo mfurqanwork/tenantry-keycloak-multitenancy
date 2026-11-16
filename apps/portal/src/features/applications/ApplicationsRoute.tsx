@@ -1,28 +1,25 @@
+import { ApiErrorNotification, RouterLink, useMe, useResource } from '@tenantry/app-kit';
 import {
   Button,
-  DataTable,
-  DataTableSkeleton,
-  Link,
-  Stack,
+  EmptyState,
+  ListPage,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-  Tile,
-} from '@carbon/react';
-import { Add, Application } from '@carbon/icons-react';
-import { ApiErrorNotification, RouterLink, useMe, useResource } from '@tenantry/app-kit';
-import { EmptyState, ListPage } from '@tenantry/ui';
-import { TYPE_LABELS, type AppView } from './api.js';
+} from '@tenantry/ui';
+import { AppWindow, Plus } from 'lucide-react';
+import { type AppView } from './api.js';
+import { AppTypeLabel } from './AppTypeLabel.js';
 
-const HEADERS = [
-  { key: 'name', header: 'Name' },
-  { key: 'type', header: 'Type' },
-  { key: 'clientId', header: 'Client ID' },
-];
+const page = {
+  title: 'Customer apps',
+  icon: AppWindow,
+  description: 'Your own apps that sign people in through this workspace.',
+};
 
 // Enterprise workspaces only (ADR-0011): the apps connected to the workspace's own sign-in.
 export function ApplicationsRoute() {
@@ -31,11 +28,11 @@ export function ApplicationsRoute() {
     return (
       <ListPage
         breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-        title="Customer apps"
-        icon={Application}
-        description="Your own apps that sign people in through this workspace."
+        {...page}
         isEmpty
-        emptyState={<Tile>Applications are available on Enterprise workspaces.</Tile>}
+        emptyState={
+          <EmptyState icon={AppWindow} title="Enterprise only" body="Applications are available on Enterprise workspaces." />
+        }
       >
         {null}
       </ListPage>
@@ -52,77 +49,57 @@ function EnterpriseApplications() {
   return (
     <ListPage
       breadcrumbs={[{ label: me.tenant.name, href: '/' }]}
-      title="Customer apps"
-      icon={Application}
-      description="Your own apps that sign people in through this workspace."
+      {...page}
       primaryAction={
         registers ? (
-          <Button as={RouterLink} href="/advanced/apps/new" renderIcon={Add}>
-            Register an app
+          <Button asChild>
+            <RouterLink href="/advanced/apps/new">
+              <Plus aria-hidden="true" />
+              Register an app
+            </RouterLink>
           </Button>
         ) : undefined
       }
       isEmpty={list.data !== undefined && apps.length === 0}
       emptyState={
         <EmptyState
-          icon={Application}
+          icon={AppWindow}
           title="Connect your first app"
-          body={
-            registers
-              ? 'Register one to connect it to your sign-in.'
-              : 'Owners and admins register apps here.'
-          }
+          body={registers ? 'Register one to connect it to your sign-in.' : 'Owners and admins register apps here.'}
         />
       }
     >
-      <Stack gap={6}>
-        <ApiErrorNotification error={list.error} />
-        {!list.data && !list.error && <DataTableSkeleton headers={HEADERS} rowCount={3} />}
-        {list.data && (
-          <DataTable
-            rows={apps.map((a) => ({
-              id: a.id,
-              name: a.name,
-              type: TYPE_LABELS[a.type],
-              clientId: a.clientId,
-            }))}
-            headers={HEADERS}
-          >
-            {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-              <TableContainer>
-                <Table {...getTableProps()} aria-label="Applications">
-                  <TableHead>
-                    <TableRow>
-                      {headers.map((header) => (
-                        <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                          {header.header}
-                        </TableHeader>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row) => (
-                      <TableRow {...getRowProps({ row })} key={row.id}>
-                        {row.cells.map((cell) => (
-                          <TableCell key={cell.id}>
-                            {cell.info.header === 'name' ? (
-                              <Link as={RouterLink} href={`/advanced/apps/${row.id}`}>
-                                {cell.value as string}
-                              </Link>
-                            ) : (
-                              (cell.value as string)
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </DataTable>
-        )}
-      </Stack>
+      <ApiErrorNotification error={list.error} />
+      {!list.data && !list.error && <Skeleton className="h-40 w-full" />}
+      {list.data && (
+        <Table aria-label="Applications">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Client ID</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {apps.map((app) => (
+              <TableRow key={app.id}>
+                <TableCell className="font-medium">
+                  <RouterLink
+                    href={`/advanced/apps/${app.id}`}
+                    className="focus-ring rounded-sm text-link underline-offset-4 outline-none hover:underline"
+                  >
+                    {app.name}
+                  </RouterLink>
+                </TableCell>
+                <TableCell>
+                  <AppTypeLabel type={app.type} />
+                </TableCell>
+                <TableCell className="font-mono text-sm text-muted-foreground">{app.clientId}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </ListPage>
   );
 }

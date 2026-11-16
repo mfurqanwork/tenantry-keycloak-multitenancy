@@ -36,6 +36,8 @@ describe('TestCallbackRoute', () => {
       'href',
       '/advanced/apps/a1',
     );
+    expect(screen.getByRole('table', { name: 'Token claims' })).toBeInTheDocument();
+    expect(document.querySelector('[class*="cds--"]')).toBeNull();
   });
 
   it('says Keycloak signed the person in, for a client with a secret', async () => {
