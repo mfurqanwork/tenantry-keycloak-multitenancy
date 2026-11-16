@@ -125,6 +125,26 @@
   --opal-text-fallback: #6fb6f0;
 }
 
+/* With a workspace colour (applyBrand writes --primary on <body>, or on a preview element), the tokens that
+   must read against the page's background follow the theme: the subtle tint is the colour over the theme's
+   own background, and links and the focus ring are the colour itself in light mode. */
+[data-brand] > body,
+[data-brand]:not(html) {
+  --primary-subtle: color-mix(in oklab, var(--primary) 14%, var(--background));
+  --link: var(--primary);
+  --ring: var(--primary);
+  --cds-link-primary: var(--link);
+  --cds-focus: var(--ring);
+}
+
+/* In dark mode a colour that passes on white is too dark to read on navy, so links and the ring take a
+   light tint of it (35 % in oklab keeps even near-black above 4.5:1 on the dark background). */
+.dark[data-brand] > body,
+.dark [data-brand]:not(html) {
+  --link: color-mix(in oklab, var(--primary) 35%, white);
+  --ring: var(--link);
+}
+
 /* Text clipped to the opal mosaic. */
 @utility opal-text {
   background: var(--opal-mosaic) 0 0 / 420px auto, var(--opal-text-fallback);

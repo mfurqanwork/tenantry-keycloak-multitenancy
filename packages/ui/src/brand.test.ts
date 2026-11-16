@@ -1,5 +1,7 @@
 import { brandTokens } from '@tenantry/brand';
 import { render } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { applyBrand, BRAND_PROPERTIES } from './brand.js';
@@ -20,9 +22,6 @@ describe('applyBrand', () => {
     expect(body.getPropertyValue('--primary-hover')).toBe(tokens.hover);
     expect(body.getPropertyValue('--primary-active')).toBe(tokens.active);
     expect(body.getPropertyValue('--primary-foreground')).toBe(tokens.foreground);
-    expect(body.getPropertyValue('--primary-subtle')).toBe(tokens.subtle);
-    expect(body.getPropertyValue('--ring')).toBe(tokens.focus);
-    expect(body.getPropertyValue('--link')).toBe(tokens.link);
   });
 
   it('marks the page as wearing a workspace colour, so the opal frame steps aside', () => {
@@ -52,6 +51,27 @@ describe('applyBrand', () => {
     document.documentElement.classList.add('dark');
     expect(document.body.style.getPropertyValue('--primary')).toBe('#2b77c0');
     expect(document.documentElement.dataset['brand']).toBe('workspace');
+  });
+
+  it('leaves the subtle tint to the theme, so dark mode keeps a dark tint of the workspace colour', () => {
+    applyBrand(brandTokens('#2b77c0'));
+    expect(document.body.style.getPropertyValue('--primary-subtle')).toBe('');
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+    expect(css).toMatch(
+      /\[data-brand\][^{]*>\s*body[^{]*\{\s*--primary-subtle:\s*color-mix\(in oklab, var\(--primary\) \d+%, var\(--background\)\);/,
+    );
+  });
+
+  it('leaves links and the focus ring to the theme, lighter in dark mode so they stay readable', () => {
+    applyBrand(brandTokens('#0f62fe'));
+    for (const name of ['--link', '--ring', '--cds-link-primary', '--cds-focus']) {
+      expect(document.body.style.getPropertyValue(name)).toBe('');
+    }
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+    expect(css).toMatch(/\[data-brand\] > body,\s*\[data-brand\]:not\(html\) \{[^}]*--link: var\(--primary\);[^}]*--ring: var\(--primary\);/);
+    expect(css).toMatch(
+      /\.dark\[data-brand\] > body,\s*\.dark \[data-brand\]:not\(html\) \{[^}]*--link: color-mix\(in oklab, var\(--primary\) \d+%, white\);/,
+    );
   });
 
   it('a preview element gets the colour and its own mark, leaving the page alone', () => {

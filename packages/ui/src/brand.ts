@@ -1,21 +1,18 @@
 import type { BrandTokens } from '@tenantry/brand';
 
 // The custom properties a workspace colour overrides, and the token each one takes: the new tokens
-// (tokens.css), then Carbon's for the pages that still wear it until they move (ADR-0031).
+// (tokens.css), then Carbon's for the pages that still wear it until they move (ADR-0031). The subtle tint,
+// links and the focus ring are not here: tokens.css derives them from the workspace colour for the current
+// theme, since one inline value cannot be readable on both a light and a dark background.
 const PROPERTIES: readonly [string, keyof BrandTokens][] = [
   ['--primary', 'interactive'],
   ['--primary-hover', 'hover'],
   ['--primary-active', 'active'],
   ['--primary-foreground', 'foreground'],
-  ['--primary-subtle', 'subtle'],
-  ['--ring', 'focus'],
-  ['--link', 'link'],
   ['--cds-interactive', 'interactive'],
   ['--cds-button-primary', 'interactive'],
   ['--cds-button-primary-hover', 'hover'],
   ['--cds-button-primary-active', 'active'],
-  ['--cds-link-primary', 'link'],
-  ['--cds-focus', 'focus'],
   ['--cds-border-interactive', 'interactive'],
 ];
 
