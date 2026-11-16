@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiCall } from './http.js';
-import { COMPANY, ensureProjects, WORKSPACES } from './seed.js';
+import { solidPng } from './png.js';
+import { COMPANY, demoLogo, ensureProjects, WORKSPACES } from './seed.js';
 
 describe('the demo seed', () => {
   it('the demo workspace is Pengopal, in the Pengopal blue', () => {
@@ -29,5 +30,14 @@ describe('the demo projects', () => {
     ]);
     expect(created).toEqual([{ name: 'Mobile app' }]);
     expect(added).toBe(1);
+  });
+});
+
+describe('the demo logos', () => {
+  it("Pengopal's logo is its own penguin, a PNG the API accepts; other workspaces get a tile in their colour", () => {
+    const pengopal = demoLogo('pengopal', '#2b77c0');
+    expect(pengopal.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    expect(pengopal.length).toBeLessThan(256 * 1024);
+    expect(demoLogo('globex', '#198038')).toEqual(solidPng('#198038'));
   });
 });

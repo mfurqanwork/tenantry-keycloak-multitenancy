@@ -15,6 +15,7 @@ import { linkIdp } from '../commands/idp.js';
 import type { OpsDeps } from '../deps.js';
 import { verificationRecord } from '../dns/txt.js';
 import type { ApiCall } from './http.js';
+import { readFileSync } from 'node:fs';
 import { solidPng } from './png.js';
 
 type Group = 'owners' | 'admins' | 'members';
@@ -153,6 +154,14 @@ async function ensureMembers(deps: SeedDeps, tenant: TenantRecord, changes: stri
   }
 }
 
+// Pengopal's own penguin (the company behind Tenantry); other demo workspaces get a tile in their colour.
+const LOGO_FILES: Record<string, string> = { pengopal: 'pengopal-logo.png' };
+
+export function demoLogo(slug: string, color: string): Buffer {
+  const file = LOGO_FILES[slug];
+  return file ? readFileSync(new URL(`./${file}`, import.meta.url)) : solidPng(color);
+}
+
 // Creates the named projects a workspace does not have yet; returns how many it created.
 export async function ensureProjects(
   api: ApiCall,
@@ -192,7 +201,7 @@ async function ensureBranding(
       Buffer.from(
         `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="logo.png"\r\nContent-Type: image/png\r\n\r\n`,
       ),
-      solidPng(w.color),
+      demoLogo(w.slug, w.color),
       Buffer.from(`\r\n--${boundary}--\r\n`),
     ]);
     const res = await deps.api(host, 'POST', '/api/branding/logo', {
