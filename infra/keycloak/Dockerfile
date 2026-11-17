@@ -16,8 +16,17 @@ COPY .npmrc .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 COPY tsconfig.base.json .
-RUN pnpm --filter "@tenantry/login-theme^..." build \
-  && pnpm --filter @tenantry/login-theme build:jar
+# Maven Central sometimes answers 429 (too many requests) to CI runners. The cache mount keeps the
+# Maven downloads between builds on the same machine, and a failed jar build is retried after a
+# growing pause; a retry reuses whatever the earlier attempt already downloaded.
+RUN --mount=type=cache,id=tenantry-keycloakify-m2,target=/repo/apps/login-theme/node_modules/.cache/keycloakify/.m2 \
+  pnpm --filter "@tenantry/login-theme^..." build \
+  && for attempt in 1 2 3; do \
+       pnpm --filter @tenantry/login-theme build:jar && exit 0; \
+       echo "Theme jar build failed (attempt $attempt of 3)"; \
+       [ "$attempt" -lt 3 ] && sleep $((attempt * 30)); \
+     done; \
+     exit 1
 
 # The production realms for this image's domain (ADR-0029).
 FROM node:22-slim AS realms
