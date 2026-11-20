@@ -6,7 +6,7 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ### Added
 
-- Product analytics through PostHog (EU), off unless the repository variable `POSTHOG_KEY` is set. The apps keep nothing in the browser (no cookies or storage), send events through `/api/ingest` on their own host, and drop query strings (sign-in codes) from URLs; people are identified by user id only. The API counts workspace, team, branding, company-login, Enterprise and app events from the audit log once each change commits, without emails or names.
+- Product analytics through PostHog (EU), off unless the repository variable `POSTHOG_KEY` is set. The apps keep nothing in the browser (no cookies or storage), send events through `/api/ingest` on their own host, and drop query strings (sign-in codes) from URLs; people are identified by user id only, and every event carries `product: tenantry`. The API counts workspace, team, branding, company-login, Enterprise and app events from the audit log once each change commits, without emails or names.
 
 ## [1.2.0] - 2026-11-20
 

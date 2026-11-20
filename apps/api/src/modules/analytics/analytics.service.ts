@@ -6,6 +6,9 @@ export type EventProps = Record<string, string | number | boolean | null>;
 // Changes made by the operator scripts (no user) are counted under one anonymous id.
 export const OPERATOR_DISTINCT_ID = 'tenantry-ops';
 
+// Pengopal's sites share one PostHog project; every event says which product it came from.
+export const PRODUCT = 'tenantry';
+
 // Product events sent to PostHog from the server, so counts do not depend on ad blockers.
 // No key (local, tests): every call does nothing. Sending never blocks or fails a request.
 // Events carry ids and small labels only: never emails, names or tokens.
@@ -23,7 +26,12 @@ export class AnalyticsService {
       event,
       distinct_id: userId ?? OPERATOR_DISTINCT_ID,
       timestamp: new Date().toISOString(),
-      properties: { ...props, $lib: 'tenantry-api', ...(userId ? {} : { $process_person_profile: false }) },
+      properties: {
+        ...props,
+        product: PRODUCT,
+        $lib: 'tenantry-api',
+        ...(userId ? {} : { $process_person_profile: false }),
+      },
     });
     fetch(`${host}/i/v0/e/`, {
       method: 'POST',

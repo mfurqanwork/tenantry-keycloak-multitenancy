@@ -131,7 +131,8 @@ The API counts what people do from the audit log, once each change commits, with
 | Branding and sign-in | `branding_updated`, `domain_verified`, `identity_provider_connected`, `security_settings_updated` |
 | Enterprise           | `app_registered`, `app_deleted`, `app_token_checked`, `scim_enabled`, `console_access_granted`    |
 
-The apps add `$pageview` and `$pageleave`.
+The apps add `$pageview` and `$pageleave`. Every event carries `product: tenantry`, so Tenantry can share one PostHog
+project with Pengopal's other sites.
 
 ## How it keeps tenants apart
 

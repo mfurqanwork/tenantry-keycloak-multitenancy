@@ -46,8 +46,13 @@ function cleanProps(props: Record<string, unknown> | undefined): void {
   }
 }
 
+// Pengopal's sites share one PostHog project; every event says which product it came from.
+const PRODUCT = 'tenantry';
+
+// Runs on every event before it leaves the browser: tags the product and cleans the URLs.
 export function cleanEvent(event: CaptureResult | null): CaptureResult | null {
   if (!event) return event;
+  event.properties['product'] = PRODUCT;
   cleanProps(event.properties);
   cleanProps(event.$set);
   cleanProps(event.$set_once);
