@@ -25,9 +25,15 @@ describe('apexAuthConfig', () => {
 });
 
 describe('apexPage', () => {
-  it('shows the welcome page at the root, signed out', () => {
+  it('shows the welcome page at the root and signup at its own paths', () => {
     expect(apexPage('/')).toBe('welcome');
-    expect(apexPage('/anything-else')).toBe('welcome');
+    expect(apexPage('/signup')).toBe('signup');
+    expect(apexPage('/auth/callback')).toBe('signup');
+  });
+
+  it('says page not found for any other path, rather than showing the welcome page', () => {
+    expect(apexPage('/anything-else')).toBe('not-found');
+    expect(apexPage('/sign-in')).toBe('not-found');
   });
 });
 

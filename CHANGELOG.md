@@ -4,6 +4,24 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-20
+
+### Security
+
+- Keycloak's master realm and its admin console answer 404 from the internet. The stack's own containers still reach them; an operator can allow their own IP with `TENANTRY_OPERATOR_IPS` in `/opt/tenantry/.env`. Customers' realm consoles are unchanged.
+- The apps send a Content Security Policy, `X-Frame-Options: DENY` and a `Permissions-Policy`; HSTS covers subdomains, and Keycloak's own headers are no longer doubled. Caddy no longer names itself in a `Server` header.
+- A missing file or dotfile path (`/.env`, `/.git/config`, `/wp-login.php`) is a real 404 instead of the app.
+- `/api/health` says only `ok` and the version, without naming the database or Keycloak, and an unreadable request body no longer echoes the JSON parser's message.
+
+### Added
+
+- A "Page not found" page, with a link back, for unknown addresses on the welcome site and in workspaces, in place of the welcome page or an empty page.
+- `robots.txt` for both apps: the welcome site may be indexed, Admin may not.
+
+### Removed
+
+- The roadmap section of the README.
+
 ## [1.1.0] - 2026-11-16
 
 ### Changed
@@ -180,7 +198,8 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.7.0...v0.8.0

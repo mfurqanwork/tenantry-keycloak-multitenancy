@@ -17,8 +17,10 @@ export class HealthController {
   @Get()
   @Public()
   @HealthCheck()
-  async check(): Promise<HealthCheckResult & { version: string }> {
+  // Public, so it says only that all is well and which version runs; a failure is a 503 whose
+  // details stay inside the API.
+  async check(): Promise<{ status: HealthCheckResult['status']; version: string }> {
     const result = await this.health.check([() => this.database.check(), () => this.keycloak.check()]);
-    return { ...result, version: this.config.version };
+    return { status: result.status, version: this.config.version };
   }
 }

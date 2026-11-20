@@ -27,8 +27,9 @@ export function apexAuthConfig(location: URL, baseDomain: string): AuthConfig {
 }
 
 // The base domain's pages: the welcome page needs no sign-in; signup (and its sign-in callback) do.
-export function apexPage(pathname: string): 'welcome' | 'signup' {
-  return pathname === '/signup' || pathname === '/auth/callback' ? 'signup' : 'welcome';
+export function apexPage(pathname: string): 'welcome' | 'signup' | 'not-found' {
+  if (pathname === '/signup' || pathname === '/auth/callback') return 'signup';
+  return pathname === '/' || pathname === '' || pathname === '/index.html' ? 'welcome' : 'not-found';
 }
 
 // VITE_DEMO_WORKSPACES: slugs the welcome page offers to try (empty in production).

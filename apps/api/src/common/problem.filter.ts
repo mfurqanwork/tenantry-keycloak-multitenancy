@@ -35,6 +35,9 @@ export class ProblemFilter implements ExceptionFilter {
       const status = err.getStatus();
       const title =
         status === 404 ? 'Not Found' : err.name.replace(/Exception$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+      // Our own code throws Problems; a framework 400 is a body or URL the parser couldn't read, and its
+      // message is the parser's own.
+      if (status === 400) return new Problem(400, title, 'The request could not be read.');
       return new Problem(status, title, err.message);
     }
     this.logger.error(err);

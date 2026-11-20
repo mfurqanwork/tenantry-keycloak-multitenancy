@@ -1,6 +1,7 @@
 import { AppShell, TenantryThemeProvider } from '@tenantry/ui';
 import { SignupApp } from './features/signup/SignupApp.js';
 import { NotFoundPage } from './features/not-found/NotFoundPage.js';
+import { PageNotFound } from './features/not-found/PageNotFound.js';
 import { BASE_DOMAIN, DEMO_WORKSPACES, apexPage, hostKind } from './lib/host.js';
 import { WelcomeRoute } from './features/welcome/WelcomeRoute.js';
 import { TenantApp } from './TenantApp.js';
@@ -14,7 +15,13 @@ export function Root() {
   return (
     // The welcome page and signup start light; workspaces follow the system until the person picks.
     <TenantryThemeProvider fallback={host.kind === 'apex' ? 'light' : 'system'}>
+      {host.kind === 'apex' && apexPage(window.location.pathname) === 'not-found' && (
+        <AppShell productName="Tenantry" navItems={[]} currentPath={window.location.pathname}>
+          <PageNotFound homeHref="/" homeLabel="Go to the welcome page" />
+        </AppShell>
+      )}
       {host.kind === 'apex' &&
+        apexPage(window.location.pathname) !== 'not-found' &&
         (apexPage(window.location.pathname) === 'signup' ? (
           <SignupApp baseDomain={BASE_DOMAIN} />
         ) : (

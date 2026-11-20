@@ -86,6 +86,12 @@ describe('web app (Tenantry, ADR-0027)', () => {
     }
   });
 
+  it('answers an unknown address with page not found and a way back Home', async () => {
+    renderAt('/no-such-page');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/');
+  });
+
   it('keeps the patterns page out of production builds', () => {
     vi.stubEnv('DEV', false);
     renderAt('/patterns');
