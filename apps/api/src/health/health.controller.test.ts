@@ -30,6 +30,10 @@ async function controllerWith(keycloakUp: boolean) {
 }
 
 describe('HealthController', () => {
+  it('answers ok with the version only, naming none of its dependencies', async () => {
+    expect(await (await controllerWith(true)).check()).toEqual({ status: 'ok', version: '1.2.3' });
+  });
+
   it('answers 503 naming keycloak when it is down', async () => {
     const error: unknown = await (await controllerWith(false)).check().catch((err: unknown) => err);
     expect(error).toBeInstanceOf(ServiceUnavailableException);

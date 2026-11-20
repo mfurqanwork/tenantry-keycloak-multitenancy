@@ -7,21 +7,41 @@
 	tls {
 		dns cloudflare {$CLOUDFLARE_API_TOKEN}
 	}
+	# "?" sets a header only when the upstream didn't, so Keycloak's own stricter values stay single.
 	header {
-		Strict-Transport-Security "max-age=31536000"
-		X-Content-Type-Options nosniff
-		Referrer-Policy strict-origin-when-cross-origin
+		?Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		?X-Content-Type-Options nosniff
+		?Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+# The SPAs: their own scripts only, API calls to their own host and Keycloak, never framed.
+(app) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://auth.{$TENANTRY_BASE_DOMAIN}; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://auth.{$TENANTRY_BASE_DOMAIN}"
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 	}
 }
 
 auth.{$TENANTRY_BASE_DOMAIN} {
 	import site
+	# Keycloak's master realm and its admin console are for operators only. The stack's own containers
+	# reach them over the Docker network; an operator adds their IP to TENANTRY_OPERATOR_IPS.
+	# Customers' realm consoles (/admin/<realm>/console, ADR-0026) stay public.
+	@master {
+		path /admin /admin/ /admin/master/* /realms/master /realms/master/* /admin/realms/master /admin/realms/master/*
+		not client_ip private_ranges {$TENANTRY_OPERATOR_IPS}
+	}
+	respond @master 404
 	reverse_proxy keycloak:8080
 }
 
 # The base domain serves the welcome page and signup from the web app.
 {$TENANTRY_BASE_DOMAIN} {
 	import site
+	import app
 	handle /api/* {
 		reverse_proxy api:3000
 	}
@@ -32,6 +52,7 @@ auth.{$TENANTRY_BASE_DOMAIN} {
 
 *.portal.{$TENANTRY_BASE_DOMAIN} {
 	import site
+	import app
 	handle /api/* {
 		reverse_proxy api:3000
 	}
@@ -42,6 +63,7 @@ auth.{$TENANTRY_BASE_DOMAIN} {
 
 *.{$TENANTRY_BASE_DOMAIN} {
 	import site
+	import app
 	handle /api/* {
 		reverse_proxy api:3000
 	}

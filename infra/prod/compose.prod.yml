@@ -19,6 +19,8 @@ services:
       TENANTRY_BASE_DOMAIN: ${TENANTRY_BASE_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      # Space-separated IPs or CIDRs that may open Keycloak's master realm (infra/prod/Caddyfile).
+      TENANTRY_OPERATOR_IPS: ${TENANTRY_OPERATOR_IPS:-}
     volumes:
       - caddy_data:/data
       - caddy_config:/config

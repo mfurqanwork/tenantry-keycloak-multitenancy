@@ -6,6 +6,17 @@
 	@page not path /assets/*
 	header @page Cache-Control "no-cache"
 	header /assets/* Cache-Control "public, max-age=31536000, immutable"
-	try_files {path} /index.html
-	file_server
+	# A missing file (a name with an extension) or a dotfile path is a real 404, not the app: scanners
+	# asking for /.env, /.git/config or /wp-login.php get nothing that looks like a hit.
+	@missing {
+		not file
+		path_regexp \.[A-Za-z0-9]+$|/\.
+	}
+	handle @missing {
+		respond 404
+	}
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 }

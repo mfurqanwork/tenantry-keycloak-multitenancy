@@ -1,0 +1,3 @@
+# Admin is for signed-in workspace owners and admins.
+User-agent: *
+Disallow: /

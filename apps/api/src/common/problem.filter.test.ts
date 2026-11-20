@@ -1,4 +1,4 @@
-import { type ArgumentsHost } from '@nestjs/common';
+import { BadRequestException, type ArgumentsHost } from '@nestjs/common';
 import { DirectoryError } from '@tenantry/keycloak-admin';
 import { describe, expect, it, vi } from 'vitest';
 import { ProblemFilter } from './problem.filter.js';
@@ -21,6 +21,14 @@ describe('ProblemFilter', () => {
         title: 'Bad Gateway',
         detail: 'The identity service is unavailable. Try again shortly.',
       }),
+    );
+  });
+
+  it("doesn't echo the JSON parser's message for an unreadable body", () => {
+    const res = respond(new BadRequestException("Expected property name or '}' in JSON at position 1"));
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: 'The request could not be read.' }),
     );
   });
 

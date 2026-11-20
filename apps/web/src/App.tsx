@@ -2,6 +2,7 @@ import { AppShell } from '@tenantry/ui';
 import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { HomeRoute } from './features/home/HomeRoute.js';
+import { PageNotFound } from './features/not-found/PageNotFound.js';
 import { PatternsRoute } from './features/patterns/PatternsRoute.js';
 import { ProjectsRoute } from './features/projects/ProjectsRoute.js';
 import {
@@ -68,6 +69,7 @@ export function App({ onSignOut }: { onSignOut?: () => void }) {
         <Route path="/audit" element={<ToAdmin path="/audit" />} />
         {/* The page-pattern gallery is a developer aid, not part of the product. */}
         {import.meta.env.DEV && <Route path="/patterns" element={<PatternsRoute />} />}
+        <Route path="*" element={<PageNotFound homeHref="/" homeLabel="Go to Home" />} />
       </Routes>
     </AppShell>
   );
