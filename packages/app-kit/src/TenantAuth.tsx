@@ -6,6 +6,7 @@ import {
   type AuthConfig,
 } from '@tenantry/oidc-client';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { forgetUser } from './analytics.js';
 import { LoadMe } from './me.js';
 import { SignedInApi } from './SignedInApi.js';
 import { Loading } from './Loading.js';
@@ -55,6 +56,7 @@ export function TenantAuth({
         <LoadMe>
           {children({
             signOut: () => {
+              forgetUser();
               void client.signOut();
             },
           })}

@@ -1,5 +1,6 @@
 import type { Permission, Role } from '@tenantry/auth';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { identifyUser } from './analytics.js';
 import { ApiErrorNotification } from './ApiErrorNotification.js';
 import { useResource } from './useResource.js';
 import { Loading } from './Loading.js';
@@ -29,6 +30,10 @@ export function useMe(): Me & { can: (permission: Permission) => boolean } {
 
 export function LoadMe({ children }: { children: ReactNode }) {
   const me = useResource<Me>('/api/me');
+  const userId = me.data?.user.id;
+  useEffect(() => {
+    if (userId) identifyUser(userId);
+  }, [userId]);
   if (me.error) return <ApiErrorNotification error={me.error} />;
   if (!me.data) return <Loading description="Loading your workspace" />;
   return <MeProvider value={me.data}>{children}</MeProvider>;

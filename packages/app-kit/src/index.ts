@@ -1,6 +1,7 @@
 // What both tenant apps share: signing in, the API client, who is signed in, and common pieces.
 export { ApiProblem, ApiProvider, createApi, useApi, type Api } from './api.js';
 export { adminUrl, canSeeAdmin } from './admin.js';
+export { forgetUser, identifyUser, startAnalytics } from './analytics.js';
 export { searchResults, type Hit, type SearchSources } from './search/search.js';
 export { WorkspaceSearch } from './search/WorkspaceSearch.js';
 export {

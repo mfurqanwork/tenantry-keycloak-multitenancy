@@ -223,6 +223,7 @@ export async function createTestApp(
     secretsDir: '.secrets-test',
     smtp: { host: 'mailpit', port: '1025', from: 'no-reply@tenantry.localhost' },
     maxAppsPerTenant: 20,
+    posthog: { key: null, host: 'https://eu.i.posthog.com' },
     ...o.config,
   };
   const moduleRef = await Test.createTestingModule({

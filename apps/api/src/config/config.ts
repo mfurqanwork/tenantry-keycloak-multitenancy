@@ -21,6 +21,8 @@ export interface AppConfig {
   smtp: { host: string; port: string; from: string };
   // Customer apps per enterprise workspace (ADR-0011).
   maxAppsPerTenant: number;
+  // Product analytics (PostHog). The project key is public; null turns analytics off.
+  posthog: { key: string | null; host: string };
 }
 
 export class ConfigError extends Error {
@@ -46,6 +48,8 @@ const schema = z.object({
   TENANTRY_SMTP_PORT: z.string().min(1).default('1025'),
   TENANTRY_SMTP_FROM: z.string().min(1).default('no-reply@tenantry.localhost'),
   TENANTRY_MAX_APPS_PER_TENANT: z.coerce.number().int().positive().default(20),
+  TENANTRY_POSTHOG_KEY: z.string().regex(/^phc_[A-Za-z0-9]+$/, 'a PostHog project key (phc_...)').optional().or(z.literal('')),
+  TENANTRY_POSTHOG_HOST: z.url().default('https://eu.i.posthog.com'),
 });
 
 // Fails fast at startup, naming every bad variable at once.
@@ -73,6 +77,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     secretsDir: e.TENANTRY_SECRETS_DIR,
     smtp: { host: e.TENANTRY_SMTP_HOST, port: e.TENANTRY_SMTP_PORT, from: e.TENANTRY_SMTP_FROM },
     maxAppsPerTenant: e.TENANTRY_MAX_APPS_PER_TENANT,
+    posthog: { key: e.TENANTRY_POSTHOG_KEY || null, host: e.TENANTRY_POSTHOG_HOST.replace(/\/$/, '') },
   };
 }
 

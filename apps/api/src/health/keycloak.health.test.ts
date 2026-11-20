@@ -20,6 +20,7 @@ const config: AppConfig = {
   secretsDir: '.secrets',
   smtp: { host: 'mailpit', port: '1025', from: 'x@example.com' },
   maxAppsPerTenant: 20,
+  posthog: { key: null, host: 'https://eu.i.posthog.com' },
 };
 const indicator = () => new KeycloakHealthIndicator(config, new HealthIndicatorService());
 const respond = (status: number, body: unknown) => {

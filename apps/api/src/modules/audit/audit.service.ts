@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { insertAudit, listAudit, platformRepository, tenantTx, type Db, type TenantTx } from '@tenantry/db';
+import { afterCommit, insertAudit, listAudit, platformRepository, tenantTx, type Db, type TenantTx } from '@tenantry/db';
 import { DB } from '../../infrastructure/tokens.js';
+import { AnalyticsService } from '../analytics/analytics.service.js';
+import { auditEvent } from './audit-events.js';
 
 export type AuditAction =
   | 'tenant.created'
@@ -63,7 +65,10 @@ const labelFor = (metadata: Record<string, unknown>): string | null => {
 // AGENTS.md rule 5: every identity change calls record(), inside the transaction that made it.
 @Injectable()
 export class AuditService {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly analytics: AnalyticsService,
+  ) {}
 
   record(
     tx: TenantTx,
@@ -73,6 +78,13 @@ export class AuditService {
     target: string,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
+    // The product event goes to PostHog only once the change has committed.
+    const tracked = auditEvent(action, metadata);
+    if (tracked) {
+      afterCommit(tx, () => {
+        this.analytics.capture(tracked.event, actor.userId, { ...tracked.props, workspace_id: tx.__tenant });
+      });
+    }
     return insertAudit(tx, { actorUserId: actor.userId, action, target, ...(metadata ? { metadata } : {}) });
   }
 

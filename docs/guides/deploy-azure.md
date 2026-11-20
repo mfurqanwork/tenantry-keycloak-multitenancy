@@ -67,6 +67,7 @@ In the repository's **Settings**:
   | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
   | `TENANTRY_BASE_DOMAIN`   | `tenantry.pengopal.com`                                                                                           |
   | `TENANTRY_DEMO_PASSWORD` | a password for the demo accounts. **It is shown publicly** on the welcome page, so use nothing you use elsewhere. |
+  | `POSTHOG_KEY`            | optional: a PostHog project key (`phc_…`, EU cloud) to turn on product analytics. Leave it unset for none.        |
 
 - **Issues → Labels → New label:** `skip-changelog`.
 
