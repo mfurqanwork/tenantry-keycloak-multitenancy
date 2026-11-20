@@ -109,6 +109,31 @@ Link a customer's Entra ID, Okta or Google Workspace to their workspace once the
 - **Keycloak console access** for the customer's own admins, limited to people and groups, with owners protected.
 - **Move to Enterprise:** an operator command moves a Standard workspace into its own realm, and everyone keeps their account, role and data.
 
+### Analytics without cookies
+
+With the `POSTHOG_KEY` repository variable set, Tenantry sends product analytics to [PostHog](https://posthog.com)
+(EU cloud), set up so no cookie banner is needed:
+
+- **Nothing kept in the browser.** No cookies or storage; ids live in memory for one page load.
+- **First-party.** The apps post to `/api/ingest` on their own host, and the API passes events on to PostHog. It
+  only accepts event posts that carry this installation's key, so it is not an open proxy, and the CSP stays
+  `connect-src 'self'`.
+- **Little data.** There is no autocapture, recording, survey or feature flag. URLs lose their query (sign-in codes
+  and states), except `utm_*` tags. People are identified by user id only. Do Not Track and Global Privacy Control
+  are honoured.
+
+The API counts what people do from the audit log, once each change commits, without emails or names:
+
+| Area                 | Events                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| Workspaces           | `workspace_created`, `workspace_upgraded`, `project_created`                                      |
+| Teams                | `member_invited`, `invite_accepted`, `member_role_changed`, `member_removed`, `member_left`       |
+| Branding and sign-in | `branding_updated`, `domain_verified`, `identity_provider_connected`, `security_settings_updated` |
+| Enterprise           | `app_registered`, `app_deleted`, `app_token_checked`, `scim_enabled`, `console_access_granted`    |
+
+The apps add `$pageview` and `$pageleave`. Every event carries `product: tenantry`, so Tenantry can share one PostHog
+project with Pengopal's other sites.
+
 ## How it keeps tenants apart
 
 Every promise is an automated test that runs in CI against real Keycloak and Postgres. A few of them:

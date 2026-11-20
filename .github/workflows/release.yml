@@ -89,6 +89,8 @@ jobs:
             VITE_TENANTRY_BASE_DOMAIN=${{ vars.TENANTRY_BASE_DOMAIN }}
             VITE_DEMO_WORKSPACES=pengopal,globex,initech
             VITE_DEMO_PASSWORD=${{ vars.TENANTRY_DEMO_PASSWORD }}
+            TENANTRY_POSTHOG_KEY=${{ vars.POSTHOG_KEY }}
+            VITE_POSTHOG_KEY=${{ vars.POSTHOG_KEY }}
 
   publish:
     needs: [verify, images]

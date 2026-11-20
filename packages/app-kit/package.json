@@ -31,7 +31,8 @@
     "@tenantry/oidc-client": "workspace:*",
     "@tenantry/ui": "workspace:*",
     "cmdk": "^1.1.1",
-    "lucide-react": "^1.73.0"
+    "lucide-react": "^1.73.0",
+    "posthog-js": "^1.453.0"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
