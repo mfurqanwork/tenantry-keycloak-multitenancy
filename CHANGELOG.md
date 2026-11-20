@@ -4,6 +4,8 @@ All notable changes to Tenantry. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-20
+
 ### Added
 
 - Product analytics through PostHog (EU), off unless the repository variable `POSTHOG_KEY` is set. The apps keep nothing in the browser (no cookies or storage), send events through `/api/ingest` on their own host, and drop query strings (sign-in codes) from URLs; people are identified by user id only, and every event carries `product: tenantry`. The API counts workspace, team, branding, company-login, Enterprise and app events from the audit log once each change commits, without emails or names.
@@ -202,7 +204,8 @@ The first public milestone: Standard tenants end to end.
 - The audit log names its targets (an email or a name).
 - Page breadcrumbs navigate within the app instead of reloading it.
 
-[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mfurqanwork/tenantry-keycloak-multitenancy/compare/v0.8.0...v1.0.0
